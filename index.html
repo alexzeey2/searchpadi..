@@ -1,0 +1,2155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SearchPadi</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+        }
+        
+        .chat-container {
+            max-width: 500px;
+            margin: 0 auto;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: #1a1a1a;
+        }
+        
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: #e5e7eb;
+            border-radius: 18px;
+        }
+        
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #6b7280;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+        
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        
+        @keyframes typing {
+            0%, 60%, 100% { transform: translateY(0); }
+            30% { transform: translateY(-10px); }
+        }
+        
+        .message-enter {
+            animation: messageSlide 0.3s ease-out;
+        }
+        
+        @keyframes messageSlide {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .seller-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            cursor: pointer;
+        }
+        
+        .seller-card:active {
+            transform: scale(0.98);
+        }
+        
+        .product-card {
+            transition: transform 0.2s;
+            cursor: pointer;
+        }
+
+        .product-card:active {
+            transform: scale(0.97);
+        }
+
+        .floating-add-button {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            z-index: 999;
+            box-shadow: 0 4px 20px rgba(147, 51, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .floating-add-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(147, 51, 234, 0.6);
+        }
+
+        .floating-add-button:active {
+            transform: translateY(0);
+        }
+
+        @media (max-width: 500px) {
+            .floating-add-button {
+                right: 16px;
+                bottom: 75px;
+            }
+        }
+
+        .glowing-search-input {
+            box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3),
+                        0 0 10px rgba(147, 51, 234, 0.2);
+            animation: glow-pulse 2s ease-in-out infinite;
+        }
+
+        .glowing-search-input:focus {
+            box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.6),
+                        0 0 15px rgba(147, 51, 234, 0.4),
+                        0 0 25px rgba(147, 51, 234, 0.2);
+            animation: none;
+        }
+
+        @keyframes glow-pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3),
+                           0 0 10px rgba(147, 51, 234, 0.2);
+            }
+            50% {
+                box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.5),
+                           0 0 15px rgba(147, 51, 234, 0.3),
+                           0 0 20px rgba(147, 51, 234, 0.15);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // Initialize Supabase
+        const SUPABASE_URL = 'https://fbelrsesvzkuvwztxwqw.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiZWxyc2VzdnprdXZ3enR4d3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTc3OTQsImV4cCI6MjA4NjQ5Mzc5NH0.CoB60mA6b7KD-TOEEOX3iw0XWSKPr8xPvc_H-FZbtnM';
+        const { createClient } = supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // Phone formatting helper
+        const formatPhoneNumber = (phone) => {
+            phone = phone.replace(/\D/g, '');
+            if (phone.startsWith('0')) phone = phone.substring(1);
+            if (phone.startsWith('234')) phone = phone.substring(3);
+            return '+234' + phone;
+        };
+
+        const WHATSAPP_NUMBER = "+2349058150220";
+
+        const sellersData = [
+            {
+                id: 1,
+                name: "TechZone Mobile Lagos",
+                category: "phones",
+                location: "Lagos Island, Nigeria",
+                bio: "Genuine phones & tablets. iPhone, Samsung, warranty included!",
+                isVerified: true,
+                whatsappNumber: WHATSAPP_NUMBER,
+                profilePhoto: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                views: 0,
+                products: [
+                    { 
+                        id: 101, 
+                        name: "iPhone 15 Pro Max", 
+                        price: "Ask for Price", 
+                        images: [
+                            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400",
+                            "https://images.unsplash.com/photo-1592286927505-b388e4a1a7e0?w=400",
+                            "https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=400",
+                            "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=400"
+                        ],
+                        keywords: ["iphone", "15", "pro", "max", "apple"], 
+                        likes: 0, 
+                        liked: false,
+                        isTrusted: true
+                    },
+                    { 
+                        id: 102, 
+                        name: "Samsung Galaxy S24 Ultra", 
+                        price: "Ask for Price", 
+                        images: [
+                            "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400",
+                            "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400",
+                            "https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=400",
+                            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400"
+                        ],
+                        keywords: ["samsung", "galaxy", "s24", "ultra"], 
+                        likes: 0, 
+                        liked: false 
+                    }
+                ]
+            },
+            {
+                id: 2,
+                name: "Lagos Fashion Footwears",
+                category: "shoes",
+                gender: "male",
+                location: "Lagos, Nigeria",
+                bio: "Premium quality men's shoes. Italian & Turkish leather.",
+                isVerified: true,
+                whatsappNumber: WHATSAPP_NUMBER,
+                profilePhoto: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400",
+                views: 0,
+                products: [
+                    { 
+                        id: 701, 
+                        name: "Men's Italian Leather Oxfords", 
+                        price: "Ask for Price", 
+                        images: [
+                            "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400",
+                            "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400",
+                            "https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=400",
+                            "https://images.unsplash.com/photo-1582897085656-c636d006a246?w=400"
+                        ],
+                        keywords: ["oxford", "leather", "italian", "formal", "men"], 
+                        likes: 0, 
+                        liked: false 
+                    },
+                    { 
+                        id: 703, 
+                        name: "Men's Casual Loafers", 
+                        price: "Ask for Price", 
+                        images: [
+                            "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=400",
+                            "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400",
+                            "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400",
+                            "https://images.unsplash.com/photo-1518049362265-d5b2a6467637?w=400"
+                        ],
+                        keywords: ["loafer", "casual", "comfort", "men"], 
+                        likes: 0, 
+                        liked: false 
+                    }
+                ]
+            },
+            {
+                id: 3,
+                name: "Ladies Fashion House",
+                category: "shoes",
+                gender: "female",
+                location: "Lekki, Lagos",
+                bio: "Elegant women's footwear. Heels, pumps, sandals.",
+                isVerified: true,
+                whatsappNumber: WHATSAPP_NUMBER,
+                profilePhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
+                views: 0,
+                products: [
+                    { 
+                        id: 702, 
+                        name: "Ladies Classic Heels", 
+                        price: "Ask for Price", 
+                        images: [
+                            "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
+                            "https://images.unsplash.com/photo-1535043934128-cf0b28d52f95?w=400",
+                            "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?w=400",
+                            "https://images.unsplash.com/photo-1596702752440-38c2c93d0b6b?w=400"
+                        ],
+                        keywords: ["heel", "classic", "formal", "women"], 
+                        likes: 0, 
+                        liked: false 
+                    }
+                ]
+            }
+        ];
+
+        function App() {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [showRegistration, setShowRegistration] = useState(false);
+            const [showLogin, setShowLogin] = useState(false);
+            const [showAddProduct, setShowAddProduct] = useState(false);
+            const [showSubscription, setShowSubscription] = useState(false);
+            
+            const [messages, setMessages] = useState([
+                { 
+                    id: 1, 
+                    type: 'assistant', 
+                    text: 'Hello! 👋 Welcome to SearchPadi.\n\nYou might like these handpicked items just for you! ✨', 
+                    timestamp: new Date(),
+                    messageId: 1
+                }
+            ]);
+            const [isTyping, setIsTyping] = useState(false);
+            const [currentStep, setCurrentStep] = useState('recommendations');
+            const [selectedCategory, setSelectedCategory] = useState(null);
+            const [selectedGender, setSelectedGender] = useState(null);
+            const [showProducts, setShowProducts] = useState(false);
+            const [showSellers, setShowSellers] = useState(false);
+            const [displayedProducts, setDisplayedProducts] = useState([]);
+            const [allProducts, setAllProducts] = useState([]);
+            const [productOffset, setProductOffset] = useState(0);
+            const [sellerOffset, setSellerOffset] = useState(0);
+            const [showNoMoreMessage, setShowNoMoreMessage] = useState(false);
+            const [selectedSeller, setSelectedSeller] = useState(null);
+            const [selectedProduct, setSelectedProduct] = useState(null);
+            const [sellers, setSellers] = useState(sellersData);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchContext, setSearchContext] = useState(null);
+            const [clickedButtons, setClickedButtons] = useState({});
+            const messagesEndRef = useRef(null);
+
+            const PRODUCTS_PER_PAGE = 6;
+            const SELLERS_PER_PAGE = 3;
+
+            // Shuffle array utility function
+            const shuffleArray = (array) => {
+                const shuffled = [...array];
+                for (let i = shuffled.length - 1; i > 0; i--) {
+                    const j = Math.floor(Math.random() * (i + 1));
+                    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+                }
+                return shuffled;
+            };
+
+            const scrollToBottom = () => {
+                messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+            };
+
+            useEffect(() => {
+                scrollToBottom();
+            }, [messages, isTyping, showProducts, showSellers]);
+
+            // Load initial recommended products
+            useEffect(() => {
+                if (currentStep === 'recommendations' && displayedProducts.length === 0) {
+                    // Get all products from all sellers
+                    const allProductsList = [];
+                    sellers.forEach(seller => {
+                        seller.products.forEach(product => {
+                            allProductsList.push({
+                                ...product,
+                                seller: seller
+                            });
+                        });
+                    });
+
+                    // Shuffle and take first 4
+                    const shuffled = shuffleArray(allProductsList);
+                    const recommended = shuffled.slice(0, 4);
+                    
+                    setDisplayedProducts(recommended);
+                    setShowProducts(true);
+                }
+            }, [currentStep]);
+
+            const addMessage = (text, type = 'assistant', buttons = null) => {
+                const messageId = messages.length + 1;
+                setMessages(prev => [...prev, {
+                    id: messageId,
+                    type,
+                    text,
+                    buttons,
+                    messageId,
+                    timestamp: new Date()
+                }]);
+                return messageId;
+            };
+
+            const simulateTyping = async (duration = 1200) => {
+                setIsTyping(true);
+                await new Promise(resolve => setTimeout(resolve, duration));
+                setIsTyping(false);
+            };
+
+            const detectCategory = (query) => {
+                const queryLower = query.toLowerCase();
+                
+                if (queryLower.match(/phone|iphone|samsung|tablet|ipad|mobile|smartphone|galaxy/)) {
+                    return 'phones';
+                } else if (queryLower.match(/laptop|computer|macbook|gaming|ps5|electronics/)) {
+                    return 'electronics';
+                } else if (queryLower.match(/shoe|sneaker|heel|boot|sandal|footwear/)) {
+                    return 'shoes';
+                } else if (queryLower.match(/cloth|fashion|dress|shirt|trouser|wear/)) {
+                    return 'fashion';
+                } else if (queryLower.match(/furniture|sofa|bed|table|chair|fridge/)) {
+                    return 'furniture';
+                }
+                
+                return null;
+            };
+
+            const scoreProduct = (product, searchTerms) => {
+                let score = 0;
+                const productText = (product.name + ' ' + product.keywords.join(' ')).toLowerCase();
+                
+                searchTerms.forEach(term => {
+                    if (productText.includes(term)) {
+                        score += 1;
+                        if (product.name.toLowerCase().includes(term)) {
+                            score += 2;
+                        }
+                    }
+                });
+
+                return score;
+            };
+
+            const getAllProducts = (category, gender = null, searchTerms = null) => {
+                const allProds = [];
+
+                sellers
+                    .filter(s => {
+                        if (s.category !== category) return false;
+                        if (gender && s.gender && s.gender !== 'both' && s.gender !== gender) return false;
+                        return true;
+                    })
+                    .forEach(seller => {
+                        seller.products.forEach(product => {
+                            const relevanceScore = searchTerms ? scoreProduct(product, searchTerms) : 0;
+                            allProds.push({
+                                ...product,
+                                seller: seller,
+                                relevanceScore
+                            });
+                        });
+                    });
+
+                if (searchTerms) {
+                    const matchedProducts = allProds.filter(p => p.relevanceScore > 0);
+                    if (matchedProducts.length > 0) {
+                        // Shuffle products with same relevance score for fairness
+                        return shuffleArray(matchedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore));
+                    }
+                }
+                
+                // Shuffle all products for fairness
+                return shuffleArray(allProds);
+            };
+
+            const resetToInitialState = () => {
+                setMessages([]);
+                setCurrentStep('category');
+                setSelectedCategory(null);
+                setSelectedGender(null);
+                setShowProducts(false);
+                setShowSellers(false);
+                setDisplayedProducts([]);
+                setAllProducts([]);
+                setProductOffset(0);
+                setSellerOffset(0);
+                setShowNoMoreMessage(false);
+                setSelectedSeller(null);
+                setSelectedProduct(null);
+                setSearchContext(null);
+                setClickedButtons({});
+            };
+
+            const handleSearch = async () => {
+                const query = searchQuery.trim();
+                if (!query) return;
+
+                resetToInitialState();
+
+                setMessages([{ id: 1, type: 'user', text: query, timestamp: new Date(), messageId: 1 }]);
+                setSearchQuery('');
+                await simulateTyping(1000);
+
+                const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
+                
+                // First, search all products by name and keywords (no category filter)
+                const allProductsAcrossCategories = [];
+                sellers.forEach(seller => {
+                    seller.products.forEach(product => {
+                        const relevanceScore = scoreProduct(product, searchTerms);
+                        if (relevanceScore > 0) {
+                            allProductsAcrossCategories.push({
+                                ...product,
+                                seller: seller,
+                                relevanceScore
+                            });
+                        }
+                    });
+                });
+
+                // If we found products matching name/keywords, show them
+                if (allProductsAcrossCategories.length > 0) {
+                    const sortedProducts = shuffleArray(
+                        allProductsAcrossCategories.sort((a, b) => b.relevanceScore - a.relevanceScore)
+                    );
+                    
+                    addMessage(`Excellent! Here are the best matches for "${query}" 🎯`, 'assistant');
+                    await simulateTyping(1000);
+                    
+                    setAllProducts(sortedProducts);
+                    setDisplayedProducts(sortedProducts.slice(0, PRODUCTS_PER_PAGE));
+                    setProductOffset(PRODUCTS_PER_PAGE);
+                    setShowProducts(true);
+                    setCurrentStep('products');
+                    setSearchContext({ query, searchTerms });
+                    return;
+                }
+
+                // If no products found by name/keywords, try category detection
+                const detectedCategory = detectCategory(query);
+                
+                if (detectedCategory) {
+                    setSearchContext({ query, searchTerms });
+                    setSelectedCategory(detectedCategory);
+                    
+                    if (detectedCategory === 'shoes' || detectedCategory === 'fashion') {
+                        setCurrentStep('gender');
+                        addMessage(`Great! I found what you're looking for 🎯\n\nAre you shopping for:`, 'assistant', [
+                            { text: '👨 Male', value: 'male' },
+                            { text: '👩 Female', value: 'female' },
+                            { text: '👥 Both', value: 'both' }
+                        ]);
+                    } else {
+                        showProductsForCategory(detectedCategory, null, searchTerms);
+                    }
+                } else {
+                    addMessage(`I'd love to help you find what you're looking for! 😊\n\nCould you be more specific? For example:\n• "iPhone 13"\n• "Gaming laptop"\n• "Nike sneakers"\n\nOr choose a category to browse:`, 'assistant', [
+                        { text: '📱 Phones & Tablets', value: 'phones' },
+                        { text: '💻 Electronics', value: 'electronics' },
+                        { text: '👟 Shoes & Footwear', value: 'shoes' },
+                        { text: '👔 Clothes & Fashion', value: 'fashion' },
+                        { text: '🏠 Home & Furniture', value: 'furniture' }
+                    ]);
+                }
+            };
+
+            const showProductsForCategory = async (category, gender = null, searchTerms = null) => {
+                await simulateTyping(800);
+                
+                const products = getAllProducts(category, gender, searchTerms);
+                const shuffledProducts = shuffleArray(products); // Shuffle for fairness
+
+                if (shuffledProducts.length > 0) {
+                    if (searchContext) {
+                        addMessage(`Excellent! Here are the best matches for "${searchContext.query}" 🎯`, 'assistant');
+                    } else {
+                        addMessage(`Excellent! Here are available products 🎉`, 'assistant');
+                    }
+                    await simulateTyping(1000);
+                    
+                    setAllProducts(shuffledProducts);
+                    setDisplayedProducts(shuffledProducts.slice(0, PRODUCTS_PER_PAGE));
+                    setProductOffset(PRODUCTS_PER_PAGE);
+                    setShowProducts(true);
+                    setCurrentStep('products');
+                } else {
+                    if (searchContext) {
+                        addMessage(`I couldn't find products matching "${searchContext.query}". Let me show you our verified sellers who might have what you need.`, 'assistant');
+                    } else {
+                        addMessage(`No products available yet. Let me show you our verified sellers.`, 'assistant');
+                    }
+                    await simulateTyping(1000);
+                    setCurrentStep('sellers');
+                    setShowSellers(true);
+                    setSellerOffset(SELLERS_PER_PAGE);
+                }
+            };
+
+            const handleCategorySelect = async (category, displayName, messageId) => {
+                setClickedButtons(prev => ({ ...prev, [messageId]: true }));
+                addMessage(displayName, 'user');
+                await simulateTyping();
+
+                setSelectedCategory(category);
+                
+                if (category === 'shoes' || category === 'fashion') {
+                    setCurrentStep('gender');
+                    addMessage(`Perfect choice! 😊 Are you shopping for:`, 'assistant', [
+                        { text: '👨 Male', value: 'male' },
+                        { text: '👩 Female', value: 'female' },
+                        { text: '👥 Both', value: 'both' }
+                    ]);
+                } else {
+                    showProductsForCategory(category);
+                }
+            };
+
+            const handleGenderSelect = async (gender, displayName, messageId) => {
+                setClickedButtons(prev => ({ ...prev, [messageId]: true }));
+                addMessage(displayName, 'user');
+                
+                setSelectedGender(gender);
+                const searchTerms = searchContext ? searchContext.searchTerms : null;
+                showProductsForCategory(selectedCategory, gender, searchTerms);
+            };
+
+            const handleProductClick = (product) => {
+                setSellers(prev => prev.map(s => s.id === product.seller.id ? { ...s, views: s.views + 1 } : s));
+                setSelectedProduct({ ...product, seller: product.seller });
+            };
+
+            const handleFindMoreProducts = async () => {
+                await simulateTyping(500);
+                
+                if (productOffset >= allProducts.length) {
+                    addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
+                    await simulateTyping(800);
+                    setShowProducts(false);
+                    setShowSellers(true);
+                    setCurrentStep('sellers');
+                    setSellerOffset(SELLERS_PER_PAGE);
+                } else {
+                    const nextProducts = allProducts.slice(productOffset, productOffset + PRODUCTS_PER_PAGE);
+                    setDisplayedProducts(prev => [...prev, ...nextProducts]);
+                    setProductOffset(prev => prev + PRODUCTS_PER_PAGE);
+                }
+            };
+
+            const handleFindMoreSellers = async () => {
+                await simulateTyping(500);
+                
+                const categorySellers = sellers.filter(s => {
+                    if (s.category !== selectedCategory) return false;
+                    if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
+                    return true;
+                });
+                
+                if (sellerOffset >= categorySellers.length) {
+                    setShowNoMoreMessage(true);
+                    addMessage("These are all the verified sellers we have in this category right now. Try 'Start Afresh' to explore a different category!", 'assistant');
+                } else {
+                    setSellerOffset(prev => Math.min(prev + SELLERS_PER_PAGE, categorySellers.length));
+                }
+            };
+
+            const handleStartAfresh = () => {
+                setMessages([
+                    { 
+                        id: 1, 
+                        type: 'assistant', 
+                        text: 'Hello! 👋 Welcome to SearchPadi.\n\nYou might like these handpicked items just for you! ✨', 
+                        timestamp: new Date(),
+                        messageId: 1
+                    }
+                ]);
+                setCurrentStep('recommendations');
+                setSelectedCategory(null);
+                setSelectedGender(null);
+                setShowProducts(false);
+                setShowSellers(false);
+                setDisplayedProducts([]);
+                setAllProducts([]);
+                setProductOffset(0);
+                setSellerOffset(0);
+                setShowNoMoreMessage(false);
+                setSelectedSeller(null);
+                setSearchQuery('');
+                setSearchContext(null);
+                setClickedButtons({});
+            };
+
+            const handleSellerClick = (seller) => {
+                setSelectedSeller(seller);
+            };
+
+            const handleWhatsAppMessage = (seller, product = null) => {
+                const message = `Hi, I saw a product you posted on SearchPadi, is it still available?`;
+                window.open(`https://wa.me/${seller.whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+            };
+
+            const toggleProductLike = (sellerId, productId) => {
+                setSellers(prev => prev.map(seller => {
+                    if (seller.id === sellerId) {
+                        return {
+                            ...seller,
+                            products: seller.products.map(product => {
+                                if (product.id === productId) {
+                                    return {
+                                        ...product,
+                                        liked: !product.liked,
+                                        likes: product.liked ? product.likes - 1 : product.likes + 1
+                                    };
+                                }
+                                return product;
+                            })
+                        };
+                    }
+                    return seller;
+                }));
+                
+                setDisplayedProducts(prev => prev.map(p => {
+                    if (p.seller.id === sellerId && p.id === productId) {
+                        return {
+                            ...p,
+                            liked: !p.liked,
+                            likes: p.liked ? p.likes - 1 : p.likes + 1
+                        };
+                    }
+                    return p;
+                }));
+
+                // Update selectedProduct if it's currently being viewed
+                setSelectedProduct(prev => {
+                    if (prev && prev.id === productId && prev.seller.id === sellerId) {
+                        return {
+                            ...prev,
+                            liked: !prev.liked,
+                            likes: prev.liked ? prev.likes - 1 : prev.likes + 1
+                        };
+                    }
+                    return prev;
+                });
+            };
+
+            const openSellerProfile = (seller) => {
+                setSelectedProduct(null);
+                handleSellerClick(seller);
+            };
+
+            const handleRegistration = async (formData) => {
+                console.log('🚀 Starting registration...', formData);
+                try {
+                    // Format phone with +234
+                    const formattedPhone = formatPhoneNumber(formData.whatsappNumber);
+                    console.log('📱 Formatted phone:', formattedPhone);
+                    console.log('📧 Email:', formData.email);
+                    
+                    // Step 1: Create auth account with Supabase
+                    console.log('🔐 Creating Supabase auth account...');
+                    const { data: authData, error: authError } = await supabaseClient.auth.signUp({
+                        email: formData.email,
+                        password: formData.password,
+                        options: {
+                            data: {
+                                phone: formattedPhone,
+                                business_name: formData.businessName
+                            }
+                        }
+                    });
+                    
+                    console.log('✅ Auth response:', authData, authError);
+                    if (authError) throw authError;
+                    
+                    if (!authData.user) {
+                        throw new Error('User creation failed - no user returned');
+                    }
+                    
+                    // Step 2: Save business info to profiles table
+                    console.log('💾 Saving to profiles table...');
+                    const profileData = {
+                        id: authData.user.id,
+                        business_name: formData.businessName,
+                        email: formData.email,
+                        category: formData.category,
+                        gender: formData.gender || null,
+                        location: formData.location,
+                        phone: formattedPhone,
+                        whatsapp: formattedPhone,
+                        bio: formData.bio || "New seller on SearchPadi",
+                        profile_photo: formData.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                        subscription_plan: 'free',
+                        is_verified: false,
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    console.log('📋 Profile data:', profileData);
+                    
+                    const { data: insertData, error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .insert([profileData])
+                        .select();
+                    
+                    console.log('✅ Profile insert response:', insertData, profileError);
+                    
+                    if (profileError) {
+                        console.error('Profile error details:', profileError);
+                        throw new Error(`Database error: ${profileError.message}`);
+                    }
+                    
+                    // Step 3: Create local seller object and set current user
+                    const newSeller = {
+                        id: authData.user.id,
+                        name: formData.businessName,
+                        email: formData.email,
+                        category: formData.category,
+                        gender: formData.gender || null,
+                        location: formData.location,
+                        bio: formData.bio || "New seller on SearchPadi",
+                        isVerified: false,
+                        whatsappNumber: formattedPhone,
+                        profilePhoto: formData.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                        views: 0,
+                        products: [],
+                        subscription: 'free'
+                    };
+                    
+                    setSellers(prev => [...prev, newSeller]);
+                    setCurrentUser({ type: 'seller', data: newSeller });
+                    setShowRegistration(false);
+                    console.log('🎉 Registration complete!');
+                    alert('✅ Account created successfully! Welcome to SearchPadi!');
+                } catch (error) {
+                    console.error('❌ Registration error:', error);
+                    let errorMessage = '';
+                    
+                    if (error.message.includes('already registered') || error.message.includes('User already registered')) {
+                        errorMessage = 'This email is already registered. Please login instead.';
+                    } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
+                        errorMessage = 'This email or phone number is already in use.';
+                    } else {
+                        errorMessage = error.message || 'Registration failed. Please try again.';
+                    }
+                    
+                    alert('❌ ' + errorMessage);
+                    throw error;
+                }
+            };
+
+            const handleAddProduct = (productData) => {
+                const newProduct = {
+                    id: Date.now(),
+                    name: productData.name,
+                    price: productData.price,
+                    images: productData.images,
+                    keywords: productData.name.toLowerCase().split(' '),
+                    likes: 0,
+                    liked: false
+                };
+
+                setSellers(prev => prev.map(s => {
+                    if (s.id === currentUser.data.id) {
+                        return {
+                            ...s,
+                            products: [...s.products, newProduct]
+                        };
+                    }
+                    return s;
+                }));
+
+                setCurrentUser(prev => ({
+                    ...prev,
+                    data: {
+                        ...prev.data,
+                        products: [...prev.data.products, newProduct]
+                    }
+                }));
+
+                setShowAddProduct(false);
+            };
+
+            const handleDeleteProduct = (productId) => {
+                if (!confirm('Are you sure you want to delete this product?')) return;
+
+                setSellers(prev => prev.map(s => {
+                    if (s.id === currentUser.data.id) {
+                        return {
+                            ...s,
+                            products: s.products.filter(p => p.id !== productId)
+                        };
+                    }
+                    return s;
+                }));
+
+                setCurrentUser(prev => ({
+                    ...prev,
+                    data: {
+                        ...prev.data,
+                        products: prev.data.products.filter(p => p.id !== productId)
+                    }
+                }));
+            };
+
+            const filteredSellers = selectedCategory && showSellers 
+                ? sellers.filter(s => {
+                    if (s.category !== selectedCategory) return false;
+                    if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
+                    return true;
+                }).slice(0, sellerOffset)
+                : [];
+
+            const currentSeller = selectedSeller ? sellers.find(s => s.id === selectedSeller.id) : null;
+            const updatedCurrentUser = currentUser?.type === 'seller' 
+                ? sellers.find(s => s.id === currentUser.data.id) 
+                : null;
+
+            return (
+                <div className="chat-container">
+                    {/* Header */}
+                    <div className="bg-gradient-to-r from-purple-600 to-purple-800 text-white p-4 shadow-lg">
+                        <div className="flex items-center justify-between">
+                            {currentUser?.type === 'seller' ? (
+                                <div className="flex items-center gap-3">
+                                    <img 
+                                        src={updatedCurrentUser?.profilePhoto} 
+                                        alt={updatedCurrentUser?.name}
+                                        className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                                    />
+                                    <div>
+                                        <h1 className="text-lg font-bold">{updatedCurrentUser?.name}</h1>
+                                        <p className="text-xs opacity-90">📍 {updatedCurrentUser?.location}</p>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div>
+                                    <h1 className="text-xl font-bold">SearchPadi</h1>
+                                    <p className="text-sm opacity-90">Find Verified Sellers 🇳🇬</p>
+                                </div>
+                            )}
+                            <button 
+                                onClick={() => {
+                                    if (currentUser?.type === 'seller') {
+                                        setSelectedSeller(updatedCurrentUser);
+                                    } else {
+                                        setShowRegistration(true);
+                                    }
+                                }}
+                                className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap"
+                            >
+                                {currentUser?.type === 'seller' ? 'View Profile' : 'Become a Seller'}
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Messages */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+                        {messages.map((message) => (
+                            <div key={message.id} className="message-enter relative z-10">
+                                {message.type === 'assistant' ? (
+                                    <div className="flex gap-2">
+                                        <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                            A
+                                        </div>
+                                        <div className="flex-1">
+                                            <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none p-3 max-w-[85%] inline-block shadow-sm">
+                                                <p className="text-white whitespace-pre-line">{message.text}</p>
+                                            </div>
+                                            {message.buttons && !clickedButtons[message.messageId] && (
+                                                <div className="flex flex-wrap gap-2 mt-3">
+                                                    {message.buttons.map((button, idx) => (
+                                                        <button
+                                                            key={idx}
+                                                            onClick={() => {
+                                                                if (currentStep === 'category') {
+                                                                    handleCategorySelect(button.value, button.text, message.messageId);
+                                                                } else if (currentStep === 'gender') {
+                                                                    handleGenderSelect(button.value, button.text, message.messageId);
+                                                                }
+                                                            }}
+                                                            className="bg-purple-600 text-white px-5 py-2.5 rounded-full font-medium hover:bg-purple-700 transition-all duration-200 shadow-md hover:shadow-lg text-sm"
+                                                        >
+                                                            {button.text}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex justify-end">
+                                        <div className="bg-purple-600 text-white rounded-2xl rounded-tr-none p-3 max-w-[85%] shadow-sm">
+                                            <p>{message.text}</p>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {isTyping && (
+                            <div className="flex gap-2 relative z-10">
+                                <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
+                                    A
+                                </div>
+                                <div className="typing-indicator">
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                    <div className="typing-dot"></div>
+                                </div>
+                            </div>
+                        )}
+
+                        {showProducts && displayedProducts.length > 0 && (
+                            <div className="space-y-3 mt-4 relative z-10">
+                                <div className="grid grid-cols-2 gap-3">
+                                    {displayedProducts.map((product, idx) => (
+                                        <div 
+                                            key={idx}
+                                            className="product-card bg-[#2a2a2a] rounded-xl shadow-md overflow-hidden border border-gray-700 relative"
+                                            onClick={() => handleProductClick(product)}
+                                        >
+                                            <img 
+                                                src={product.images[0]}
+                                                alt={product.name}
+                                                className="w-full h-32 object-cover"
+                                            />
+                                            {product.isTrusted && (
+                                                <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
+                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                    </svg>
+                                                    Trusted
+                                                </div>
+                                            )}
+                                            <div className="p-3">
+                                                <p className="text-sm font-bold text-white line-clamp-2 mb-1">{product.name}</p>
+                                                <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
+                                                    <img 
+                                                        src={product.seller.profilePhoto} 
+                                                        alt={product.seller.name}
+                                                        className="w-4 h-4 rounded-full"
+                                                    />
+                                                    <span className="truncate">{product.seller.name}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                {currentStep === 'recommendations' ? (
+                                    <div className="pt-2">
+                                        <button
+                                            onClick={() => {
+                                                setShowProducts(false);
+                                                setDisplayedProducts([]);
+                                                setCurrentStep('category');
+                                                setMessages([
+                                                    { 
+                                                        id: 1, 
+                                                        type: 'assistant', 
+                                                        text: 'Hello! 👋 Welcome to SearchPadi - Nigeria\'s trusted business directory.\n\nWhat are you looking for today?', 
+                                                        timestamp: new Date(),
+                                                        buttons: [
+                                                            { text: '📱 Phones & Tablets', value: 'phones' },
+                                                            { text: '💻 Electronics', value: 'electronics' },
+                                                            { text: '👟 Shoes & Footwear', value: 'shoes' },
+                                                            { text: '👔 Clothes & Fashion', value: 'fashion' },
+                                                            { text: '🏠 Home & Furniture', value: 'furniture' }
+                                                        ],
+                                                        messageId: 1
+                                                    }
+                                                ]);
+                                            }}
+                                            className="w-full bg-gray-700 hover:bg-gray-600 text-white py-3 rounded-lg font-semibold transition-colors"
+                                        >
+                                            No, Thanks
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            onClick={handleFindMoreProducts}
+                                            className="flex-1 bg-[#2a2a2a] border-2 border-purple-600 text-purple-400 py-2.5 rounded-lg font-medium hover:bg-[#333333] transition-colors"
+                                        >
+                                            Find More
+                                        </button>
+                                        <button
+                                            onClick={handleStartAfresh}
+                                            className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2.5 rounded-lg font-medium hover:from-purple-700 hover:to-purple-800 transition-all shadow-md"
+                                        >
+                                            Start Afresh
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {showSellers && filteredSellers.length > 0 && (
+                            <div className="space-y-3 mt-4 relative z-10">
+                                {filteredSellers.map(seller => (
+                                    <div 
+                                        key={seller.id} 
+                                        className="seller-card bg-[#2a2a2a] rounded-xl shadow-md overflow-hidden border border-gray-700"
+                                        onClick={() => handleSellerClick(seller)}
+                                    >
+                                        <div className="p-4">
+                                            <div className="flex items-start gap-3">
+                                                <img 
+                                                    src={seller.profilePhoto} 
+                                                    alt={seller.name}
+                                                    className="w-16 h-16 rounded-full object-cover border-2 border-purple-600"
+                                                />
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex items-center gap-2">
+                                                        <h3 className="font-bold text-white truncate">{seller.name}</h3>
+                                                        {seller.isVerified && (
+                                                            <svg className="w-5 h-5 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                            </svg>
+                                                        )}
+                                                    </div>
+                                                    <p className="text-sm text-gray-400 mt-1 line-clamp-2">{seller.bio}</p>
+                                                    <p className="text-xs text-gray-500 mt-1">📍 {seller.location}</p>
+                                                </div>
+                                            </div>
+                                            <button className="w-full mt-3 bg-purple-600 text-white py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors">
+                                                View Profile
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                                
+                                <div className={`flex gap-3 pt-2 pb-4 ${showNoMoreMessage ? 'justify-center' : ''}`}>
+                                    {!showNoMoreMessage ? (
+                                        <>
+                                            <button
+                                                onClick={handleFindMoreSellers}
+                                                className="flex-1 bg-[#2a2a2a] border-2 border-purple-600 text-purple-400 py-2.5 rounded-lg font-medium hover:bg-[#333333] transition-colors"
+                                            >
+                                                Find More
+                                            </button>
+                                            <button
+                                                onClick={handleStartAfresh}
+                                                className="flex-1 bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2.5 rounded-lg font-medium hover:from-purple-700 hover:to-purple-800 transition-all shadow-md"
+                                            >
+                                                Start Afresh
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <button
+                                            onClick={handleStartAfresh}
+                                            className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-2.5 rounded-lg font-medium hover:from-purple-700 hover:to-purple-800 transition-all shadow-md"
+                                        >
+                                            Start Afresh
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        )}
+
+                        <div ref={messagesEndRef} />
+                    </div>
+
+                    {/* Search Input */}
+                    <div className="bg-[#1a1a1a] border-t border-gray-800 p-3 fixed bottom-0 left-0 right-0 max-w-[500px] mx-auto z-20">
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                                placeholder="What are you looking for?"
+                                className="flex-1 bg-[#2a2a2a] rounded-full px-5 py-3 text-white placeholder-gray-500 focus:outline-none focus:bg-[#333333] text-sm border-0 glowing-search-input"
+                            />
+                            <button
+                                onClick={handleSearch}
+                                disabled={!searchQuery.trim()}
+                                className="bg-purple-600 text-white p-3 rounded-full hover:bg-purple-700 transition-colors disabled:bg-gray-600 disabled:cursor-not-allowed flex-shrink-0"
+                            >
+                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Seller Profile View */}
+                    {currentSeller && (
+                        <SellerProfile 
+                            seller={currentSeller}
+                            isOwnProfile={currentUser?.type === 'seller' && currentUser.data.id === currentSeller.id}
+                            onClose={() => setSelectedSeller(null)}
+                            onWhatsApp={handleWhatsAppMessage}
+                            onShowSubscription={() => setShowSubscription(true)}
+                            onAddProduct={() => setShowAddProduct(true)}
+                            onProductClick={(product) => setSelectedProduct({ ...product, seller: currentSeller })}
+                            onDeleteProduct={handleDeleteProduct}
+                        />
+                    )}
+
+                    {/* Product Detail View */}
+                    {selectedProduct && (
+                        <ProductDetail 
+                            product={selectedProduct}
+                            onClose={() => setSelectedProduct(null)}
+                            onSellerClick={openSellerProfile}
+                            onWhatsApp={handleWhatsAppMessage}
+                            onToggleLike={toggleProductLike}
+                        />
+                    )}
+
+                    {/* Modals */}
+                    {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLoginSuccess={(sellerData) => {
+                        setCurrentUser({ type: 'seller', data: sellerData });
+                        setShowLogin(false);
+                    }} onSwitchToRegister={() => {
+                        setShowLogin(false);
+                        setShowRegistration(true);
+                    }} />}
+                    {showRegistration && <RegistrationModal onClose={() => setShowRegistration(false)} onRegister={handleRegistration} onSwitchToLogin={() => {
+                        setShowRegistration(false);
+                        setShowLogin(true);
+                    }} />}
+                    {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} />}
+                    {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} />}
+                </div>
+            );
+        }
+
+        // Seller Profile Component
+        function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct }) {
+            return (
+                <div className="fixed inset-0 bg-[#1a1a1a] z-50 flex flex-col overflow-hidden">
+                    <div className="bg-[#1a1a1a] p-4 border-b border-gray-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold text-white">
+                            {isOwnProfile ? 'My Profile' : 'Seller Profile'}
+                        </h2>
+                        <button 
+                            onClick={onClose}
+                            className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white"
+                        >
+                            ✕
+                        </button>
+                    </div>
+
+                    <div className="flex-1 p-6 overflow-y-auto">
+                        <div className="mb-4">
+                            <div className="flex items-center gap-6 mb-4">
+                                <img 
+                                    src={seller.profilePhoto} 
+                                    alt={seller.name}
+                                    className="w-20 h-20 rounded-full object-cover border-2 border-gray-700"
+                                />
+                                <div className="flex-1 flex justify-around text-center">
+                                    <div>
+                                        <div className="font-bold text-lg text-white">{seller.products.length}</div>
+                                        <div className="text-sm text-gray-400">Products</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-lg text-white">{seller.views.toLocaleString()}</div>
+                                        <div className="text-sm text-gray-400">Views</div>
+                                    </div>
+                                    <div>
+                                        <div className="font-bold text-lg text-white">{seller.products.reduce((sum, p) => sum + p.likes, 0).toLocaleString()}</div>
+                                        <div className="text-sm text-gray-400">Likes</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-bold text-base text-white">{seller.name}</h3>
+                                {seller.isVerified && (
+                                    <svg className="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                    </svg>
+                                )}
+                            </div>
+
+                            <p className="text-sm text-gray-300 mb-2">{seller.bio}</p>
+
+                            <div className="flex items-center gap-1 mb-3">
+                                <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd"/>
+                                </svg>
+                                <p className="text-sm text-gray-400">{seller.location}</p>
+                            </div>
+
+                            <div className="mb-4">
+                                {isOwnProfile ? (
+                                    <button
+                                        onClick={onShowSubscription}
+                                        className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg font-bold hover:from-purple-700 hover:to-purple-800 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <span>🚀</span>
+                                        {seller.subscription === 'free' ? 'Upgrade to Premium' : 'Manage Subscription'}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => onWhatsApp(seller)}
+                                        className="w-full bg-green-500 text-white py-3 rounded-lg font-bold hover:bg-green-600 transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                        </svg>
+                                        Contact Seller
+                                    </button>
+                                )}
+                            </div>
+
+                            <div>
+                                <h4 className="font-bold text-lg mb-3 text-white">Products</h4>
+                                {seller.products.length === 0 ? (
+                                    isOwnProfile ? (
+                                        <div className="text-center py-8">
+                                            <p className="text-gray-400 mb-4">No products yet</p>
+                                            <button
+                                                onClick={onAddProduct}
+                                                className="bg-purple-600 text-white px-6 py-2 rounded-lg font-medium hover:bg-purple-700 transition-colors"
+                                            >
+                                                + Add Your First Product
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <p className="text-gray-400 text-center py-8">No products yet</p>
+                                    )
+                                ) : (
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {seller.products.map((product, idx) => (
+                                            <div 
+                                                key={idx} 
+                                                className="cursor-pointer product-card relative"
+                                                onClick={() => onProductClick(product)}
+                                            >
+                                                <img 
+                                                    src={product.images[0]}
+                                                    alt={product.name}
+                                                    className="w-full h-32 object-cover rounded-lg mb-1"
+                                                />
+                                                {isOwnProfile && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            onDeleteProduct(product.id);
+                                                        }}
+                                                        className="absolute top-2 right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                )}
+                                                <p className="text-sm font-semibold truncate text-white">{product.name}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Floating Add Product Button */}
+                    {isOwnProfile && (
+                        <button
+                            onClick={onAddProduct}
+                            className="floating-add-button bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-full font-semibold hover:from-purple-700 hover:to-purple-800 transition-all flex items-center gap-2"
+                        >
+                            <span className="text-xl font-bold">+</span>
+                            Add Product
+                        </button>
+                    )}
+                </div>
+            );
+        }
+
+        // Product Detail Component
+        function ProductDetail({ product, onClose, onSellerClick, onWhatsApp, onToggleLike }) {
+            const [currentIndex, setCurrentIndex] = useState(0);
+            const [touchStart, setTouchStart] = useState(0);
+            const [touchEnd, setTouchEnd] = useState(0);
+
+            const minSwipeDistance = 50;
+
+            const handleTouchStart = (e) => {
+                setTouchEnd(0);
+                setTouchStart(e.targetTouches[0].clientX);
+            };
+
+            const handleTouchMove = (e) => {
+                setTouchEnd(e.targetTouches[0].clientX);
+            };
+
+            const handleTouchEnd = () => {
+                if (!touchStart || !touchEnd) return;
+                
+                const distance = touchStart - touchEnd;
+                const isLeftSwipe = distance > minSwipeDistance;
+                const isRightSwipe = distance < -minSwipeDistance;
+
+                if (isLeftSwipe && currentIndex < product.images.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                }
+                if (isRightSwipe && currentIndex > 0) {
+                    setCurrentIndex(currentIndex - 1);
+                }
+            };
+
+            const handleLeftClick = (e) => {
+                e.stopPropagation();
+                if (currentIndex > 0) {
+                    setCurrentIndex(currentIndex - 1);
+                }
+            };
+
+            const handleRightClick = (e) => {
+                e.stopPropagation();
+                if (currentIndex < product.images.length - 1) {
+                    setCurrentIndex(currentIndex + 1);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black z-[60]" onClick={onClose}>
+                    <div className="relative w-full h-full flex items-center justify-center bg-black">
+                        {/* Image Display */}
+                        <div 
+                            className="w-full h-full flex items-center justify-center" 
+                            onTouchStart={handleTouchStart}
+                            onTouchMove={handleTouchMove}
+                            onTouchEnd={handleTouchEnd}
+                        >
+                            <img 
+                                src={product.images[currentIndex]}
+                                alt={product.name}
+                                className="max-w-full max-h-full object-contain"
+                                onClick={(e) => e.stopPropagation()}
+                            />
+                        </div>
+
+                        {/* Left Click Area */}
+                        <div 
+                            className="absolute left-0 top-0 bottom-0 w-1/3 cursor-pointer"
+                            onClick={handleLeftClick}
+                        />
+
+                        {/* Right Click Area */}
+                        <div 
+                            className="absolute right-0 top-0 bottom-0 w-1/3 cursor-pointer"
+                            onClick={handleRightClick}
+                        />
+                        
+                        {/* Top Bar with Lines and Info */}
+                        <div className="absolute top-0 left-0 right-0 bg-gradient-to-b from-black/70 to-transparent p-4">
+                            {/* WhatsApp-style Lines Indicator */}
+                            <div className="flex gap-1 mb-3">
+                                {product.images.map((_, idx) => (
+                                    <div 
+                                        key={idx}
+                                        className="flex-1 h-0.5 rounded-full transition-all"
+                                        style={{
+                                            backgroundColor: idx === currentIndex ? 'white' : 'rgba(255,255,255,0.3)'
+                                        }}
+                                    />
+                                ))}
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div 
+                                    className="flex items-center gap-3 flex-1 cursor-pointer" 
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onSellerClick(product.seller);
+                                    }}
+                                >
+                                    <img 
+                                        src={product.seller.profilePhoto} 
+                                        alt={product.seller.name}
+                                        className="w-10 h-10 rounded-full object-cover border-2 border-white"
+                                    />
+                                    <div className="flex-1">
+                                        <div className="flex items-center gap-1">
+                                            <p className="font-semibold text-white text-sm">{product.seller.name}</p>
+                                            {product.seller.isVerified && (
+                                                <svg className="w-4 h-4 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                                                    <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                </svg>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-white/80">{product.seller.location}</p>
+                                    </div>
+                                </div>
+                                <button 
+                                    onClick={onClose}
+                                    className="w-9 h-9 rounded-full flex items-center justify-center"
+                                >
+                                    <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Bottom Bar with Product Name and Buttons */}
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 pb-6" onClick={(e) => e.stopPropagation()}>
+                            <div className="mb-3">
+                                <h3 className="text-xl font-bold text-white">{product.name}</h3>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => onWhatsApp(product.seller, product)}
+                                    className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold text-sm hover:bg-green-600 active:scale-98 transition-all shadow-lg flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                    </svg>
+                                    Ask for Price
+                                </button>
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleLike(product.seller.id, product.id);
+                                    }}
+                                    className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all"
+                                >
+                                    <span className="text-2xl">
+                                        {product.liked ? '❤️' : '🤍'}
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Registration Modal
+        function RegistrationModal({ onClose, onRegister, onSwitchToLogin }) {
+            const [formData, setFormData] = useState({
+                profilePhoto: '',
+                businessName: '',
+                email: '',
+                category: 'phones',
+                gender: '',
+                location: '',
+                whatsappNumber: '',
+                password: '',
+                bio: ''
+            });
+            const [previewPhoto, setPreviewPhoto] = useState('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400');
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+            const fileInputRef = useRef(null);
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                
+                if (!formData.businessName || !formData.email || !formData.location || !formData.whatsappNumber || !formData.password) {
+                    setError('Please fill in all required fields');
+                    return;
+                }
+                
+                // Validate email format
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.email)) {
+                    setError('Please enter a valid email address');
+                    return;
+                }
+                
+                if (formData.password.length < 6) {
+                    setError('Password must be at least 6 characters long');
+                    return;
+                }
+                
+                setIsLoading(true);
+                try {
+                    await onRegister({ ...formData, profilePhoto: previewPhoto });
+                } catch (err) {
+                    setError('Registration failed. Please try again.');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            const handleImageUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setPreviewPhoto(reader.result);
+                        setFormData({ ...formData, profilePhoto: reader.result });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-800" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-white">Become a Seller</h2>
+                                <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white">
+                                    ✕
+                                </button>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg mb-4">
+                                    {error}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div className="flex flex-col items-center mb-4">
+                                    <img 
+                                        src={previewPhoto} 
+                                        alt="Preview"
+                                        className="w-24 h-24 rounded-full object-cover border-4 border-purple-600 mb-3"
+                                    />
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        onChange={handleImageUpload}
+                                        accept="image/*"
+                                        className="hidden"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => fileInputRef.current.click()}
+                                        className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-purple-700 transition-colors"
+                                    >
+                                        Upload Photo
+                                    </button>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Business Name *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.businessName}
+                                        onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="e.g., TechZone Mobile Lagos"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">WhatsApp Number *</label>
+                                    <div className="flex gap-2">
+                                        <span className="bg-[#3a3a3a] border border-gray-700 text-white px-4 py-2 rounded-lg flex items-center font-medium">
+                                            +234
+                                        </span>
+                                        <input
+                                            type="tel"
+                                            required
+                                            value={formData.whatsappNumber}
+                                            onChange={(e) => {
+                                                const value = e.target.value.replace(/\D/g, '').substring(0, 10);
+                                                setFormData({ ...formData, whatsappNumber: value });
+                                            }}
+                                            className="flex-1 px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                            placeholder="8012345678"
+                                            maxLength="10"
+                                        />
+                                    </div>
+                                    <p className="text-xs text-gray-400 mt-1">For buyer contacts (used in "Ask for Price" button)</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Email Address *</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="e.g., yourname@gmail.com"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">For login and account verification</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Category *</label>
+                                    <select
+                                        required
+                                        value={formData.category}
+                                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                    >
+                                        <option value="phones">📱 Phones & Tablets</option>
+                                        <option value="electronics">💻 Electronics</option>
+                                        <option value="shoes">👟 Shoes & Footwear</option>
+                                        <option value="fashion">👔 Clothes & Fashion</option>
+                                        <option value="furniture">🏠 Home & Furniture</option>
+                                    </select>
+                                </div>
+
+                                {(formData.category === 'shoes' || formData.category === 'fashion') && (
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-300 mb-1">Target Gender</label>
+                                        <select
+                                            value={formData.gender}
+                                            onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
+                                            className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        >
+                                            <option value="">Select...</option>
+                                            <option value="male">👨 Male</option>
+                                            <option value="female">👩 Female</option>
+                                            <option value="both">👥 Both</option>
+                                        </select>
+                                    </div>
+                                )}
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Location *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.location}
+                                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="e.g., Lagos Island, Nigeria"
+                                    />
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Password *</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="Create a strong password"
+                                        minLength="6"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">Minimum 6 characters</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Bio (optional)</label>
+                                    <textarea
+                                        value={formData.bio}
+                                        onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        rows="3"
+                                        placeholder="Tell customers about your business..."
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Creating Account...' : 'Register as Seller'}
+                                </button>
+                                
+                                {onSwitchToLogin && (
+                                    <p className="text-center text-gray-400 text-sm mt-4">
+                                        Already have an account?{' '}
+                                        <button 
+                                            type="button"
+                                            onClick={onSwitchToLogin}
+                                            className="text-purple-500 hover:text-purple-400 font-medium"
+                                        >
+                                            Login here
+                                        </button>
+                                    </p>
+                                )}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Login Modal Component
+        function LoginModal({ onClose, onLoginSuccess, onSwitchToRegister }) {
+            const [formData, setFormData] = useState({
+                email: '',
+                password: ''
+            });
+            const [isLoading, setIsLoading] = useState(false);
+            const [error, setError] = useState('');
+
+            const handleSubmit = async (e) => {
+                e.preventDefault();
+                setError('');
+                
+                if (!formData.email || !formData.password) {
+                    setError('Please fill in all fields');
+                    return;
+                }
+                
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(formData.email)) {
+                    setError('Please enter a valid email address');
+                    return;
+                }
+                
+                setIsLoading(true);
+                
+                try {
+                    const { data, error: authError } = await supabaseClient.auth.signInWithPassword({
+                        email: formData.email,
+                        password: formData.password
+                    });
+                    
+                    if (authError) throw authError;
+                    
+                    // Get user profile from database
+                    const { data: profile, error: profileError } = await supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .eq('id', data.user.id)
+                        .single();
+                    
+                    if (profileError) {
+                        console.error('Profile fetch error:', profileError);
+                        throw new Error('Could not load profile. Please contact support.');
+                    }
+                    
+                    // Create seller object
+                    const sellerData = {
+                        id: profile.id,
+                        name: profile.business_name,
+                        email: profile.email,
+                        category: profile.category,
+                        gender: profile.gender || null,
+                        location: profile.location,
+                        bio: profile.bio || "Seller on SearchPadi",
+                        isVerified: profile.is_verified || false,
+                        whatsappNumber: profile.whatsapp,
+                        profilePhoto: profile.profile_photo || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                        views: 0,
+                        products: [],
+                        subscription: profile.subscription_plan || 'free'
+                    };
+                    
+                    onLoginSuccess(sellerData);
+                    alert('✅ Login successful! Welcome back!');
+                } catch (error) {
+                    console.error('Login error:', error);
+                    setError(error.message || 'Login failed. Please check your credentials.');
+                } finally {
+                    setIsLoading(false);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full border border-gray-800" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-white">Seller Login</h2>
+                                <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white">
+                                    ✕
+                                </button>
+                            </div>
+
+                            {error && (
+                                <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg mb-4">
+                                    {error}
+                                </div>
+                            )}
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Email Address *</label>
+                                    <input
+                                        type="email"
+                                        required
+                                        value={formData.email}
+                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="yourname@gmail.com"
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">Enter your registered email address</p>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Password *</label>
+                                    <input
+                                        type="password"
+                                        required
+                                        value={formData.password}
+                                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="Enter your password"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={isLoading}
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    {isLoading ? 'Logging in...' : 'Login'}
+                                </button>
+                                
+                                {onSwitchToRegister && (
+                                    <p className="text-center text-gray-400 text-sm mt-4">
+                                        Don't have an account?{' '}
+                                        <button 
+                                            type="button"
+                                            onClick={onSwitchToRegister}
+                                            className="text-purple-500 hover:text-purple-400 font-medium"
+                                        >
+                                            Register here
+                                        </button>
+                                    </p>
+                                )}
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Add Product Modal with 4 Images
+        function AddProductModal({ onClose, onAdd }) {
+            const [formData, setFormData] = useState({
+                name: '',
+                images: ['', '', '', '']
+            });
+            const [previewImages, setPreviewImages] = useState([
+                'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
+                'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
+                'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400',
+                'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400'
+            ]);
+            const fileInputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (!formData.name) {
+                    alert('Please fill in all required fields');
+                    return;
+                }
+                
+                onAdd({ ...formData, price: 'Ask for Price', images: previewImages });
+            };
+
+            const handleImageUpload = (index, e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        const newPreviews = [...previewImages];
+                        newPreviews[index] = reader.result;
+                        setPreviewImages(newPreviews);
+                        
+                        const newImages = [...formData.images];
+                        newImages[index] = reader.result;
+                        setFormData({ ...formData, images: newImages });
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-800" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-white">Add Product</h2>
+                                <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white">
+                                    ✕
+                                </button>
+                            </div>
+
+                            <form onSubmit={handleSubmit} className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Product Images (4 images)</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[0, 1, 2, 3].map((index) => (
+                                            <div key={index} className="relative">
+                                                <img 
+                                                    src={previewImages[index]} 
+                                                    alt={`Preview ${index + 1}`}
+                                                    className="w-full h-32 object-cover rounded-lg border-2 border-purple-600"
+                                                />
+                                                <input
+                                                    type="file"
+                                                    ref={fileInputRefs[index]}
+                                                    onChange={(e) => handleImageUpload(index, e)}
+                                                    accept="image/*"
+                                                    className="hidden"
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRefs[index].current.click()}
+                                                    className="absolute bottom-2 right-2 bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700"
+                                                >
+                                                    Change
+                                                </button>
+                                                <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
+                                                    {index + 1}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Product Name *</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        value={formData.name}
+                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        placeholder="e.g., iPhone 15 Pro Max"
+                                    />
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                                >
+                                    Add Product
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Subscription Modal - Simple version ready for Paystack/Flutterwave
+        function SubscriptionModal({ onClose }) {
+            const plans = [
+                {
+                    name: 'Basic Plan',
+                    price: 'Free',
+                    period: '',
+                    features: [
+                        { text: 'Limited WhatsApp Buyer Chats', included: false },
+                        { text: 'No Verified Badge', included: false },
+                        { text: 'No Search Ranking Boost', included: false },
+                        { text: 'Basic Product Listing', included: true },
+                        { text: 'Standard Support', included: true }
+                    ],
+                    borderColor: 'border-gray-300',
+                    buttonText: 'Current Plan',
+                    buttonColor: 'bg-gray-300 text-gray-600 cursor-default',
+                    textColor: 'text-gray-600'
+                },
+                {
+                    name: 'Verified Plus',
+                    price: '₦3,900',
+                    period: '/mo',
+                    features: [
+                        { text: 'Verified Profile Badge', included: true },
+                        { text: 'Limited WhatsApp Buyer Chats', included: true },
+                        { text: 'Priority Search Ranking', included: true }
+                    ],
+                    borderColor: 'border-blue-400',
+                    buttonText: 'Choose Plan',
+                    buttonColor: 'bg-blue-600 hover:bg-blue-700 text-white',
+                    textColor: 'text-blue-700',
+                    popular: true,
+                    badge: 'MOST POPULAR'
+                },
+                {
+                    name: 'Growth Pro Plan',
+                    price: '₦8,000',
+                    period: '/mo',
+                    features: [
+                        { text: 'UNLIMITED WhatsApp Buyer Chats', included: true, highlight: true },
+                        { text: 'Verified Profile Badge', included: true },
+                        { text: 'TOP Priority Search Ranking', included: true },
+                        { text: 'Trusted Badge', included: true },
+                        { text: 'Priority Customer Support', included: true }
+                    ],
+                    borderColor: 'border-orange-400',
+                    buttonText: 'Go Pro',
+                    buttonColor: 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white',
+                    textColor: 'text-orange-600',
+                    recommended: true,
+                    badge: 'RECOMMENDED'
+                }
+            ];
+
+            const handleUpgrade = (plan) => {
+                if (plan.buttonText === 'Current Plan') {
+                    return; // Do nothing for current plan
+                } else {
+                    alert(`Upgrade to ${plan.name} for ${plan.price}${plan.period}\n\nPayment integration coming soon! Contact admin on WhatsApp: ${WHATSAPP_NUMBER} to upgrade.`);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 p-6 z-10 rounded-t-3xl">
+                            <div className="flex justify-between items-start">
+                                <div className="text-center flex-1">
+                                    <h2 className="text-2xl md:text-3xl font-bold text-[#0f2942] leading-snug">
+                                        Choose a Growth Plan, Attract More Buyers
+                                    </h2>
+                                </div>
+                                <button 
+                                    onClick={onClose} 
+                                    className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-300 transition-colors ml-4 flex-shrink-0"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Plans Grid */}
+                        <div className="p-6 md:p-10">
+                            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
+                                {plans.map((plan, idx) => (
+                                    <div 
+                                        key={idx}
+                                        className={`bg-white rounded-2xl p-7 border-[3px] ${plan.borderColor} relative hover:shadow-2xl transition-all duration-300 ${plan.popular ? 'transform md:scale-105' : ''}`}
+                                    >
+                                        {/* Badge */}
+                                        {(plan.popular || plan.recommended) && (
+                                            <div className={`absolute -top-3 -right-3 ${plan.popular ? 'bg-gradient-to-br from-blue-500 to-blue-600' : 'bg-gradient-to-br from-orange-500 to-orange-600'} text-white text-xs font-bold px-5 py-2 rounded-full shadow-lg`}>
+                                                {plan.badge}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Plan Header */}
+                                        <div className="mb-6 text-center pb-6 border-b-2 border-gray-100">
+                                            <h3 className={`text-2xl font-bold ${plan.textColor} mb-4`}>{plan.name}</h3>
+                                            <div className="flex items-baseline justify-center gap-1">
+                                                <span className={`text-5xl md:text-6xl font-extrabold ${plan.price === 'Free' ? 'text-gray-500' : plan.textColor}`}>
+                                                    {plan.price}
+                                                </span>
+                                                {plan.period && <span className="text-gray-500 text-2xl font-medium">{plan.period}</span>}
+                                            </div>
+                                        </div>
+
+                                        {/* Features List */}
+                                        <ul className="space-y-4 mb-8">
+                                            {plan.features.map((feature, fIdx) => (
+                                                <li 
+                                                    key={fIdx} 
+                                                    className={`flex items-start gap-3 ${
+                                                        feature.highlight 
+                                                            ? 'text-orange-600 font-bold text-base' 
+                                                            : feature.included 
+                                                                ? 'text-gray-700' 
+                                                                : 'text-gray-400'
+                                                    }`}
+                                                >
+                                                    {feature.included ? (
+                                                        <svg className={`w-6 h-6 flex-shrink-0 mt-0.5 ${feature.highlight ? 'text-orange-500' : plan.textColor}`} fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                        </svg>
+                                                    ) : (
+                                                        <svg className="w-6 h-6 text-gray-300 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
+                                                        </svg>
+                                                    )}
+                                                    <span className="text-sm leading-relaxed">{feature.text}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        {/* Action Button */}
+                                        <button
+                                            onClick={() => handleUpgrade(plan)}
+                                            className={`w-full py-4 rounded-xl font-bold transition-all shadow-lg text-lg ${plan.buttonColor}`}
+                                        >
+                                            {plan.buttonText}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Footer */}
+                            <div className="mt-10 text-center space-y-3">
+                                <p className="text-gray-500 text-base">
+                                    Cancel or upgrade anytime. Billed monthly.
+                                </p>
+                                <p className="text-gray-400 text-sm">
+                                    💳 Secure payments • 24/7 Support • Money-back guarantee
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
+</body>
+</html>
