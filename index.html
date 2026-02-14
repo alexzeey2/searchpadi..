@@ -3,7 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SearchPadi</title>
+    <title>SearchPadi - Nigeria's Trusted Marketplace</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="description" content="Find verified sellers and products across Nigeria. Your trusted business directory.">
+    <meta name="theme-color" content="#7c3aed">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SearchPadi">
+    
+    <!-- PWA Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png">
+    <link rel="apple-touch-icon" href="https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png">
+    <link rel="manifest" href="manifest.json">
+    
     <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
@@ -131,6 +144,34 @@
                            0 0 20px rgba(147, 51, 234, 0.15);
             }
         }
+        
+        @keyframes shimmer {
+            0% {
+                background-position: -1000px 0;
+            }
+            100% {
+                background-position: 1000px 0;
+            }
+        }
+        
+        .shimmer {
+            animation: shimmer 2s infinite;
+            background: linear-gradient(to right, #2a2a2a 4%, #3a3a3a 25%, #2a2a2a 36%);
+            background-size: 1000px 100%;
+        }
+        
+        @keyframes slide-up {
+            from {
+                transform: translateY(100%);
+            }
+            to {
+                transform: translateY(0);
+            }
+        }
+        
+        .animate-slide-up {
+            animation: slide-up 0.3s ease-out;
+        }
     </style>
 </head>
 <body>
@@ -140,8 +181,8 @@
         const { useState, useEffect, useRef } = React;
 
         // Initialize Supabase
-        const SUPABASE_URL = 'https://fbelrsesvzkuvwztxwqw.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZiZWxyc2VzdnprdXZ3enR4d3F3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzA5MTc3OTQsImV4cCI6MjA4NjQ5Mzc5NH0.CoB60mA6b7KD-TOEEOX3iw0XWSKPr8xPvc_H-FZbtnM';
+        const SUPABASE_URL = 'https://fxjnbqymkdvuqfeagpur.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4am5icXlta2R2dXFmZWFncHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTE0NTUsImV4cCI6MjA4NjU4NzQ1NX0.qcQPStoxVPdJfAEDJ-f0xiu_EQkRnZd2c2uDIhMMAdg';
         const { createClient } = supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
@@ -155,120 +196,9 @@
 
         const WHATSAPP_NUMBER = "+2349058150220";
 
-        const sellersData = [
-            {
-                id: 1,
-                name: "TechZone Mobile Lagos",
-                category: "phones",
-                location: "Lagos Island, Nigeria",
-                bio: "Genuine phones & tablets. iPhone, Samsung, warranty included!",
-                isVerified: true,
-                whatsappNumber: WHATSAPP_NUMBER,
-                profilePhoto: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
-                views: 0,
-                products: [
-                    { 
-                        id: 101, 
-                        name: "iPhone 15 Pro Max", 
-                        price: "Ask for Price", 
-                        images: [
-                            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400",
-                            "https://images.unsplash.com/photo-1592286927505-b388e4a1a7e0?w=400",
-                            "https://images.unsplash.com/photo-1678685888221-cda773a3dcdb?w=400",
-                            "https://images.unsplash.com/photo-1510557880182-3d4d3cba35a5?w=400"
-                        ],
-                        keywords: ["iphone", "15", "pro", "max", "apple"], 
-                        likes: 0, 
-                        liked: false,
-                        isTrusted: true
-                    },
-                    { 
-                        id: 102, 
-                        name: "Samsung Galaxy S24 Ultra", 
-                        price: "Ask for Price", 
-                        images: [
-                            "https://images.unsplash.com/photo-1610945415295-d9bbf067e59c?w=400",
-                            "https://images.unsplash.com/photo-1598327105666-5b89351aff97?w=400",
-                            "https://images.unsplash.com/photo-1585060544812-6b45742d762f?w=400",
-                            "https://images.unsplash.com/photo-1511707171634-5f897ff02aa9?w=400"
-                        ],
-                        keywords: ["samsung", "galaxy", "s24", "ultra"], 
-                        likes: 0, 
-                        liked: false 
-                    }
-                ]
-            },
-            {
-                id: 2,
-                name: "Lagos Fashion Footwears",
-                category: "shoes",
-                gender: "male",
-                location: "Lagos, Nigeria",
-                bio: "Premium quality men's shoes. Italian & Turkish leather.",
-                isVerified: true,
-                whatsappNumber: WHATSAPP_NUMBER,
-                profilePhoto: "https://images.unsplash.com/photo-1560250097-0b93528c311a?w=400",
-                views: 0,
-                products: [
-                    { 
-                        id: 701, 
-                        name: "Men's Italian Leather Oxfords", 
-                        price: "Ask for Price", 
-                        images: [
-                            "https://images.unsplash.com/photo-1549298916-b41d501d3772?w=400",
-                            "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400",
-                            "https://images.unsplash.com/photo-1614252369475-531eba835eb1?w=400",
-                            "https://images.unsplash.com/photo-1582897085656-c636d006a246?w=400"
-                        ],
-                        keywords: ["oxford", "leather", "italian", "formal", "men"], 
-                        likes: 0, 
-                        liked: false 
-                    },
-                    { 
-                        id: 703, 
-                        name: "Men's Casual Loafers", 
-                        price: "Ask for Price", 
-                        images: [
-                            "https://images.unsplash.com/photo-1460353581641-37baddab0fa2?w=400",
-                            "https://images.unsplash.com/photo-1533867617858-e7b97e060509?w=400",
-                            "https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400",
-                            "https://images.unsplash.com/photo-1518049362265-d5b2a6467637?w=400"
-                        ],
-                        keywords: ["loafer", "casual", "comfort", "men"], 
-                        likes: 0, 
-                        liked: false 
-                    }
-                ]
-            },
-            {
-                id: 3,
-                name: "Ladies Fashion House",
-                category: "shoes",
-                gender: "female",
-                location: "Lekki, Lagos",
-                bio: "Elegant women's footwear. Heels, pumps, sandals.",
-                isVerified: true,
-                whatsappNumber: WHATSAPP_NUMBER,
-                profilePhoto: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400",
-                views: 0,
-                products: [
-                    { 
-                        id: 702, 
-                        name: "Ladies Classic Heels", 
-                        price: "Ask for Price", 
-                        images: [
-                            "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400",
-                            "https://images.unsplash.com/photo-1535043934128-cf0b28d52f95?w=400",
-                            "https://images.unsplash.com/photo-1566150905458-1bf1fc113f0d?w=400",
-                            "https://images.unsplash.com/photo-1596702752440-38c2c93d0b6b?w=400"
-                        ],
-                        keywords: ["heel", "classic", "formal", "women"], 
-                        likes: 0, 
-                        liked: false 
-                    }
-                ]
-            }
-        ];
+        // Default placeholder image URLs (will be used as fallbacks)
+        const DEFAULT_PROFILE_IMAGE = "https://via.placeholder.com/400x400/6366f1/ffffff?text=Profile";
+        const DEFAULT_PRODUCT_IMAGE = "https://via.placeholder.com/400x400/6366f1/ffffff?text=Product";
 
         function App() {
             const [currentUser, setCurrentUser] = useState(null);
@@ -276,6 +206,12 @@
             const [showLogin, setShowLogin] = useState(false);
             const [showAddProduct, setShowAddProduct] = useState(false);
             const [showSubscription, setShowSubscription] = useState(false);
+            
+            // Loading states
+            const [isRegistering, setIsRegistering] = useState(false);
+            const [isLoggingIn, setIsLoggingIn] = useState(false);
+            const [isUploadingProduct, setIsUploadingProduct] = useState(false);
+            const [isLoadingProductView, setIsLoadingProductView] = useState(false);
             
             const [messages, setMessages] = useState([
                 { 
@@ -299,14 +235,111 @@
             const [showNoMoreMessage, setShowNoMoreMessage] = useState(false);
             const [selectedSeller, setSelectedSeller] = useState(null);
             const [selectedProduct, setSelectedProduct] = useState(null);
-            const [sellers, setSellers] = useState(sellersData);
+            const [sellers, setSellers] = useState([]);
             const [searchQuery, setSearchQuery] = useState('');
             const [searchContext, setSearchContext] = useState(null);
             const [clickedButtons, setClickedButtons] = useState({});
+            const [isLoadingData, setIsLoadingData] = useState(true);
             const messagesEndRef = useRef(null);
 
             const PRODUCTS_PER_PAGE = 6;
             const SELLERS_PER_PAGE = 3;
+
+            // Load sellers and products from database on mount
+            useEffect(() => {
+                loadSellersFromDatabase();
+            }, []);
+
+            const loadSellersFromDatabase = async () => {
+                try {
+                    setIsLoadingData(true);
+                    
+                    // Start timer for minimum 5 seconds
+                    const startTime = Date.now();
+                    
+                    // Fetch ALL sellers (so buyers see all available sellers)
+                    const { data: sellersData, error: sellersError } = await supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (sellersError) throw sellersError;
+                    
+                    // Fetch ALL products
+                    const { data: productsData, error: productsError } = await supabaseClient
+                        .from('products')
+                        .select('*')
+                        .order('created_at', { ascending: false });
+                    
+                    if (productsError) throw productsError;
+                    
+                    // Map sellers with their products
+                    const mappedSellers = (sellersData || []).map(seller => {
+                        // Check if free trial is active
+                        const isTrusted = seller.is_free_trial && seller.free_trial_expires_at 
+                            ? new Date(seller.free_trial_expires_at) > new Date()
+                            : seller.subscription_plan === 'growth_pro';
+                        
+                        return {
+                            id: seller.id,
+                            name: seller.business_name,
+                            email: seller.email,
+                            category: seller.category,
+                            gender: seller.gender || null,
+                            location: seller.location,
+                            bio: seller.bio || "Seller on SearchPadi",
+                            isVerified: seller.is_verified || false,
+                            isTrusted: isTrusted,
+                            isFreeTrial: seller.is_free_trial || false,
+                            freeTrialExpiresAt: seller.free_trial_expires_at,
+                            whatsappNumber: seller.whatsapp,
+                            profilePhoto: seller.profile_photo || DEFAULT_PROFILE_IMAGE,
+                            views: seller.views || 0,
+                            subscription: seller.subscription_plan || 'free',
+                            products: (productsData || [])
+                                .filter(p => p.seller_id === seller.id)
+                                .map(product => ({
+                                    id: product.id,
+                                    name: product.name,
+                                    price: product.price || 'Ask for Price',
+                                    description: product.description || '',
+                                    images: product.images || [DEFAULT_PRODUCT_IMAGE],
+                                    keywords: product.keywords || [],
+                                    likes: product.likes || 0,
+                                    liked: false,
+                                    isTrusted: isTrusted && product.is_trusted
+                                }))
+                        };
+                    });
+                    
+                    // Calculate remaining time to reach 5 seconds
+                    const elapsedTime = Date.now() - startTime;
+                    const remainingTime = Math.max(5000 - elapsedTime, 0);
+                    
+                    // Wait for remaining time if less than 5 seconds have passed
+                    if (remainingTime > 0) {
+                        await new Promise(resolve => setTimeout(resolve, remainingTime));
+                    }
+                    
+                    setSellers(mappedSellers);
+                    console.log('✅ Loaded', mappedSellers.length, 'sellers with products');
+                    
+                } catch (error) {
+                    console.error('Error loading data from database:', error);
+                    
+                    // Even on error, wait for minimum 5 seconds
+                    const elapsedTime = Date.now() - startTime;
+                    const remainingTime = Math.max(5000 - elapsedTime, 0);
+                    if (remainingTime > 0) {
+                        await new Promise(resolve => setTimeout(resolve, remainingTime));
+                    }
+                    
+                    // Show empty state, not error
+                    setSellers([]);
+                } finally {
+                    setIsLoadingData(false);
+                }
+            };
 
             // Shuffle array utility function
             const shuffleArray = (array) => {
@@ -328,7 +361,7 @@
 
             // Load initial recommended products
             useEffect(() => {
-                if (currentStep === 'recommendations' && displayedProducts.length === 0) {
+                if (currentStep === 'recommendations' && displayedProducts.length === 0 && sellers.length > 0 && !isLoadingData) {
                     // Get all products from all sellers
                     const allProductsList = [];
                     sellers.forEach(seller => {
@@ -340,14 +373,40 @@
                         });
                     });
 
+                    if (allProductsList.length === 0) {
+                        // Sellers exist but no products yet
+                        setMessages([
+                            { 
+                                id: 1, 
+                                type: 'assistant', 
+                                text: 'Hello! 👋 Welcome to SearchPadi.\n\nOur sellers are setting up their products. Check back soon! ✨', 
+                                timestamp: new Date(),
+                                messageId: 1
+                            }
+                        ]);
+                        setShowProducts(false);
+                        return;
+                    }
+
                     // Shuffle and take first 4
                     const shuffled = shuffleArray(allProductsList);
                     const recommended = shuffled.slice(0, 4);
                     
                     setDisplayedProducts(recommended);
                     setShowProducts(true);
+                } else if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
+                    // Truly no sellers at all - marketplace is empty
+                    setMessages([
+                        { 
+                            id: 1, 
+                            type: 'assistant', 
+                            text: 'Hello! 👋 Welcome to SearchPadi.\n\n🚀 Be the first! Click "Become a Seller" to start.', 
+                            timestamp: new Date(),
+                            messageId: 1
+                        }
+                    ]);
                 }
-            }, [currentStep]);
+            }, [currentStep, sellers, isLoadingData]);
 
             const addMessage = (text, type = 'assistant', buttons = null) => {
                 const messageId = messages.length + 1;
@@ -425,12 +484,10 @@
                 if (searchTerms) {
                     const matchedProducts = allProds.filter(p => p.relevanceScore > 0);
                     if (matchedProducts.length > 0) {
-                        // Shuffle products with same relevance score for fairness
                         return shuffleArray(matchedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore));
                     }
                 }
                 
-                // Shuffle all products for fairness
                 return shuffleArray(allProds);
             };
 
@@ -464,7 +521,6 @@
 
                 const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
                 
-                // First, search all products by name and keywords (no category filter)
                 const allProductsAcrossCategories = [];
                 sellers.forEach(seller => {
                     seller.products.forEach(product => {
@@ -479,7 +535,6 @@
                     });
                 });
 
-                // If we found products matching name/keywords, show them
                 if (allProductsAcrossCategories.length > 0) {
                     const sortedProducts = shuffleArray(
                         allProductsAcrossCategories.sort((a, b) => b.relevanceScore - a.relevanceScore)
@@ -497,7 +552,6 @@
                     return;
                 }
 
-                // If no products found by name/keywords, try category detection
                 const detectedCategory = detectCategory(query);
                 
                 if (detectedCategory) {
@@ -529,7 +583,7 @@
                 await simulateTyping(800);
                 
                 const products = getAllProducts(category, gender, searchTerms);
-                const shuffledProducts = shuffleArray(products); // Shuffle for fairness
+                const shuffledProducts = shuffleArray(products);
 
                 if (shuffledProducts.length > 0) {
                     if (searchContext) {
@@ -585,9 +639,30 @@
                 showProductsForCategory(selectedCategory, gender, searchTerms);
             };
 
-            const handleProductClick = (product) => {
-                setSellers(prev => prev.map(s => s.id === product.seller.id ? { ...s, views: s.views + 1 } : s));
+            const handleProductClick = async (product) => {
+                setIsLoadingProductView(true);
+                
+                // Simulate brief loading for better UX
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                // Increment view count in database
+                try {
+                    const { error } = await supabaseClient
+                        .from('profiles')
+                        .update({ views: product.seller.views + 1 })
+                        .eq('id', product.seller.id);
+                    
+                    if (!error) {
+                        setSellers(prev => prev.map(s => 
+                            s.id === product.seller.id ? { ...s, views: s.views + 1 } : s
+                        ));
+                    }
+                } catch (error) {
+                    console.error('Error incrementing views:', error);
+                }
+                
                 setSelectedProduct({ ...product, seller: product.seller });
+                setIsLoadingProductView(false);
             };
 
             const handleFindMoreProducts = async () => {
@@ -659,48 +734,68 @@
                 window.open(`https://wa.me/${seller.whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
             };
 
-            const toggleProductLike = (sellerId, productId) => {
-                setSellers(prev => prev.map(seller => {
-                    if (seller.id === sellerId) {
-                        return {
-                            ...seller,
-                            products: seller.products.map(product => {
-                                if (product.id === productId) {
-                                    return {
-                                        ...product,
-                                        liked: !product.liked,
-                                        likes: product.liked ? product.likes - 1 : product.likes + 1
-                                    };
-                                }
-                                return product;
-                            })
-                        };
-                    }
-                    return seller;
-                }));
+            const toggleProductLike = async (sellerId, productId) => {
+                const seller = sellers.find(s => s.id === sellerId);
+                const product = seller?.products.find(p => p.id === productId);
                 
-                setDisplayedProducts(prev => prev.map(p => {
-                    if (p.seller.id === sellerId && p.id === productId) {
-                        return {
-                            ...p,
-                            liked: !p.liked,
-                            likes: p.liked ? p.likes - 1 : p.likes + 1
-                        };
-                    }
-                    return p;
-                }));
+                if (!product) return;
+                
+                const newLikedState = !product.liked;
+                const newLikesCount = newLikedState ? product.likes + 1 : product.likes - 1;
+                
+                try {
+                    // Update in database
+                    const { error } = await supabaseClient
+                        .from('products')
+                        .update({ likes: newLikesCount })
+                        .eq('id', productId);
+                    
+                    if (error) throw error;
+                    
+                    // Update local state
+                    setSellers(prev => prev.map(seller => {
+                        if (seller.id === sellerId) {
+                            return {
+                                ...seller,
+                                products: seller.products.map(product => {
+                                    if (product.id === productId) {
+                                        return {
+                                            ...product,
+                                            liked: newLikedState,
+                                            likes: newLikesCount
+                                        };
+                                    }
+                                    return product;
+                                })
+                            };
+                        }
+                        return seller;
+                    }));
+                    
+                    setDisplayedProducts(prev => prev.map(p => {
+                        if (p.seller.id === sellerId && p.id === productId) {
+                            return {
+                                ...p,
+                                liked: newLikedState,
+                                likes: newLikesCount
+                            };
+                        }
+                        return p;
+                    }));
 
-                // Update selectedProduct if it's currently being viewed
-                setSelectedProduct(prev => {
-                    if (prev && prev.id === productId && prev.seller.id === sellerId) {
-                        return {
-                            ...prev,
-                            liked: !prev.liked,
-                            likes: prev.liked ? prev.likes - 1 : prev.likes + 1
-                        };
-                    }
-                    return prev;
-                });
+                    setSelectedProduct(prev => {
+                        if (prev && prev.id === productId && prev.seller.id === sellerId) {
+                            return {
+                                ...prev,
+                                liked: newLikedState,
+                                likes: newLikesCount
+                            };
+                        }
+                        return prev;
+                    });
+                } catch (error) {
+                    console.error('Error updating likes:', error);
+                }
             };
 
             const openSellerProfile = (seller) => {
@@ -710,13 +805,12 @@
 
             const handleRegistration = async (formData) => {
                 console.log('🚀 Starting registration...', formData);
+                setIsRegistering(true);
                 try {
-                    // Format phone with +234
                     const formattedPhone = formatPhoneNumber(formData.whatsappNumber);
                     console.log('📱 Formatted phone:', formattedPhone);
                     console.log('📧 Email:', formData.email);
                     
-                    // Step 1: Create auth account with Supabase
                     console.log('🔐 Creating Supabase auth account...');
                     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                         email: formData.email,
@@ -736,8 +830,20 @@
                         throw new Error('User creation failed - no user returned');
                     }
                     
-                    // Step 2: Save business info to profiles table
                     console.log('💾 Saving to profiles table...');
+                    
+                    // Check if this is one of the first 5 sellers
+                    const { count: sellerCount } = await supabaseClient
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true });
+                    
+                    const isEligibleForFreeTrial = sellerCount < 5;
+                    const freeTrialExpiresAt = isEligibleForFreeTrial 
+                        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
+                        : null;
+                    
+                    console.log(`🎁 Free trial eligible: ${isEligibleForFreeTrial}, Seller count: ${sellerCount}`);
+                    
                     const profileData = {
                         id: authData.user.id,
                         business_name: formData.businessName,
@@ -748,9 +854,12 @@
                         phone: formattedPhone,
                         whatsapp: formattedPhone,
                         bio: formData.bio || "New seller on SearchPadi",
-                        profile_photo: formData.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                        profile_photo: formData.profilePhoto || DEFAULT_PROFILE_IMAGE,
                         subscription_plan: 'free',
-                        is_verified: false,
+                        is_verified: isEligibleForFreeTrial,
+                        is_free_trial: isEligibleForFreeTrial,
+                        free_trial_expires_at: freeTrialExpiresAt,
+                        views: 0,
                         created_at: new Date().toISOString()
                     };
                     
@@ -768,7 +877,6 @@
                         throw new Error(`Database error: ${profileError.message}`);
                     }
                     
-                    // Step 3: Create local seller object and set current user
                     const newSeller = {
                         id: authData.user.id,
                         name: formData.businessName,
@@ -777,9 +885,12 @@
                         gender: formData.gender || null,
                         location: formData.location,
                         bio: formData.bio || "New seller on SearchPadi",
-                        isVerified: false,
+                        isVerified: isEligibleForFreeTrial,
+                        isTrusted: isEligibleForFreeTrial,
+                        isFreeTrial: isEligibleForFreeTrial,
+                        freeTrialExpiresAt: freeTrialExpiresAt,
                         whatsappNumber: formattedPhone,
-                        profilePhoto: formData.profilePhoto || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
+                        profilePhoto: formData.profilePhoto || DEFAULT_PROFILE_IMAGE,
                         views: 0,
                         products: [],
                         subscription: 'free'
@@ -789,7 +900,12 @@
                     setCurrentUser({ type: 'seller', data: newSeller });
                     setShowRegistration(false);
                     console.log('🎉 Registration complete!');
-                    alert('✅ Account created successfully! Welcome to SearchPadi!');
+                    
+                    if (isEligibleForFreeTrial) {
+                        alert('🎉 Congratulations! You\'re one of our first 5 sellers!\n\nYou\'ve received:\n✅ Verified Profile Badge\n✅ Product Trusted Badge\n\nValid for 30 days - FREE!');
+                    } else {
+                        alert('✅ Account created successfully! Welcome to SearchPadi!');
+                    }
                 } catch (error) {
                     console.error('❌ Registration error:', error);
                     let errorMessage = '';
@@ -804,61 +920,132 @@
                     
                     alert('❌ ' + errorMessage);
                     throw error;
+                } finally {
+                    setIsRegistering(false);
                 }
             };
 
-            const handleAddProduct = (productData) => {
-                const newProduct = {
-                    id: Date.now(),
-                    name: productData.name,
-                    price: productData.price,
-                    images: productData.images,
-                    keywords: productData.name.toLowerCase().split(' '),
-                    likes: 0,
-                    liked: false
-                };
-
-                setSellers(prev => prev.map(s => {
-                    if (s.id === currentUser.data.id) {
-                        return {
-                            ...s,
-                            products: [...s.products, newProduct]
-                        };
+            const handleAddProduct = async (productData) => {
+                setIsUploadingProduct(true);
+                try {
+                    // Check if seller has free trial or Growth Pro subscription
+                    const { data: sellerProfile } = await supabaseClient
+                        .from('profiles')
+                        .select('is_free_trial, free_trial_expires_at, subscription_plan')
+                        .eq('id', currentUser.data.id)
+                        .single();
+                    
+                    // Determine if product should have trusted badge
+                    let isTrusted = false;
+                    if (sellerProfile) {
+                        // Check if free trial is active
+                        if (sellerProfile.is_free_trial && sellerProfile.free_trial_expires_at) {
+                            const expiryDate = new Date(sellerProfile.free_trial_expires_at);
+                            const now = new Date();
+                            if (expiryDate > now) {
+                                isTrusted = true;
+                            }
+                        }
+                        // Check if Growth Pro subscription
+                        if (sellerProfile.subscription_plan === 'growth_pro') {
+                            isTrusted = true;
+                        }
                     }
-                    return s;
-                }));
+                    
+                    const newProductData = {
+                        seller_id: currentUser.data.id,
+                        name: productData.name,
+                        description: productData.description || '',
+                        price: 'Ask for Price',
+                        images: productData.images,
+                        keywords: productData.name.toLowerCase().split(' ').filter(w => w.length > 2),
+                        likes: 0,
+                        is_trusted: isTrusted,
+                        created_at: new Date().toISOString()
+                    };
+                    
+                    const { data: insertedProduct, error } = await supabaseClient
+                        .from('products')
+                        .insert([newProductData])
+                        .select()
+                        .single();
+                    
+                    if (error) throw error;
+                    
+                    const newProduct = {
+                        id: insertedProduct.id,
+                        name: insertedProduct.name,
+                        description: insertedProduct.description,
+                        price: insertedProduct.price,
+                        images: insertedProduct.images,
+                        keywords: insertedProduct.keywords,
+                        likes: insertedProduct.likes,
+                        liked: false,
+                        isTrusted: insertedProduct.is_trusted
+                    };
 
-                setCurrentUser(prev => ({
-                    ...prev,
-                    data: {
-                        ...prev.data,
-                        products: [...prev.data.products, newProduct]
-                    }
-                }));
+                    setSellers(prev => prev.map(s => {
+                        if (s.id === currentUser.data.id) {
+                            return {
+                                ...s,
+                                products: [...s.products, newProduct]
+                            };
+                        }
+                        return s;
+                    }));
 
-                setShowAddProduct(false);
+                    setCurrentUser(prev => ({
+                        ...prev,
+                        data: {
+                            ...prev.data,
+                            products: [...prev.data.products, newProduct]
+                        }
+                    }));
+
+                    setShowAddProduct(false);
+                    alert('✅ Product added successfully!');
+                } catch (error) {
+                    console.error('Error adding product:', error);
+                    alert('❌ Failed to add product. Please try again.');
+                } finally {
+                    setIsUploadingProduct(false);
+                }
             };
 
-            const handleDeleteProduct = (productId) => {
+            const handleDeleteProduct = async (productId) => {
                 if (!confirm('Are you sure you want to delete this product?')) return;
 
-                setSellers(prev => prev.map(s => {
-                    if (s.id === currentUser.data.id) {
-                        return {
-                            ...s,
-                            products: s.products.filter(p => p.id !== productId)
-                        };
-                    }
-                    return s;
-                }));
+                try {
+                    const { error } = await supabaseClient
+                        .from('products')
+                        .delete()
+                        .eq('id', productId);
+                    
+                    if (error) throw error;
+                    
+                    setSellers(prev => prev.map(s => {
+                        if (s.id === currentUser.data.id) {
+                            return {
+                                ...s,
+                                products: s.products.filter(p => p.id !== productId)
+                            };
+                        }
+                        return s;
+                    }));
 
-                setCurrentUser(prev => ({
-                    ...prev,
-                    data: {
-                        ...prev.data,
-                        products: prev.data.products.filter(p => p.id !== productId)
-                    }
-                }));
+                    setCurrentUser(prev => ({
+                        ...prev,
+                        data: {
+                            ...prev.data,
+                            products: prev.data.products.filter(p => p.id !== productId)
+                        }
+                    }));
+                    
+                    alert('✅ Product deleted successfully!');
+                } catch (error) {
+                    console.error('Error deleting product:', error);
+                    alert('❌ Failed to delete product. Please try again.');
+                }
             };
 
             const filteredSellers = selectedCategory && showSellers 
@@ -873,6 +1060,36 @@
             const updatedCurrentUser = currentUser?.type === 'seller' 
                 ? sellers.find(s => s.id === currentUser.data.id) 
                 : null;
+
+            if (isLoadingData) {
+                return (
+                    <div className="chat-container bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+                        <div className="flex items-center justify-center h-full">
+                            <div className="text-center px-6">
+                                {/* Logo */}
+                                <div className="mb-8">
+                                    <div className="w-24 h-24 mx-auto mb-6">
+                                        <img 
+                                            src="https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png"
+                                            alt="SearchPadi Logo"
+                                            className="w-full h-full object-contain"
+                                        />
+                                    </div>
+                                    <h1 className="text-4xl font-bold text-white mb-3">SearchPadi</h1>
+                                    <p className="text-purple-300 text-base">Nigeria's Trusted Marketplace</p>
+                                </div>
+                                
+                                {/* Circular Spinner */}
+                                <div className="flex justify-center mb-6">
+                                    <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                                </div>
+                                
+                                <p className="text-purple-200 text-sm animate-pulse">Loading verified sellers...</p>
+                            </div>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="chat-container">
@@ -918,9 +1135,11 @@
                             <div key={message.id} className="message-enter relative z-10">
                                 {message.type === 'assistant' ? (
                                     <div className="flex gap-2">
-                                        <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                                            A
-                                        </div>
+                                        <img 
+                                            src="https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/b7151cfc-1839-429e-9af1-61dfce3ddc9d.jpg"
+                                            alt="SearchPadi Assistant"
+                                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                        />
                                         <div className="flex-1">
                                             <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none p-3 max-w-[85%] inline-block shadow-sm">
                                                 <p className="text-white whitespace-pre-line">{message.text}</p>
@@ -958,9 +1177,11 @@
 
                         {isTyping && (
                             <div className="flex gap-2 relative z-10">
-                                <div className="w-8 h-8 rounded-full bg-purple-600 flex items-center justify-center text-white text-sm font-bold flex-shrink-0">
-                                    A
-                                </div>
+                                <img 
+                                    src="https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/b7151cfc-1839-429e-9af1-61dfce3ddc9d.jpg"
+                                    alt="SearchPadi Assistant"
+                                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                />
                                 <div className="typing-indicator">
                                     <div className="typing-dot"></div>
                                     <div className="typing-dot"></div>
@@ -982,16 +1203,19 @@
                                                 src={product.images[0]}
                                                 alt={product.name}
                                                 className="w-full h-32 object-cover"
+                                                loading="lazy"
                                             />
-                                            {product.isTrusted && (
-                                                <div className="absolute top-2 left-2 bg-gradient-to-r from-green-500 to-green-600 text-white text-xs font-bold px-2 py-1 rounded-full shadow-lg flex items-center gap-1">
-                                                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
-                                                        <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                                                    </svg>
-                                                    Trusted
-                                                </div>
-                                            )}
                                             <div className="p-3">
+                                                {product.isTrusted && (
+                                                    <div className="mb-2">
+                                                        <div className="inline-flex bg-gradient-to-r from-green-500 to-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow-lg items-center gap-1">
+                                                            <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                            </svg>
+                                                            Trusted
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <p className="text-sm font-bold text-white line-clamp-2 mb-1">{product.name}</p>
                                                 <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
                                                     <img 
@@ -1068,6 +1292,7 @@
                                                     src={seller.profilePhoto} 
                                                     alt={seller.name}
                                                     className="w-16 h-16 rounded-full object-cover border-2 border-purple-600"
+                                                    loading="lazy"
                                                 />
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2">
@@ -1158,6 +1383,19 @@
                     )}
 
                     {/* Product Detail View */}
+                    {/* Loading overlay for product view */}
+                    {isLoadingProductView && (
+                        <div className="fixed inset-0 bg-black/50 z-[100] flex items-center justify-center">
+                            <div className="bg-[#2a2a2a] rounded-2xl p-6 flex flex-col items-center gap-3">
+                                <svg className="animate-spin h-10 w-10 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <p className="text-white font-medium">Loading product...</p>
+                            </div>
+                        </div>
+                    )}
+
                     {selectedProduct && (
                         <ProductDetail 
                             product={selectedProduct}
@@ -1180,7 +1418,7 @@
                         setShowRegistration(false);
                         setShowLogin(true);
                     }} />}
-                    {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} />}
+                    {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
                     {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} />}
                 </div>
             );
@@ -1251,7 +1489,7 @@
                                         className="w-full bg-gradient-to-r from-purple-600 to-purple-700 text-white py-3 rounded-lg font-bold hover:from-purple-700 hover:to-purple-800 transition-colors flex items-center justify-center gap-2"
                                     >
                                         <span>🚀</span>
-                                        {seller.subscription === 'free' ? 'Upgrade to Premium' : 'Manage Subscription'}
+                                        {seller.subscription === 'free' ? 'Attract Customers' : 'Manage Subscription'}
                                     </button>
                                 ) : (
                                     <button
@@ -1306,6 +1544,16 @@
                                                         ✕
                                                     </button>
                                                 )}
+                                                {product.isTrusted && (
+                                                    <div className="mb-1">
+                                                        <div className="inline-flex bg-gradient-to-r from-green-500 to-green-600 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full shadow-lg items-center gap-0.5">
+                                                            <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
+                                                                <path fillRule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                                            </svg>
+                                                            Trusted
+                                                        </div>
+                                                    </div>
+                                                )}
                                                 <p className="text-sm font-semibold truncate text-white">{product.name}</p>
                                             </div>
                                         ))}
@@ -1334,6 +1582,7 @@
             const [currentIndex, setCurrentIndex] = useState(0);
             const [touchStart, setTouchStart] = useState(0);
             const [touchEnd, setTouchEnd] = useState(0);
+            const [showDescriptionModal, setShowDescriptionModal] = useState(false);
 
             const minSwipeDistance = 50;
 
@@ -1456,16 +1705,32 @@
                             </div>
                         </div>
 
-                        {/* Bottom Bar with Product Name and Buttons */}
+                        {/* Bottom Bar with About Product, Product Name and Buttons */}
                         <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/80 to-transparent p-5 pb-6" onClick={(e) => e.stopPropagation()}>
+                            
+                            {/* About Product Button - ON TOP */}
+                            {product.description && (
+                                <button
+                                    onClick={() => setShowDescriptionModal(true)}
+                                    className="w-full mb-3 bg-white/10 backdrop-blur-sm text-white py-3 rounded-lg font-medium text-sm hover:bg-white/20 transition-all flex items-center justify-center gap-2"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    About Product
+                                </button>
+                            )}
+                            
+                            {/* Product Name */}
                             <div className="mb-3">
                                 <h3 className="text-xl font-bold text-white">{product.name}</h3>
                             </div>
 
+                            {/* Action Buttons */}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={() => onWhatsApp(product.seller, product)}
-                                    className="flex-1 bg-green-500 text-white py-3 rounded-lg font-semibold text-sm hover:bg-green-600 active:scale-98 transition-all shadow-lg flex items-center justify-center gap-2"
+                                    className="flex-1 bg-green-500 text-black py-3 rounded-lg font-semibold text-sm hover:bg-green-600 active:scale-98 transition-all shadow-lg flex items-center justify-center gap-2"
                                 >
                                     <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
                                         <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
@@ -1485,6 +1750,42 @@
                                 </button>
                             </div>
                         </div>
+                        
+                        {/* Description Modal - Slides up from bottom */}
+                        {showDescriptionModal && (
+                            <div 
+                                className="fixed inset-0 bg-black/50 z-[70] flex items-end"
+                                onClick={() => setShowDescriptionModal(false)}
+                            >
+                                <div 
+                                    className="bg-[#1a1a1a] w-full rounded-t-3xl max-h-[70vh] overflow-y-auto animate-slide-up"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {/* Drag Handle */}
+                                    <div className="flex justify-center pt-3 pb-2">
+                                        <div className="w-12 h-1 bg-gray-600 rounded-full"></div>
+                                    </div>
+                                    
+                                    {/* Modal Header */}
+                                    <div className="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                                        <h3 className="text-xl font-bold text-white">Product Description</h3>
+                                        <button 
+                                            onClick={() => setShowDescriptionModal(false)}
+                                            className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white hover:bg-gray-700"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                    
+                                    {/* Description Content */}
+                                    <div className="px-6 py-6">
+                                        <p className="text-gray-300 text-base leading-relaxed whitespace-pre-line">
+                                            {product.description || 'No description available.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             );
@@ -1503,7 +1804,7 @@
                 password: '',
                 bio: ''
             });
-            const [previewPhoto, setPreviewPhoto] = useState('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400');
+            const [previewPhoto, setPreviewPhoto] = useState(DEFAULT_PROFILE_IMAGE);
             const [isLoading, setIsLoading] = useState(false);
             const [error, setError] = useState('');
             const fileInputRef = useRef(null);
@@ -1517,7 +1818,6 @@
                     return;
                 }
                 
-                // Validate email format
                 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
                 if (!emailRegex.test(formData.email)) {
                     setError('Please enter a valid email address');
@@ -1539,15 +1839,62 @@
                 }
             };
 
-            const handleImageUpload = (e) => {
+            const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            // Resize if larger than maxWidth
+                            if (width > maxWidth) {
+                                height = (height * maxWidth) / width;
+                                width = maxWidth;
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            // Convert to base64 with compression
+                            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                            resolve(compressedBase64);
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            };
+
+            const handleImageUpload = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
-                        setPreviewPhoto(reader.result);
-                        setFormData({ ...formData, profilePhoto: reader.result });
-                    };
-                    reader.readAsDataURL(file);
+                    // Validate file size (max 5MB before compression)
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('Image size must be less than 5MB');
+                        return;
+                    }
+                    
+                    try {
+                        // Show loading state
+                        setPreviewPhoto('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white">Loading...</text></svg>');
+                        
+                        // Compress image
+                        const compressedBase64 = await compressImage(file, 800, 0.7);
+                        
+                        setPreviewPhoto(compressedBase64);
+                        setFormData({ ...formData, profilePhoto: compressedBase64 });
+                    } catch (error) {
+                        console.error('Image compression error:', error);
+                        alert('Failed to process image. Please try another image.');
+                    }
                 }
             };
 
@@ -1589,6 +1936,7 @@
                                     >
                                         Upload Photo
                                     </button>
+                                    <p className="text-xs text-gray-400 mt-2">Max 5MB (auto-compressed to ~200KB)</p>
                                 </div>
 
                                 <div>
@@ -1710,8 +2058,14 @@
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
+                                    {isLoading && (
+                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    )}
                                     {isLoading ? 'Creating Account...' : 'Register as Seller'}
                                 </button>
                                 
@@ -1768,7 +2122,6 @@
                     
                     if (authError) throw authError;
                     
-                    // Get user profile from database
                     const { data: profile, error: profileError } = await supabaseClient
                         .from('profiles')
                         .select('*')
@@ -1780,7 +2133,12 @@
                         throw new Error('Could not load profile. Please contact support.');
                     }
                     
-                    // Create seller object
+                    // Fetch user's products
+                    const { data: products, error: productsError } = await supabaseClient
+                        .from('products')
+                        .select('*')
+                        .eq('seller_id', profile.id);
+                    
                     const sellerData = {
                         id: profile.id,
                         name: profile.business_name,
@@ -1791,9 +2149,18 @@
                         bio: profile.bio || "Seller on SearchPadi",
                         isVerified: profile.is_verified || false,
                         whatsappNumber: profile.whatsapp,
-                        profilePhoto: profile.profile_photo || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400",
-                        views: 0,
-                        products: [],
+                        profilePhoto: profile.profile_photo || DEFAULT_PROFILE_IMAGE,
+                        views: profile.views || 0,
+                        products: (products || []).map(p => ({
+                            id: p.id,
+                            name: p.name,
+                            price: p.price || 'Ask for Price',
+                            images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                            keywords: p.keywords || [],
+                            likes: p.likes || 0,
+                            liked: false,
+                            isTrusted: p.is_trusted || false
+                        })),
                         subscription: profile.subscription_plan || 'free'
                     };
                     
@@ -1853,8 +2220,14 @@
                                 <button
                                     type="submit"
                                     disabled={isLoading}
-                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
+                                    {isLoading && (
+                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    )}
                                     {isLoading ? 'Logging in...' : 'Login'}
                                 </button>
                                 
@@ -1878,18 +2251,52 @@
         }
 
         // Add Product Modal with 4 Images
-        function AddProductModal({ onClose, onAdd }) {
+        function AddProductModal({ onClose, onAdd, isUploading }) {
             const [formData, setFormData] = useState({
                 name: '',
+                description: '',
                 images: ['', '', '', '']
             });
             const [previewImages, setPreviewImages] = useState([
-                'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400',
-                'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400',
-                'https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=400',
-                'https://images.unsplash.com/photo-1560343090-f0409e92791a?w=400'
+                DEFAULT_PRODUCT_IMAGE,
+                DEFAULT_PRODUCT_IMAGE,
+                DEFAULT_PRODUCT_IMAGE,
+                DEFAULT_PRODUCT_IMAGE
             ]);
+            const [uploadingIndex, setUploadingIndex] = useState(null);
             const fileInputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+
+            const compressImage = (file, maxWidth = 800, quality = 0.7) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = new Image();
+                        img.onload = () => {
+                            const canvas = document.createElement('canvas');
+                            let width = img.width;
+                            let height = img.height;
+                            
+                            if (width > maxWidth) {
+                                height = (height * maxWidth) / width;
+                                width = maxWidth;
+                            }
+                            
+                            canvas.width = width;
+                            canvas.height = height;
+                            
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            
+                            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
+                            resolve(compressedBase64);
+                        };
+                        img.onerror = reject;
+                        img.src = e.target.result;
+                    };
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+            };
 
             const handleSubmit = (e) => {
                 e.preventDefault();
@@ -1898,23 +2305,40 @@
                     return;
                 }
                 
-                onAdd({ ...formData, price: 'Ask for Price', images: previewImages });
+                onAdd({ 
+                    ...formData, 
+                    price: 'Ask for Price', 
+                    images: previewImages,
+                    description: formData.description 
+                });
             };
 
-            const handleImageUpload = (index, e) => {
+            const handleImageUpload = async (index, e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    const reader = new FileReader();
-                    reader.onloadend = () => {
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('Image size must be less than 5MB');
+                        return;
+                    }
+                    
+                    try {
+                        setUploadingIndex(index);
+                        const compressedBase64 = await compressImage(file, 800, 0.7);
+                        
                         const newPreviews = [...previewImages];
-                        newPreviews[index] = reader.result;
+                        newPreviews[index] = compressedBase64;
                         setPreviewImages(newPreviews);
                         
                         const newImages = [...formData.images];
-                        newImages[index] = reader.result;
+                        newImages[index] = compressedBase64;
                         setFormData({ ...formData, images: newImages });
-                    };
-                    reader.readAsDataURL(file);
+                        
+                        setUploadingIndex(null);
+                    } catch (error) {
+                        console.error('Image compression error:', error);
+                        alert('Failed to process image. Please try another image.');
+                        setUploadingIndex(null);
+                    }
                 }
             };
 
@@ -1931,7 +2355,8 @@
 
                             <form onSubmit={handleSubmit} className="space-y-4">
                                 <div>
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">Product Images (4 images)</label>
+                                    <label className="block text-sm font-medium text-gray-300 mb-2">Product Images (4 images) *</label>
+                                    <p className="text-xs text-gray-400 mb-2">Upload real product photos (Max 5MB each, auto-compressed)</p>
                                     <div className="grid grid-cols-2 gap-2">
                                         {[0, 1, 2, 3].map((index) => (
                                             <div key={index} className="relative">
@@ -1950,9 +2375,10 @@
                                                 <button
                                                     type="button"
                                                     onClick={() => fileInputRefs[index].current.click()}
-                                                    className="absolute bottom-2 right-2 bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700"
+                                                    disabled={uploadingIndex === index}
+                                                    className="absolute bottom-2 right-2 bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700 disabled:bg-gray-600"
                                                 >
-                                                    Change
+                                                    {uploadingIndex === index ? '...' : (previewImages[index] === DEFAULT_PRODUCT_IMAGE ? 'Upload' : 'Change')}
                                                 </button>
                                                 <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
                                                     {index + 1}
@@ -1974,11 +2400,30 @@
                                     />
                                 </div>
 
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-300 mb-1">Product Description (Optional)</label>
+                                    <textarea
+                                        value={formData.description}
+                                        onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                                        className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                        rows="4"
+                                        placeholder="Describe your product: features, condition, specifications, etc."
+                                    />
+                                    <p className="text-xs text-gray-400 mt-1">This will be shown in "About Product" section</p>
+                                </div>
+
                                 <button
                                     type="submit"
-                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                                    disabled={isUploading}
+                                    className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                                 >
-                                    Add Product
+                                    {isUploading && (
+                                        <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                    )}
+                                    {isUploading ? 'Uploading...' : 'Add Product'}
                                 </button>
                             </form>
                         </div>
@@ -1987,7 +2432,7 @@
             );
         }
 
-        // Subscription Modal - Simple version ready for Paystack/Flutterwave
+        // Subscription Modal
         function SubscriptionModal({ onClose }) {
             const plans = [
                 {
@@ -2012,8 +2457,8 @@
                     period: '/mo',
                     features: [
                         { text: 'Verified Profile Badge', included: true },
-                        { text: 'Limited WhatsApp Buyer Chats', included: true },
-                        { text: 'Priority Search Ranking', included: true }
+                        { text: 'Standard Product Listings', included: true },
+                        { text: 'Basic Search Visibility', included: true }
                     ],
                     borderColor: 'border-blue-400',
                     buttonText: 'Choose Plan',
@@ -2024,13 +2469,12 @@
                 },
                 {
                     name: 'Growth Pro Plan',
-                    price: '₦8,000',
+                    price: '₦9,900',
                     period: '/mo',
                     features: [
-                        { text: 'UNLIMITED WhatsApp Buyer Chats', included: true, highlight: true },
-                        { text: 'Verified Profile Badge', included: true },
-                        { text: 'TOP Priority Search Ranking', included: true },
-                        { text: 'Trusted Badge', included: true },
+                        { text: 'Verified Profile Badge', included: true, highlight: true },
+                        { text: 'Product Trusted Badge', included: true, highlight: true },
+                        { text: 'Enhanced Product Visibility', included: true },
                         { text: 'Priority Customer Support', included: true }
                     ],
                     borderColor: 'border-orange-400',
@@ -2044,7 +2488,7 @@
 
             const handleUpgrade = (plan) => {
                 if (plan.buttonText === 'Current Plan') {
-                    return; // Do nothing for current plan
+                    return;
                 } else {
                     alert(`Upgrade to ${plan.name} for ${plan.price}${plan.period}\n\nPayment integration coming soon! Contact admin on WhatsApp: ${WHATSAPP_NUMBER} to upgrade.`);
                 }
@@ -2053,7 +2497,6 @@
             return (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4" onClick={onClose}>
                     <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                        {/* Header */}
                         <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 p-6 z-10 rounded-t-3xl">
                             <div className="flex justify-between items-start">
                                 <div className="text-center flex-1">
@@ -2070,7 +2513,6 @@
                             </div>
                         </div>
 
-                        {/* Plans Grid */}
                         <div className="p-6 md:p-10">
                             <div className="grid md:grid-cols-3 gap-6 md:gap-8">
                                 {plans.map((plan, idx) => (
@@ -2078,14 +2520,12 @@
                                         key={idx}
                                         className={`bg-white rounded-2xl p-7 border-[3px] ${plan.borderColor} relative hover:shadow-2xl transition-all duration-300 ${plan.popular ? 'transform md:scale-105' : ''}`}
                                     >
-                                        {/* Badge */}
                                         {(plan.popular || plan.recommended) && (
                                             <div className={`absolute -top-3 -right-3 ${plan.popular ? 'bg-gradient-to-br from-blue-500 to-blue-600' : 'bg-gradient-to-br from-orange-500 to-orange-600'} text-white text-xs font-bold px-5 py-2 rounded-full shadow-lg`}>
                                                 {plan.badge}
                                             </div>
                                         )}
                                         
-                                        {/* Plan Header */}
                                         <div className="mb-6 text-center pb-6 border-b-2 border-gray-100">
                                             <h3 className={`text-2xl font-bold ${plan.textColor} mb-4`}>{plan.name}</h3>
                                             <div className="flex items-baseline justify-center gap-1">
@@ -2096,7 +2536,6 @@
                                             </div>
                                         </div>
 
-                                        {/* Features List */}
                                         <ul className="space-y-4 mb-8">
                                             {plan.features.map((feature, fIdx) => (
                                                 <li 
@@ -2123,7 +2562,6 @@
                                             ))}
                                         </ul>
 
-                                        {/* Action Button */}
                                         <button
                                             onClick={() => handleUpgrade(plan)}
                                             className={`w-full py-4 rounded-xl font-bold transition-all shadow-lg text-lg ${plan.buttonColor}`}
@@ -2134,7 +2572,6 @@
                                 ))}
                             </div>
 
-                            {/* Footer */}
                             <div className="mt-10 text-center space-y-3">
                                 <p className="text-gray-500 text-base">
                                     Cancel or upgrade anytime. Billed monthly.
@@ -2150,6 +2587,19 @@
         }
 
         ReactDOM.render(<App />, document.getElementById('root'));
+        
+        // Register Service Worker for PWA
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(registration => {
+                        console.log('✅ Service Worker registered:', registration);
+                    })
+                    .catch(error => {
+                        console.log('❌ Service Worker registration failed:', error);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
