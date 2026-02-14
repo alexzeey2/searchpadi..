@@ -123,8 +123,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'SearchPadi';
   const options = {
     body: data.body || 'New updates available!',
-    icon: 'https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png',
-    badge: 'https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png',
+    icon: 'https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/dbd35a3c-753b-47ee-aa17-ceff6698b9f6.jpg',
+    badge: 'https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/dbd35a3c-753b-47ee-aa17-ceff6698b9f6.jpg',
     vibrate: [200, 100, 200],
     data: data
   };

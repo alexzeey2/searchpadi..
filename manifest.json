@@ -1,7 +1,7 @@
 {
-  "name": "SearchPadi - Nigeria's Trusted Marketplace",
+  "name": "SearchPadi - Your Search Padi for Trusted Sellers",
   "short_name": "SearchPadi",
-  "description": "Find verified sellers and products across Nigeria. Your trusted business directory.",
+  "description": "Your search padi for trusted sellers. Find verified sellers across Nigeria with AI-powered assistance.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#1a1a1a",
@@ -10,15 +10,15 @@
   "scope": "/",
   "icons": [
     {
-      "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png",
+      "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/dbd35a3c-753b-47ee-aa17-ceff6698b9f6.jpg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     },
     {
-      "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png",
+      "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/dbd35a3c-753b-47ee-aa17-ceff6698b9f6.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ],
@@ -31,7 +31,7 @@
       "url": "/?action=search",
       "icons": [
         {
-          "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png",
+          "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/dbd35a3c-753b-47ee-aa17-ceff6698b9f6.jpg",
           "sizes": "192x192"
         }
       ]
@@ -43,7 +43,7 @@
       "url": "/?action=register",
       "icons": [
         {
-          "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/675e4d2b-c3c2-46d1-bca8-b00cc6dd06ef.png",
+          "src": "https://i.supaimg.com/9e62019b-cf4f-4010-9667-57fc56b2769e/dbd35a3c-753b-47ee-aa17-ceff6698b9f6.jpg",
           "sizes": "192x192"
         }
       ]
