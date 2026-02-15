@@ -217,7 +217,7 @@
                 { 
                     id: 1, 
                     type: 'assistant', 
-                    text: 'Hello! 👋 Welcome to SearchPadi.\n\nYou might like these handpicked items just for you! ✨', 
+                    text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\nYou might like these handpicked items just for you! ✨', 
                     timestamp: new Date(),
                     messageId: 1
                 }
@@ -379,7 +379,7 @@
                             { 
                                 id: 1, 
                                 type: 'assistant', 
-                                text: 'Hello! 👋 Welcome to SearchPadi.\n\nOur sellers are setting up their products. Check back soon! ✨', 
+                                text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\nOur sellers are setting up their products. Check back soon! ✨', 
                                 timestamp: new Date(),
                                 messageId: 1
                             }
@@ -400,7 +400,7 @@
                         { 
                             id: 1, 
                             type: 'assistant', 
-                            text: 'Hello! 👋 Welcome to SearchPadi.\n\n🚀 Be the first! Click "Become a Seller" to start.', 
+                            text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\n🚀 Be the first! Click "Become a Seller" to start.', 
                             timestamp: new Date(),
                             messageId: 1
                         }
@@ -540,7 +540,7 @@
                         allProductsAcrossCategories.sort((a, b) => b.relevanceScore - a.relevanceScore)
                     );
                     
-                    addMessage(`Excellent! Here are the best matches for "${query}" 🎯`, 'assistant');
+                    addMessage(`Here's what I found!\nDo they match what you're looking for?`, 'assistant');
                     await simulateTyping(1000);
                     
                     setAllProducts(sortedProducts);
@@ -587,9 +587,9 @@
 
                 if (shuffledProducts.length > 0) {
                     if (searchContext) {
-                        addMessage(`Excellent! Here are the best matches for "${searchContext.query}" 🎯`, 'assistant');
+                        addMessage(`Here's what I found!\nDo they match what you're looking for?`, 'assistant');
                     } else {
-                        addMessage(`Excellent! Here are available products 🎉`, 'assistant');
+                        addMessage(`Here's what I found!\nDo they match what you're looking for?`, 'assistant');
                     }
                     await simulateTyping(1000);
                     
@@ -704,7 +704,7 @@
                     { 
                         id: 1, 
                         type: 'assistant', 
-                        text: 'Hello! 👋 Welcome to SearchPadi.\n\nYou might like these handpicked items just for you! ✨', 
+                        text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\nYou might like these handpicked items just for you! ✨', 
                         timestamp: new Date(),
                         messageId: 1
                     }
@@ -1241,7 +1241,7 @@
                                                     { 
                                                         id: 1, 
                                                         type: 'assistant', 
-                                                        text: 'Hello! 👋 Welcome to SearchPadi - Nigeria\'s trusted business directory.\n\nWhat are you looking for today?', 
+                                                        text: 'So, what are you looking for today?', 
                                                         timestamp: new Date(),
                                                         buttons: [
                                                             { text: '📱 Phones & Tablets', value: 'phones' },
