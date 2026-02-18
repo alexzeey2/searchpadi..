@@ -207,6 +207,12 @@
             const [showAddProduct, setShowAddProduct] = useState(false);
             const [showSubscription, setShowSubscription] = useState(false);
             
+            // Admin states
+            const [showAdminLogin, setShowAdminLogin] = useState(false);
+            const [showAdminDashboard, setShowAdminDashboard] = useState(false);
+            const [isAdmin, setIsAdmin] = useState(false);
+            const [logoHoldTimer, setLogoHoldTimer] = useState(null);
+            
             // Loading states
             const [isRegistering, setIsRegistering] = useState(false);
             const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -729,9 +735,10 @@
                 setSelectedSeller(seller);
             };
 
+            const [whatsappModal, setWhatsappModal] = useState(null); // { seller, product }
+            
             const handleWhatsAppMessage = (seller, product = null) => {
-                const message = `Hi, I saw a product you posted on SearchPadi, is it still available?`;
-                window.open(`https://wa.me/${seller.whatsappNumber}?text=${encodeURIComponent(message)}`, '_blank');
+                setWhatsappModal({ seller, product });
             };
 
             const toggleProductLike = async (sellerId, productId) => {
@@ -808,10 +815,7 @@
                 setIsRegistering(true);
                 try {
                     const formattedPhone = formatPhoneNumber(formData.whatsappNumber);
-                    console.log('📱 Formatted phone:', formattedPhone);
-                    console.log('📧 Email:', formData.email);
                     
-                    console.log('🔐 Creating Supabase auth account...');
                     const { data: authData, error: authError } = await supabaseClient.auth.signUp({
                         email: formData.email,
                         password: formData.password,
@@ -823,26 +827,28 @@
                         }
                     });
                     
-                    console.log('✅ Auth response:', authData, authError);
                     if (authError) throw authError;
+                    if (!authData.user) throw new Error('User creation failed');
                     
-                    if (!authData.user) {
-                        throw new Error('User creation failed - no user returned');
+                    // Check free verified count from app_settings
+                    const { data: appSettings } = await supabaseClient
+                        .from('app_settings')
+                        .select('free_verified_count')
+                        .eq('id', 1)
+                        .single();
+                    
+                    const freeCount = appSettings?.free_verified_count || 0;
+                    const isFreeVerified = freeCount < 5;
+                    
+                    // If free verified, increment the count
+                    if (isFreeVerified) {
+                        await supabaseClient
+                            .from('app_settings')
+                            .update({ free_verified_count: freeCount + 1 })
+                            .eq('id', 1);
                     }
                     
-                    console.log('💾 Saving to profiles table...');
-                    
-                    // Check if this is one of the first 5 sellers
-                    const { count: sellerCount } = await supabaseClient
-                        .from('profiles')
-                        .select('*', { count: 'exact', head: true });
-                    
-                    const isEligibleForFreeTrial = sellerCount < 5;
-                    const freeTrialExpiresAt = isEligibleForFreeTrial 
-                        ? new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString() // 30 days from now
-                        : null;
-                    
-                    console.log(`🎁 Free trial eligible: ${isEligibleForFreeTrial}, Seller count: ${sellerCount}`);
+                    const accountStatus = isFreeVerified ? 'approved' : 'pending';
                     
                     const profileData = {
                         id: authData.user.id,
@@ -855,27 +861,22 @@
                         whatsapp: formattedPhone,
                         bio: formData.bio || "New seller on SearchPadi",
                         profile_photo: formData.profilePhoto || DEFAULT_PROFILE_IMAGE,
+                        selfie_photo: formData.selfiePhoto || null,
+                        verification_video: isFreeVerified ? null : (formData.verificationVideo || null),
                         subscription_plan: 'free',
-                        is_verified: isEligibleForFreeTrial,
-                        is_free_trial: isEligibleForFreeTrial,
-                        free_trial_expires_at: freeTrialExpiresAt,
+                        is_verified: false,
+                        is_free_verified: isFreeVerified,
+                        account_status: accountStatus,
                         views: 0,
                         created_at: new Date().toISOString()
                     };
-                    
-                    console.log('📋 Profile data:', profileData);
                     
                     const { data: insertData, error: profileError } = await supabaseClient
                         .from('profiles')
                         .insert([profileData])
                         .select();
                     
-                    console.log('✅ Profile insert response:', insertData, profileError);
-                    
-                    if (profileError) {
-                        console.error('Profile error details:', profileError);
-                        throw new Error(`Database error: ${profileError.message}`);
-                    }
+                    if (profileError) throw new Error(`Database error: ${profileError.message}`);
                     
                     const newSeller = {
                         id: authData.user.id,
@@ -885,10 +886,10 @@
                         gender: formData.gender || null,
                         location: formData.location,
                         bio: formData.bio || "New seller on SearchPadi",
-                        isVerified: isEligibleForFreeTrial,
-                        isTrusted: isEligibleForFreeTrial,
-                        isFreeTrial: isEligibleForFreeTrial,
-                        freeTrialExpiresAt: freeTrialExpiresAt,
+                        isVerified: false,
+                        isTrusted: false,
+                        isFreeVerified: isFreeVerified,
+                        accountStatus: accountStatus,
                         whatsappNumber: formattedPhone,
                         profilePhoto: formData.profilePhoto || DEFAULT_PROFILE_IMAGE,
                         views: 0,
@@ -896,20 +897,17 @@
                         subscription: 'free'
                     };
                     
-                    setSellers(prev => [...prev, newSeller]);
+                    // Only add to sellers list if approved
+                    if (isFreeVerified) {
+                        setSellers(prev => [...prev, newSeller]);
+                    }
+                    
                     setCurrentUser({ type: 'seller', data: newSeller });
                     setShowRegistration(false);
-                    console.log('🎉 Registration complete!');
                     
-                    if (isEligibleForFreeTrial) {
-                        alert('🎉 Congratulations! You\'re one of our first 5 sellers!\n\nYou\'ve received:\n✅ Verified Profile Badge\n✅ Product Trusted Badge\n\nValid for 30 days - FREE!');
-                    } else {
-                        alert('✅ Account created successfully! Welcome to SearchPadi!');
-                    }
                 } catch (error) {
                     console.error('❌ Registration error:', error);
                     let errorMessage = '';
-                    
                     if (error.message.includes('already registered') || error.message.includes('User already registered')) {
                         errorMessage = 'This email is already registered. Please login instead.';
                     } else if (error.message.includes('duplicate key') || error.message.includes('unique constraint')) {
@@ -917,7 +915,6 @@
                     } else {
                         errorMessage = error.message || 'Registration failed. Please try again.';
                     }
-                    
                     alert('❌ ' + errorMessage);
                     throw error;
                 } finally {
@@ -1109,7 +1106,33 @@
                                     </div>
                                 </div>
                             ) : (
-                                <div>
+                                <div 
+                                    onMouseDown={() => {
+                                        const timer = setTimeout(() => {
+                                            setShowAdminLogin(true);
+                                        }, 5000);
+                                        setLogoHoldTimer(timer);
+                                    }}
+                                    onMouseUp={() => {
+                                        if (logoHoldTimer) {
+                                            clearTimeout(logoHoldTimer);
+                                            setLogoHoldTimer(null);
+                                        }
+                                    }}
+                                    onTouchStart={() => {
+                                        const timer = setTimeout(() => {
+                                            setShowAdminLogin(true);
+                                        }, 5000);
+                                        setLogoHoldTimer(timer);
+                                    }}
+                                    onTouchEnd={() => {
+                                        if (logoHoldTimer) {
+                                            clearTimeout(logoHoldTimer);
+                                            setLogoHoldTimer(null);
+                                        }
+                                    }}
+                                    className="cursor-pointer select-none"
+                                >
                                     <h1 className="text-xl font-bold">SearchPadi</h1>
                                     <p className="text-sm opacity-90">Find Verified Sellers 🇳🇬</p>
                                 </div>
@@ -1419,7 +1442,27 @@
                         setShowLogin(true);
                     }} />}
                     {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
-                    {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} />}
+                    {showSubscription && <SubscriptionModal onClose={() => setShowSubscription(false)} currentUser={currentUser} />}
+                    
+                    {/* Admin Modals */}
+                    {showAdminLogin && <AdminLoginModal onClose={() => setShowAdminLogin(false)} onLogin={() => {
+                        setIsAdmin(true);
+                        setShowAdminLogin(false);
+                        setShowAdminDashboard(true);
+                    }} />}
+                    {showAdminDashboard && <AdminDashboard onClose={() => {
+                        setShowAdminDashboard(false);
+                        setIsAdmin(false);
+                    }} />}
+
+                    {/* WhatsApp Safety Modal */}
+                    {whatsappModal && (
+                        <WhatsAppModal
+                            seller={whatsappModal.seller}
+                            product={whatsappModal.product}
+                            onClose={() => setWhatsappModal(null)}
+                        />
+                    )}
                 </div>
             );
         }
@@ -1802,12 +1845,34 @@
                 location: '',
                 whatsappNumber: '',
                 password: '',
-                bio: ''
+                bio: '',
+                selfiePhoto: '',
+                verificationVideo: ''
             });
             const [previewPhoto, setPreviewPhoto] = useState(DEFAULT_PROFILE_IMAGE);
+            const [selfiePreview, setSelfiePreview] = useState(null);
+            const [videoName, setVideoName] = useState('');
             const [isLoading, setIsLoading] = useState(false);
             const [error, setError] = useState('');
+            const [isFreeSlot, setIsFreeSlot] = useState(null);
+            const [submitted, setSubmitted] = useState(false);
+            const [isFreeVerified, setIsFreeVerified] = useState(false);
             const fileInputRef = useRef(null);
+            const selfieInputRef = useRef(null);
+            const videoInputRef = useRef(null);
+
+            useEffect(() => {
+                // Check if free slots available
+                const checkFreeSlots = async () => {
+                    const { data } = await supabaseClient
+                        .from('app_settings')
+                        .select('free_verified_count')
+                        .eq('id', 1)
+                        .single();
+                    setIsFreeSlot((data?.free_verified_count || 0) < 5);
+                };
+                checkFreeSlots();
+            }, []);
 
             const handleSubmit = async (e) => {
                 e.preventDefault();
@@ -1828,10 +1893,22 @@
                     setError('Password must be at least 6 characters long');
                     return;
                 }
+
+                if (!isFreeSlot && !formData.selfiePhoto) {
+                    setError('Please upload your selfie photo');
+                    return;
+                }
+
+                if (!isFreeSlot && !formData.verificationVideo) {
+                    setError('Please upload your verification video');
+                    return;
+                }
                 
                 setIsLoading(true);
                 try {
                     await onRegister({ ...formData, profilePhoto: previewPhoto });
+                    setSubmitted(true);
+                    setIsFreeVerified(isFreeSlot);
                 } catch (err) {
                     setError('Registration failed. Please try again.');
                 } finally {
@@ -1848,22 +1925,15 @@
                             const canvas = document.createElement('canvas');
                             let width = img.width;
                             let height = img.height;
-                            
-                            // Resize if larger than maxWidth
                             if (width > maxWidth) {
                                 height = (height * maxWidth) / width;
                                 width = maxWidth;
                             }
-                            
                             canvas.width = width;
                             canvas.height = height;
-                            
                             const ctx = canvas.getContext('2d');
                             ctx.drawImage(img, 0, 0, width, height);
-                            
-                            // Convert to base64 with compression
-                            const compressedBase64 = canvas.toDataURL('image/jpeg', quality);
-                            resolve(compressedBase64);
+                            resolve(canvas.toDataURL('image/jpeg', quality));
                         };
                         img.onerror = reject;
                         img.src = e.target.result;
@@ -1876,27 +1946,84 @@
             const handleImageUpload = async (e) => {
                 const file = e.target.files[0];
                 if (file) {
-                    // Validate file size (max 5MB before compression)
-                    if (file.size > 5 * 1024 * 1024) {
-                        alert('Image size must be less than 5MB');
-                        return;
-                    }
-                    
+                    if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return; }
                     try {
-                        // Show loading state
-                        setPreviewPhoto('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="white">Loading...</text></svg>');
-                        
-                        // Compress image
-                        const compressedBase64 = await compressImage(file, 800, 0.7);
-                        
-                        setPreviewPhoto(compressedBase64);
-                        setFormData({ ...formData, profilePhoto: compressedBase64 });
-                    } catch (error) {
-                        console.error('Image compression error:', error);
-                        alert('Failed to process image. Please try another image.');
-                    }
+                        const compressed = await compressImage(file, 800, 0.7);
+                        setPreviewPhoto(compressed);
+                        setFormData({ ...formData, profilePhoto: compressed });
+                    } catch (error) { alert('Failed to process image.'); }
                 }
             };
+
+            const handleSelfieUpload = async (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return; }
+                    try {
+                        const compressed = await compressImage(file, 800, 0.8);
+                        setSelfiePreview(compressed);
+                        setFormData({ ...formData, selfiePhoto: compressed });
+                    } catch (error) { alert('Failed to process image.'); }
+                }
+            };
+
+            const handleVideoUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 50 * 1024 * 1024) { alert('Video must be less than 50MB'); return; }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        setFormData({ ...formData, verificationVideo: ev.target.result });
+                        setVideoName(file.name);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            // Show "Under Review" screen after submission
+            if (submitted) {
+                if (isFreeVerified) {
+                    return (
+                        <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+                            <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full p-8 border border-gray-800 text-center">
+                                <div className="text-6xl mb-4">🎉</div>
+                                <h2 className="text-2xl font-bold text-white mb-3">Welcome to SearchPadi!</h2>
+                                <p className="text-green-400 font-semibold mb-4">You're one of our first 5 sellers!</p>
+                                <p className="text-gray-400 mb-6">Your account is active and ready to go. Start adding your products!</p>
+                                <button onClick={onClose} className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700">
+                                    Start Selling!
+                                </button>
+                            </div>
+                        </div>
+                    );
+                }
+                return (
+                    <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4">
+                        <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full p-8 border border-gray-800 text-center">
+                            <div className="text-6xl mb-4">⏳</div>
+                            <h2 className="text-2xl font-bold text-white mb-3">Account Under Review</h2>
+                            <p className="text-gray-300 mb-4">Your application has been submitted successfully!</p>
+                            <div className="bg-[#2a2a2a] rounded-xl p-4 mb-6 text-left space-y-3">
+                                <p className="text-gray-400 text-sm flex items-start gap-2">
+                                    <span>🔍</span>
+                                    <span>Our team is reviewing your selfie and verification video to confirm your identity.</span>
+                                </p>
+                                <p className="text-gray-400 text-sm flex items-start gap-2">
+                                    <span>⏱️</span>
+                                    <span>This usually takes <strong className="text-white">5-10 minutes</strong> during business hours.</span>
+                                </p>
+                                <p className="text-gray-400 text-sm flex items-start gap-2">
+                                    <span>📱</span>
+                                    <span>You'll be able to start selling as soon as your account is approved.</span>
+                                </p>
+                            </div>
+                            <button onClick={onClose} className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700">
+                                Got it!
+                            </button>
+                        </div>
+                    </div>
+                );
+            }
 
             return (
                 <div className="fixed inset-0 bg-black/70 z-[100] flex items-center justify-center p-4" onClick={onClose}>
@@ -2055,6 +2182,62 @@
                                     />
                                 </div>
 
+                                {/* Selfie + Video - Only for sellers 6+ */}
+                                {isFreeSlot === false && (
+                                    <div className="border border-purple-800 rounded-xl p-4 bg-purple-900/10 space-y-4">
+                                        <div>
+                                            <h3 className="text-white font-bold mb-1">📋 Identity Verification</h3>
+                                            <p className="text-gray-400 text-xs">To keep SearchPadi safe and trusted, we verify every seller before they go live. This takes 5-10 minutes.</p>
+                                        </div>
+
+                                        {/* Selfie */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">
+                                                📸 Selfie Photo <span className="text-red-400">*</span>
+                                            </label>
+                                            <p className="text-xs text-gray-500 mb-2">Take a clear photo of your face. Make sure your face is fully visible and well-lit.</p>
+                                            <input type="file" ref={selfieInputRef} onChange={handleSelfieUpload} accept="image/*" capture="user" className="hidden" />
+                                            {selfiePreview ? (
+                                                <div className="relative inline-block">
+                                                    <img src={selfiePreview} className="w-20 h-20 rounded-full object-cover border-2 border-purple-500" />
+                                                    <button type="button" onClick={() => selfieInputRef.current.click()} className="absolute -bottom-1 -right-1 bg-purple-600 text-white text-xs px-2 py-1 rounded-full">Change</button>
+                                                </div>
+                                            ) : (
+                                                <button type="button" onClick={() => selfieInputRef.current.click()} className="w-full bg-[#2a2a2a] border border-dashed border-gray-600 text-gray-400 py-3 rounded-lg text-sm hover:border-purple-500 hover:text-purple-400 transition-colors">
+                                                    📷 Take Selfie or Upload Photo
+                                                </button>
+                                            )}
+                                        </div>
+
+                                        {/* Video */}
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-300 mb-1">
+                                                🎥 Verification Video (Max 20 seconds) <span className="text-red-400">*</span>
+                                            </label>
+                                            <p className="text-xs text-gray-500 mb-2">Record yourself saying: <strong className="text-white">"I am [your name] and I am verified by SearchPadi"</strong>. This proves you are a real person.</p>
+                                            <input type="file" ref={videoInputRef} onChange={handleVideoUpload} accept="video/*" capture="environment" className="hidden" />
+                                            {videoName ? (
+                                                <div className="flex items-center gap-2 bg-[#2a2a2a] p-3 rounded-lg">
+                                                    <span className="text-green-400">✓</span>
+                                                    <span className="text-gray-300 text-sm flex-1 truncate">{videoName}</span>
+                                                    <button type="button" onClick={() => videoInputRef.current.click()} className="text-xs text-purple-400">Change</button>
+                                                </div>
+                                            ) : (
+                                                <button type="button" onClick={() => videoInputRef.current.click()} className="w-full bg-[#2a2a2a] border border-dashed border-gray-600 text-gray-400 py-3 rounded-lg text-sm hover:border-purple-500 hover:text-purple-400 transition-colors">
+                                                    🎬 Record or Upload Video (Max 50MB)
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {isFreeSlot === true && (
+                                    <div className="bg-green-900/20 border border-green-700 rounded-xl p-4 text-center">
+                                        <p className="text-green-400 font-bold">🎉 You're one of our first 5 sellers!</p>
+                                        <p className="text-gray-400 text-xs mt-1">No verification required. Your account activates instantly!</p>
+                                    </div>
+                                )}
+
                                 <button
                                     type="submit"
                                     disabled={isLoading}
@@ -2148,6 +2331,7 @@
                         location: profile.location,
                         bio: profile.bio || "Seller on SearchPadi",
                         isVerified: profile.is_verified || false,
+                        accountStatus: profile.account_status || 'approved',
                         whatsappNumber: profile.whatsapp,
                         profilePhoto: profile.profile_photo || DEFAULT_PROFILE_IMAGE,
                         views: profile.views || 0,
@@ -2163,6 +2347,21 @@
                         })),
                         subscription: profile.subscription_plan || 'free'
                     };
+
+                    // Block login if account is pending or declined
+                    if (profile.account_status === 'pending') {
+                        setError('⏳ Your account is still under review. Please check back in 5-10 minutes.');
+                        setIsLoading(false);
+                        await supabaseClient.auth.signOut();
+                        return;
+                    }
+
+                    if (profile.account_status === 'declined') {
+                        setError('❌ Your account application was declined. Contact support for more info.');
+                        setIsLoading(false);
+                        await supabaseClient.auth.signOut();
+                        return;
+                    }
                     
                     onLoginSuccess(sellerData);
                     alert('✅ Login successful! Welcome back!');
@@ -2433,7 +2632,19 @@
         }
 
         // Subscription Modal
-        function SubscriptionModal({ onClose }) {
+        function SubscriptionModal({ onClose, currentUser }) {
+            const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
+            const [selectedPlan, setSelectedPlan] = useState(null);
+            const [screenshot, setScreenshot] = useState(null);
+            const [screenshotPreview, setScreenshotPreview] = useState(null);
+            const screenshotInputRef = useRef(null);
+            
+            const BANK_DETAILS = {
+                bank: 'Opay',
+                accountNumber: '9058150220',
+                accountName: 'AlexanderBede Somtochukwu Ugwu'
+            };
+            
             const plans = [
                 {
                     name: 'Basic Plan',
@@ -2487,10 +2698,61 @@
             ];
 
             const handleUpgrade = (plan) => {
-                if (plan.buttonText === 'Current Plan') {
+                if (plan.buttonText === 'Current Plan') return;
+                const planType = plan.name === 'Verified Plus' ? 'verified_plus' : 'growth_pro';
+                setSelectedPlan({ ...plan, planType });
+                setShowPaymentInstructions(true);
+            };
+
+            const handleScreenshotUpload = (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                        alert('Image must be less than 5MB');
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        setScreenshot(ev.target.result);
+                        setScreenshotPreview(ev.target.result);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const handlePaidConfirmation = async () => {
+                if (!currentUser || !selectedPlan) {
+                    alert('Please login first');
                     return;
-                } else {
-                    alert(`Upgrade to ${plan.name} for ${plan.price}${plan.period}\n\nPayment integration coming soon! Contact admin on WhatsApp: ${WHATSAPP_NUMBER} to upgrade.`);
+                }
+
+                if (!screenshot) {
+                    alert('Please upload payment screenshot');
+                    return;
+                }
+
+                try {
+                    const { error } = await supabaseClient
+                        .from('pending_payments')
+                        .insert([{
+                            seller_id: currentUser.data.id,
+                            seller_name: currentUser.data.name,
+                            seller_email: currentUser.data.email,
+                            plan_type: selectedPlan.planType,
+                            amount: selectedPlan.planType === 'verified_plus' ? 390000 : 990000,
+                            category: currentUser.data.category,
+                            payment_timestamp: new Date().toISOString(),
+                            payment_screenshot: screenshot,
+                            status: 'pending'
+                        }]);
+
+                    if (error) throw error;
+
+                    alert('✅ Payment submitted!\n\nYour payment is being reviewed.\nYou\'ll be activated within 5-10 minutes.');
+                    onClose();
+                } catch (error) {
+                    console.error('Error creating payment record:', error);
+                    alert('❌ Failed to submit. Please try again or contact support.');
                 }
             };
 
@@ -2581,6 +2843,762 @@
                                 </p>
                             </div>
                         </div>
+
+                        {/* Payment Instructions Overlay */}
+                        {showPaymentInstructions && (
+                            <div className="absolute inset-0 bg-black/95 rounded-3xl flex items-center justify-center p-4 z-20 overflow-y-auto">
+                                <div className="bg-white rounded-2xl p-6 md:p-8 max-w-lg w-full my-8">
+                                    <h3 className="text-2xl font-bold text-[#0f2942] mb-4">Complete Your Payment</h3>
+                                    
+                                    {/* Amount */}
+                                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl p-5 mb-5 text-center">
+                                        <p className="text-sm opacity-90 mb-1">Amount to Pay</p>
+                                        <p className="text-4xl font-bold">{selectedPlan?.price}</p>
+                                        <p className="text-sm opacity-90 mt-1">{selectedPlan?.name}</p>
+                                    </div>
+
+                                    {/* Bank Details */}
+                                    <div className="bg-gray-50 rounded-xl p-5 mb-5 border-2 border-gray-200">
+                                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Transfer to:</p>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <p className="text-xs text-gray-500 mb-1">Bank Name</p>
+                                                <p className="text-lg font-bold text-gray-900">{BANK_DETAILS.bank}</p>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500 mb-1">Account Number</p>
+                                                <div className="flex items-center gap-2">
+                                                    <p className="text-2xl font-bold text-purple-600 tracking-wider">{BANK_DETAILS.accountNumber}</p>
+                                                    <button
+                                                        onClick={() => {
+                                                            navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
+                                                            alert('Account number copied!');
+                                                        }}
+                                                        className="bg-purple-100 text-purple-600 px-3 py-1 rounded-lg text-xs font-semibold hover:bg-purple-200"
+                                                    >
+                                                        Copy
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div>
+                                                <p className="text-xs text-gray-500 mb-1">Account Name</p>
+                                                <p className="text-sm font-semibold text-gray-900">{BANK_DETAILS.accountName}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Important Note */}
+                                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-5">
+                                        <p className="text-sm text-blue-900">
+                                            <span className="font-bold">💡 Note:</span> This is SearchPadi's founder account. We're a new startup building trust one seller at a time. Your payment is secure and you'll be activated within 5-10 minutes.
+                                        </p>
+                                    </div>
+
+                                    {/* Upload Screenshot */}
+                                    <div className="mb-5">
+                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Payment Screenshot</label>
+                                        <input
+                                            type="file"
+                                            ref={screenshotInputRef}
+                                            onChange={handleScreenshotUpload}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                        {screenshotPreview ? (
+                                            <div className="relative">
+                                                <img src={screenshotPreview} className="w-full h-48 object-contain bg-gray-100 rounded-lg border-2 border-green-500" />
+                                                <button
+                                                    onClick={() => screenshotInputRef.current.click()}
+                                                    className="absolute top-2 right-2 bg-white text-gray-700 px-3 py-1 rounded-lg text-xs font-semibold shadow-lg hover:bg-gray-100"
+                                                >
+                                                    Change
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <button
+                                                onClick={() => screenshotInputRef.current.click()}
+                                                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 hover:bg-purple-50 transition-colors"
+                                            >
+                                                <p className="text-gray-600 font-medium mb-1">📸 Click to Upload Screenshot</p>
+                                                <p className="text-xs text-gray-500">After making the transfer, upload proof of payment</p>
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Actions */}
+                                    <div className="space-y-3">
+                                        <button
+                                            onClick={handlePaidConfirmation}
+                                            disabled={!screenshot}
+                                            className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold transition-colors"
+                                        >
+                                            ✓ Submit Payment
+                                        </button>
+                                        <button
+                                            onClick={() => {
+                                                setShowPaymentInstructions(false);
+                                                setScreenshot(null);
+                                                setScreenshotPreview(null);
+                                            }}
+                                            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium transition-colors"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        }
+
+        // WhatsApp Safety Modal
+        function WhatsAppModal({ seller, product, onClose }) {
+            const [agreed, setAgreed] = useState(false);
+
+            // Get contact count (simulated from views as proxy)
+            const contactCount = Math.max(1, Math.floor((seller.views || 0) * 0.3));
+
+            const message = `Hi ${seller.name || seller.business_name}, I saw your ${product ? product.name : 'products'} on SearchPadi. Is it still available? I'd like to discuss the price.`;
+
+            const handleContinue = () => {
+                const phone = (seller.whatsappNumber || seller.whatsapp || '').replace(/\D/g, '');
+                window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+                onClose();
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/80 z-[150] flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-6">
+                            {/* Header */}
+                            <div className="flex justify-between items-center mb-5">
+                                <h3 className="text-xl font-bold text-white">Contact Seller</h3>
+                                <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white text-sm">✕</button>
+                            </div>
+
+                            {/* Message Preview */}
+                            <div className="mb-5">
+                                <p className="text-gray-400 text-xs uppercase tracking-wider mb-2 font-medium">Message Preview</p>
+                                <div className="bg-[#2a2a2a] rounded-xl p-4 border-l-4 border-green-500">
+                                    <p className="text-gray-300 text-sm leading-relaxed italic">"{message}"</p>
+                                </div>
+                            </div>
+
+                            {/* Safety Checklist */}
+                            <div className="mb-5">
+                                <p className="text-gray-400 text-xs uppercase tracking-wider mb-3 font-medium">Safety Checklist</p>
+                                <div className="space-y-3">
+                                    <div className="flex items-start gap-3 bg-[#2a2a2a] rounded-xl p-3">
+                                        <span className="text-lg flex-shrink-0">🚫</span>
+                                        <div>
+                                            <p className="text-white text-sm font-semibold">No Upfront Payment</p>
+                                            <p className="text-gray-400 text-xs mt-0.5">Never pay for delivery or an item until you have seen it or used a trusted escrow service.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 bg-[#2a2a2a] rounded-xl p-3">
+                                        <span className="text-lg flex-shrink-0">📍</span>
+                                        <div>
+                                            <p className="text-white text-sm font-semibold">Public Meetup Only</p>
+                                            <p className="text-gray-400 text-xs mt-0.5">If meeting physically, choose a well-lit, busy public place like a mall or bank entrance.</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3 bg-[#2a2a2a] rounded-xl p-3">
+                                        <span className="text-lg flex-shrink-0">🎥</span>
+                                        <div>
+                                            <p className="text-white text-sm font-semibold">Demand a Live Video</p>
+                                            <p className="text-gray-400 text-xs mt-0.5">On WhatsApp, ask the seller to send a live video of the product to prove they have it in hand.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Contact Count */}
+                            <div className="bg-purple-900/20 border border-purple-800/40 rounded-xl p-3 mb-5 text-center">
+                                <p className="text-purple-300 text-sm">
+                                    <strong className="text-white">{contactCount} buyer{contactCount !== 1 ? 's' : ''}</strong> {contactCount !== 1 ? 'have' : 'has'} already reached out to this seller on SearchPadi.
+                                </p>
+                            </div>
+
+                            {/* Agree + Continue */}
+                            <div className="flex items-center gap-3 mb-4">
+                                <button
+                                    onClick={() => setAgreed(!agreed)}
+                                    className={`w-6 h-6 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-colors ${agreed ? 'bg-green-600 border-green-600' : 'border-gray-600'}`}
+                                >
+                                    {agreed && <span className="text-white text-xs font-bold">✓</span>}
+                                </button>
+                                <p className="text-gray-400 text-sm">I have read and understood the safety guidelines above.</p>
+                            </div>
+
+                            <button
+                                onClick={handleContinue}
+                                disabled={!agreed}
+                                className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
+                            >
+                                <span>💬</span> Continue to WhatsApp
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        }
+
+        // Admin Login Modal
+        function AdminLoginModal({ onClose, onLogin }) {
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                if (password === '@654321') {
+                    onLogin();
+                } else {
+                    setError('Incorrect password');
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-black/90 z-[200] flex items-center justify-center p-4" onClick={onClose}>
+                    <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl max-w-md w-full p-8" onClick={(e) => e.stopPropagation()}>
+                        <h2 className="text-2xl font-bold text-white mb-6 text-center">Admin Access</h2>
+                        
+                        {error && (
+                            <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded-lg mb-4 text-center">
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-300 mb-2">Password</label>
+                                <input
+                                    type="password"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    className="w-full px-4 py-3 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
+                                    placeholder="Enter admin password"
+                                    autoFocus
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors"
+                            >
+                                Access Dashboard
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            );
+        }
+
+        // Admin Dashboard Component
+        function AdminDashboard({ onClose }) {
+            const [stats, setStats] = useState({ total_profit: 0, total_ad_budget: 0, phones_ad_budget: 0, electronics_ad_budget: 0, shoes_ad_budget: 0, fashion_ad_budget: 0, furniture_ad_budget: 0 });
+            const [pendingPayments, setPendingPayments] = useState([]);
+            const [pendingAccounts, setPendingAccounts] = useState([]);
+            const [totalSellers, setTotalSellers] = useState(0);
+            const [searchQuery, setSearchQuery] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
+            const [showAdBudgetBreakdown, setShowAdBudgetBreakdown] = useState(false);
+            const [selectedSeller, setSelectedSeller] = useState(null);
+            const [activeTab, setActiveTab] = useState('accounts'); // 'accounts' | 'payments'
+
+            useEffect(() => {
+                loadAdminData();
+            }, []);
+
+            const loadAdminData = async () => {
+                try {
+                    const { data: statsData } = await supabaseClient
+                        .from('admin_stats')
+                        .select('*')
+                        .eq('id', 1)
+                        .single();
+                    if (statsData) setStats(statsData);
+
+                    const { data: paymentsData } = await supabaseClient
+                        .from('pending_payments')
+                        .select('*')
+                        .eq('status', 'pending')
+                        .order('created_at', { ascending: false });
+                    if (paymentsData) setPendingPayments(paymentsData);
+
+                    // Load pending accounts (sellers waiting for approval)
+                    const { data: accountsData } = await supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .eq('account_status', 'pending')
+                        .order('created_at', { ascending: false });
+                    if (accountsData) setPendingAccounts(accountsData);
+
+                    // Count only approved sellers
+                    const { count } = await supabaseClient
+                        .from('profiles')
+                        .select('*', { count: 'exact', head: true })
+                        .eq('account_status', 'approved');
+                    setTotalSellers(count || 0);
+                } catch (error) {
+                    console.error('Error loading admin data:', error);
+                }
+            };
+
+            const handleApprove = async (payment) => {
+                try {
+                    // Update seller subscription
+                    const planType = payment.plan_type === 'verified_plus' ? 'verified_plus' : 'growth_pro';
+                    const { error: updateError } = await supabaseClient
+                        .from('profiles')
+                        .update({ 
+                            subscription_plan: planType,
+                            is_verified: true
+                        })
+                        .eq('id', payment.seller_id);
+                    
+                    if (updateError) throw updateError;
+
+                    // Calculate splits
+                    const profit = Math.floor(payment.amount * 0.6); // 60%
+                    const adBudget = Math.floor(payment.amount * 0.4); // 40%
+                    
+                    // Update stats
+                    const categoryField = `${payment.category}_ad_budget`;
+                    const { error: statsError } = await supabaseClient
+                        .from('admin_stats')
+                        .update({
+                            total_profit: stats.total_profit + profit,
+                            total_ad_budget: stats.total_ad_budget + adBudget,
+                            [categoryField]: stats[categoryField] + adBudget,
+                            updated_at: new Date().toISOString()
+                        })
+                        .eq('id', 1);
+                    
+                    if (statsError) throw statsError;
+
+                    // Mark payment as approved
+                    const { error: paymentError } = await supabaseClient
+                        .from('pending_payments')
+                        .update({ status: 'approved' })
+                        .eq('id', payment.id);
+                    
+                    if (paymentError) throw paymentError;
+
+                    // Reload data
+                    loadAdminData();
+                    alert('✅ Payment approved and seller activated!');
+                } catch (error) {
+                    console.error('Error approving payment:', error);
+                    alert('❌ Failed to approve payment');
+                }
+            };
+
+            const handleDecline = async (payment) => {
+                if (!confirm('Are you sure you want to decline this payment?')) return;
+
+                try {
+                    const { error } = await supabaseClient
+                        .from('pending_payments')
+                        .update({ status: 'declined' })
+                        .eq('id', payment.id);
+                    
+                    if (error) throw error;
+
+                    loadAdminData();
+                    alert('Payment declined');
+                } catch (error) {
+                    console.error('Error declining payment:', error);
+                    alert('Failed to decline payment');
+                }
+            };
+
+            const handleApproveAccount = async (account) => {
+                try {
+                    // Approve account + delete video, keep selfie
+                    const { error } = await supabaseClient
+                        .from('profiles')
+                        .update({
+                            account_status: 'approved',
+                            verification_video: null, // Delete video
+                            verified_at: new Date().toISOString()
+                        })
+                        .eq('id', account.id);
+                    
+                    if (error) throw error;
+                    loadAdminData();
+                    alert(`✅ ${account.business_name} has been approved!`);
+                } catch (error) {
+                    console.error('Error approving account:', error);
+                    alert('❌ Failed to approve account');
+                }
+            };
+
+            const handleDeclineAccount = async (account) => {
+                if (!confirm(`Decline ${account.business_name}'s application?`)) return;
+                try {
+                    const { error } = await supabaseClient
+                        .from('profiles')
+                        .update({ account_status: 'declined' })
+                        .eq('id', account.id);
+                    
+                    if (error) throw error;
+                    loadAdminData();
+                    alert(`Account declined.`);
+                } catch (error) {
+                    console.error('Error declining account:', error);
+                    alert('Failed to decline account');
+                }
+            };
+
+            const handleSearch = async () => {
+                if (!searchQuery.trim()) {
+                    setSearchResults([]);
+                    return;
+                }
+
+                try {
+                    const { data } = await supabaseClient
+                        .from('profiles')
+                        .select('*')
+                        .or(`business_name.ilike.%${searchQuery}%,email.ilike.%${searchQuery}%`)
+                        .limit(10);
+                    
+                    if (data) {
+                        setSearchResults(data);
+                    }
+                } catch (error) {
+                    console.error('Error searching sellers:', error);
+                }
+            };
+
+            return (
+                <div className="fixed inset-0 bg-[#0a0a0a] z-[200] overflow-y-auto">
+                    <div className="min-h-screen p-4 md:p-8">
+                        {/* Header */}
+                        <div className="flex justify-between items-center mb-8 gap-4">
+                            <h1 className="text-3xl font-bold text-white">Admin Dashboard</h1>
+                            <div className="flex items-center gap-4">
+                                {/* Search */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        value={searchQuery}
+                                        onChange={(e) => {
+                                            setSearchQuery(e.target.value);
+                                            if (e.target.value.trim()) {
+                                                handleSearch();
+                                            } else {
+                                                setSearchResults([]);
+                                            }
+                                        }}
+                                        placeholder="Search sellers..."
+                                        className="bg-[#1a1a1a] border border-gray-800 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm w-64"
+                                    />
+                                    {searchResults.length > 0 && (
+                                        <div className="absolute top-full mt-2 w-full bg-[#1a1a1a] border border-gray-800 rounded-lg shadow-2xl max-h-80 overflow-y-auto z-10">
+                                            {searchResults.map(seller => (
+                                                <div 
+                                                    key={seller.id}
+                                                    onClick={async () => {
+                                                        // Load seller products
+                                                        const { data: productsData } = await supabaseClient
+                                                            .from('products')
+                                                            .select('*')
+                                                            .eq('seller_id', seller.id);
+                                                        
+                                                        setSelectedSeller({
+                                                            ...seller,
+                                                            products: (productsData || []).map(p => ({
+                                                                ...p,
+                                                                images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                                                                isTrusted: p.is_trusted || false
+                                                            }))
+                                                        });
+                                                        setSearchQuery('');
+                                                        setSearchResults([]);
+                                                    }}
+                                                    className="p-3 hover:bg-[#2a2a2a] cursor-pointer border-b border-gray-800/50 last:border-b-0 flex items-center gap-3"
+                                                >
+                                                    <img 
+                                                        src={seller.profile_photo || DEFAULT_PROFILE_IMAGE}
+                                                        className="w-10 h-10 rounded-full"
+                                                        alt={seller.business_name}
+                                                    />
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="text-white font-medium text-sm">{seller.business_name}</span>
+                                                            {seller.is_verified && (
+                                                                <div className="bg-blue-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                                                                    ✓
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                        <span className="text-gray-400 text-xs">{seller.email}</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button 
+                                    onClick={onClose}
+                                    className="w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-white hover:bg-gray-700 flex-shrink-0"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Stats Cards */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                            {/* Total Sellers */}
+                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                                <div className="text-gray-400 text-sm mb-2">Total Sellers</div>
+                                <div className="text-3xl font-bold text-white">{totalSellers}</div>
+                            </div>
+
+                            {/* Profit (60%) */}
+                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                                <div className="text-gray-400 text-sm mb-2">Profit (60%)</div>
+                                <div className="text-3xl font-bold text-green-500">₦{(stats.total_profit / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</div>
+                            </div>
+
+                            {/* Ad Budget (40%) */}
+                            <div 
+                                className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6 cursor-pointer hover:border-purple-500 transition-colors"
+                                onClick={() => setShowAdBudgetBreakdown(true)}
+                            >
+                                <div className="text-gray-400 text-sm mb-2">Ad Budget (40%)</div>
+                                <div className="text-3xl font-bold text-purple-500">₦{(stats.total_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</div>
+                                <div className="text-xs text-gray-500 mt-2">Click for breakdown</div>
+                            </div>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className="flex gap-2 mb-4">
+                            <button
+                                onClick={() => setActiveTab('accounts')}
+                                className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'accounts' ? 'bg-purple-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-gray-800 hover:border-purple-500'}`}
+                            >
+                                Pending Accounts {pendingAccounts.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendingAccounts.length}</span>}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('payments')}
+                                className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'payments' ? 'bg-purple-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-gray-800 hover:border-purple-500'}`}
+                            >
+                                Pending Subscriptions {pendingPayments.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendingPayments.length}</span>}
+                            </button>
+                        </div>
+
+                        {/* Pending Accounts Tab */}
+                        {activeTab === 'accounts' && (
+                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                                <h2 className="text-xl font-bold text-white mb-4">Pending Accounts</h2>
+                                {pendingAccounts.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-500">No pending accounts</div>
+                                ) : (
+                                    <div className="space-y-4">
+                                        {pendingAccounts.map(account => (
+                                            <div key={account.id} className="bg-[#2a2a2a] rounded-xl p-5 border border-gray-700">
+                                                {/* Seller Info */}
+                                                <div className="flex items-start gap-4 mb-4">
+                                                    <img
+                                                        src={account.profile_photo || DEFAULT_PROFILE_IMAGE}
+                                                        className="w-14 h-14 rounded-full object-cover border-2 border-gray-600"
+                                                    />
+                                                    <div className="flex-1">
+                                                        <h3 className="text-white font-bold text-lg">{account.business_name}</h3>
+                                                        <p className="text-gray-400 text-sm">{account.email}</p>
+                                                        <p className="text-gray-400 text-sm">{account.location} · {account.category}</p>
+                                                        <p className="text-gray-500 text-xs mt-1">{new Date(account.created_at).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Selfie + Video Preview */}
+                                                <div className="grid grid-cols-2 gap-3 mb-4">
+                                                    {/* Selfie */}
+                                                    <div>
+                                                        <p className="text-gray-400 text-xs mb-2 font-medium">SELFIE PHOTO</p>
+                                                        {account.selfie_photo ? (
+                                                            <img src={account.selfie_photo} className="w-full h-32 object-cover rounded-lg border border-gray-700" />
+                                                        ) : (
+                                                            <div className="w-full h-32 bg-[#1a1a1a] rounded-lg border border-gray-700 flex items-center justify-center text-gray-600 text-sm">Not provided</div>
+                                                        )}
+                                                    </div>
+                                                    {/* Video */}
+                                                    <div>
+                                                        <p className="text-gray-400 text-xs mb-2 font-medium">VERIFICATION VIDEO</p>
+                                                        {account.verification_video ? (
+                                                            <video
+                                                                src={account.verification_video}
+                                                                controls
+                                                                className="w-full h-32 object-cover rounded-lg border border-gray-700"
+                                                            />
+                                                        ) : (
+                                                            <div className="w-full h-32 bg-[#1a1a1a] rounded-lg border border-gray-700 flex items-center justify-center text-gray-600 text-sm">Not provided</div>
+                                                        )}
+                                                    </div>
+                                                </div>
+
+                                                {/* Note about video deletion */}
+                                                <p className="text-yellow-600 text-xs mb-4">⚠️ Approving will delete their video and keep only the selfie as a permanent record.</p>
+
+                                                {/* Actions */}
+                                                <div className="flex gap-3">
+                                                    <button
+                                                        onClick={() => handleApproveAccount(account)}
+                                                        className="flex-1 bg-green-600 hover:bg-green-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors"
+                                                    >
+                                                        ✓ Approve
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeclineAccount(account)}
+                                                        className="flex-1 bg-red-600/20 hover:bg-red-600/40 text-red-400 py-2.5 rounded-lg font-semibold text-sm transition-colors border border-red-800"
+                                                    >
+                                                        ✗ Decline
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Pending Subscriptions Tab */}
+                        {activeTab === 'payments' && (
+                        <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                            <h2 className="text-xl font-bold text-white mb-4">Pending Subscriptions</h2>
+                            {pendingPayments.length === 0 ? (
+                                <div className="text-center py-12 text-gray-500">No pending payments</div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {pendingPayments.map(payment => (
+                                        <div key={payment.id} className="bg-[#2a2a2a] rounded-xl p-5 border border-gray-700">
+                                            <div className="flex items-start gap-4">
+                                                {/* Payment Screenshot */}
+                                                <div className="flex-shrink-0">
+                                                    {payment.payment_screenshot ? (
+                                                        <img 
+                                                            src={payment.payment_screenshot} 
+                                                            className="w-32 h-32 object-cover rounded-lg border-2 border-purple-500 cursor-pointer hover:scale-105 transition-transform"
+                                                            onClick={() => window.open(payment.payment_screenshot, '_blank')}
+                                                            title="Click to view full size"
+                                                        />
+                                                    ) : (
+                                                        <div className="w-32 h-32 bg-[#1a1a1a] rounded-lg border border-gray-700 flex items-center justify-center text-gray-600 text-xs">
+                                                            No screenshot
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Payment Details */}
+                                                <div className="flex-1">
+                                                    <h3 className="text-white font-bold text-lg mb-1">{payment.seller_name}</h3>
+                                                    <div className="space-y-1 text-sm">
+                                                        <p className="text-gray-400">
+                                                            <span className="text-gray-500">Plan:</span> 
+                                                            <span className="text-white ml-2 capitalize">{payment.plan_type.replace('_', ' ')}</span>
+                                                        </p>
+                                                        <p className="text-gray-400">
+                                                            <span className="text-gray-500">Amount:</span> 
+                                                            <span className="text-white ml-2 font-bold">₦{(payment.amount / 100).toLocaleString()}</span>
+                                                        </p>
+                                                        <p className="text-gray-400">
+                                                            <span className="text-gray-500">Email:</span> 
+                                                            <span className="text-gray-300 ml-2">{payment.seller_email}</span>
+                                                        </p>
+                                                        <p className="text-gray-500 text-xs">
+                                                            {new Date(payment.payment_timestamp).toLocaleString()}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions */}
+                                                <div className="flex flex-col gap-2 flex-shrink-0">
+                                                    <button 
+                                                        onClick={() => handleApprove(payment)} 
+                                                        className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg text-sm font-semibold transition-colors whitespace-nowrap"
+                                                    >
+                                                        ✓ Approve
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDecline(payment)} 
+                                                        className="bg-red-600/20 hover:bg-red-600/40 text-red-400 px-5 py-2 rounded-lg text-sm font-semibold transition-colors border border-red-800 whitespace-nowrap"
+                                                    >
+                                                        ✗ Decline
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                        )}
+
+                        {/* Ad Budget Breakdown Modal */}
+                        {showAdBudgetBreakdown && (
+                            <div className="fixed inset-0 bg-black/80 z-[210] flex items-center justify-center p-4" onClick={() => setShowAdBudgetBreakdown(false)}>
+                                <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                    <h3 className="text-2xl font-bold text-white mb-6">Ad Budget by Category</h3>
+                                    <div className="space-y-4">
+                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+                                            <span className="text-gray-300">📱 Phones & Tablets</span>
+                                            <span className="text-white font-bold">₦{(stats.phones_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+                                            <span className="text-gray-300">💻 Electronics</span>
+                                            <span className="text-white font-bold">₦{(stats.electronics_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+                                            <span className="text-gray-300">👟 Shoes & Footwear</span>
+                                            <span className="text-white font-bold">₦{(stats.shoes_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
+                                            <span className="text-gray-300">👔 Clothes & Fashion</span>
+                                            <span className="text-white font-bold">₦{(stats.fashion_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-3">
+                                            <span className="text-gray-300">🏠 Home & Furniture</span>
+                                            <span className="text-white font-bold">₦{(stats.furniture_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => setShowAdBudgetBreakdown(false)}
+                                        className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-bold transition-colors"
+                                    >
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Seller Profile Modal */}
+                        {selectedSeller && (
+                            <SellerProfile
+                                seller={{
+                                    ...selectedSeller,
+                                    name: selectedSeller.business_name,
+                                    isVerified: selectedSeller.is_verified,
+                                    whatsappNumber: selectedSeller.whatsapp,
+                                    profilePhoto: selectedSeller.profile_photo,
+                                    subscription: selectedSeller.subscription_plan,
+                                    products: [] // Admin view doesn't need products loaded
+                                }}
+                                isOwnProfile={false}
+                                onClose={() => setSelectedSeller(null)}
+                                onWhatsApp={(seller) => {
+                                    window.open(`https://wa.me/${seller.whatsappNumber.replace(/\D/g, '')}`, '_blank');
+                                }}
+                                onShowSubscription={() => {}}
+                                onAddProduct={() => {}}
+                                onProductClick={() => {}}
+                                onDeleteProduct={() => {}}
+                            />
+                        )}
                     </div>
                 </div>
             );
