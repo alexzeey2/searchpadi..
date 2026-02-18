@@ -576,11 +576,12 @@
                     }
                 } else {
                     addMessage(`I'd love to help you find what you're looking for! 😊\n\nCould you be more specific? For example:\n• "iPhone 13"\n• "Gaming laptop"\n• "Nike sneakers"\n\nOr choose a category to browse:`, 'assistant', [
-                        { text: '📱 Phones & Tablets', value: 'phones' },
+                        { text: '📱 Phones & Gadgets', value: 'phones' },
                         { text: '💻 Electronics', value: 'electronics' },
                         { text: '👟 Shoes & Footwear', value: 'shoes' },
                         { text: '👔 Clothes & Fashion', value: 'fashion' },
-                        { text: '🏠 Home & Furniture', value: 'furniture' }
+                        { text: '🏠 Home & Furniture', value: 'furniture' },
+                        { text: '🍕 Foods & Edibles', value: 'foods' }
                     ]);
                 }
             };
@@ -1267,7 +1268,7 @@
                                                         text: 'So, what are you looking for today?', 
                                                         timestamp: new Date(),
                                                         buttons: [
-                                                            { text: '📱 Phones & Tablets', value: 'phones' },
+                                                            { text: '📱 Phones Phones & Tablets Gadgets', value: 'phones' },
                                                             { text: '💻 Electronics', value: 'electronics' },
                                                             { text: '👟 Shoes & Footwear', value: 'shoes' },
                                                             { text: '👔 Clothes & Fashion', value: 'fashion' },
@@ -2121,11 +2122,12 @@
                                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                                         className="w-full px-4 py-2 bg-[#2a2a2a] border border-gray-700 text-white rounded-lg focus:outline-none focus:border-purple-500"
                                     >
-                                        <option value="phones">📱 Phones & Tablets</option>
+                                        <option value="phones">📱 Phones & Gadgets</option>
                                         <option value="electronics">💻 Electronics</option>
                                         <option value="shoes">👟 Shoes & Footwear</option>
                                         <option value="fashion">👔 Clothes & Fashion</option>
                                         <option value="furniture">🏠 Home & Furniture</option>
+                                        <option value="foods">🍕 Foods & Edibles</option>
                                     </select>
                                 </div>
 
@@ -3097,7 +3099,7 @@
 
         // Admin Dashboard Component
         function AdminDashboard({ onClose }) {
-            const [stats, setStats] = useState({ total_profit: 0, total_ad_budget: 0, phones_ad_budget: 0, electronics_ad_budget: 0, shoes_ad_budget: 0, fashion_ad_budget: 0, furniture_ad_budget: 0 });
+            const [stats, setStats] = useState({ total_profit: 0, total_ad_budget: 0, phones_ad_budget: 0, electronics_ad_budget: 0, shoes_ad_budget: 0, fashion_ad_budget: 0, furniture_ad_budget: 0, foods_ad_budget: 0 });
             const [pendingPayments, setPendingPayments] = useState([]);
             const [pendingAccounts, setPendingAccounts] = useState([]);
             const [totalSellers, setTotalSellers] = useState(0);
@@ -3546,7 +3548,7 @@
                                     <h3 className="text-2xl font-bold text-white mb-6">Ad Budget by Category</h3>
                                     <div className="space-y-4">
                                         <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                                            <span className="text-gray-300">📱 Phones & Tablets</span>
+                                            <span className="text-gray-300">📱 Phones Phones & Tablets Gadgets</span>
                                             <span className="text-white font-bold">₦{(stats.phones_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                         <div className="flex justify-between items-center pb-3 border-b border-gray-800">
@@ -3561,9 +3563,13 @@
                                             <span className="text-gray-300">👔 Clothes & Fashion</span>
                                             <span className="text-white font-bold">₦{(stats.fashion_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
                                         </div>
-                                        <div className="flex justify-between items-center pb-3">
+                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
                                             <span className="text-gray-300">🏠 Home & Furniture</span>
                                             <span className="text-white font-bold">₦{(stats.furniture_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                        </div>
+                                        <div className="flex justify-between items-center pb-3">
+                                            <span className="text-gray-300">🍕 Foods & Edibles</span>
+                                            <span className="text-white font-bold">₦{(stats.foods_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
                                         </div>
                                     </div>
                                     <button
