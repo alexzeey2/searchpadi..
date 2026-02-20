@@ -1556,15 +1556,20 @@
                         </div>
                     )}
 
-                    {selectedProduct && (
-                        <ProductDetail 
-                            product={selectedProduct}
-                            onClose={() => setSelectedProduct(null)}
-                            onSellerClick={openSellerProfile}
-                            onWhatsApp={handleWhatsAppMessage}
-                            onToggleLike={toggleProductLike}
-                        />
-                    )}
+                    {selectedProduct && (() => {
+                        const liveSeller = sellers.find(s => s.id === selectedProduct.seller.id);
+                        const liveProduct = liveSeller?.products.find(p => p.id === selectedProduct.id);
+                        const derivedProduct = liveProduct ? { ...liveProduct, seller: liveSeller } : selectedProduct;
+                        return (
+                            <ProductDetail 
+                                product={derivedProduct}
+                                onClose={() => setSelectedProduct(null)}
+                                onSellerClick={openSellerProfile}
+                                onWhatsApp={handleWhatsAppMessage}
+                                onToggleLike={toggleProductLike}
+                            />
+                        );
+                    })()}
 
                     {/* Modals */}
                     {showLogin && <LoginModal onClose={() => setShowLogin(false)} onLoginSuccess={(sellerData) => {
