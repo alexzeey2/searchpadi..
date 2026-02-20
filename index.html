@@ -277,7 +277,7 @@
                         await supabaseClient.from('site_analytics').update({
                             period_start: today, visits_today: 1, visits_week: 1, visits_month: 1,
                             last_visit_date: today, phones_searches: 0, electronics_searches: 0,
-                            shoes_searches: 0, fashion_searches: 0, furniture_searches: 0, foods_searches: 0,
+                            shoes_searches: 0, fashion_searches: 0, furniture_searches: 0, foods_searches: 0, beauty_searches: 0, general_searches: 0,
                             updated_at: new Date().toISOString()
                         }).eq('id', 1);
                         return;
@@ -619,7 +619,9 @@
                         { text: '👟 Shoes & Footwear', value: 'shoes' },
                         { text: '👔 Clothes & Fashion', value: 'fashion' },
                         { text: '🏠 Home & Furniture', value: 'furniture' },
-                        { text: '🍕 Foods & Edibles', value: 'foods' }
+                        { text: '🍕 Foods & Edibles', value: 'foods' },
+                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
+                        { text: '🛒 General Store', value: 'general' }
                     ]);
                 }
             };
@@ -1422,7 +1424,9 @@
                                                             { text: '👟 Shoes & Footwear', value: 'shoes' },
                                                             { text: '👔 Clothes & Fashion', value: 'fashion' },
                                                             { text: '🏠 Home & Furniture', value: 'furniture' },
-                                                            { text: '🍕 Foods & Edibles', value: 'foods' }
+                                                            { text: '🍕 Foods & Edibles', value: 'foods' },
+                                                            { text: '💄 Beauty & Personal Care', value: 'beauty' },
+                                                            { text: '🛒 General Store', value: 'general' }
                                                         ],
                                                         messageId: 1
                                                     }
@@ -1657,6 +1661,8 @@
                 { value: 'fashion', label: '👔 Clothes & Fashion' },
                 { value: 'furniture', label: '🏠 Home & Furniture' },
                 { value: 'foods', label: '🍕 Foods & Edibles' },
+                { value: 'beauty', label: '💄 Beauty & Personal Care' },
+                { value: 'general', label: '🛒 General Store' },
             ];
 
             const handlePhotoUpload = (e) => {
@@ -2624,6 +2630,8 @@
                                         <option value="fashion">👔 Clothes & Fashion</option>
                                         <option value="furniture">🏠 Home & Furniture</option>
                                         <option value="foods">🍕 Foods & Edibles</option>
+                                        <option value="beauty">💄 Beauty & Personal Care</option>
+                                        <option value="general">🛒 General Store</option>
                                     </select>
                                 </div>
 
@@ -3606,8 +3614,8 @@
 
         // Admin Dashboard Component
         function AdminDashboard({ onClose }) {
-            const [stats, setStats] = useState({ total_profit: 0, total_ad_budget: 0, phones_ad_budget: 0, electronics_ad_budget: 0, shoes_ad_budget: 0, fashion_ad_budget: 0, furniture_ad_budget: 0, foods_ad_budget: 0 });
-            const [analytics, setAnalytics] = useState({ visits_today: 0, visits_week: 0, visits_month: 0, period_start: null, phones_searches: 0, electronics_searches: 0, shoes_searches: 0, fashion_searches: 0, furniture_searches: 0, foods_searches: 0 });
+            const [stats, setStats] = useState({ total_profit: 0, total_ad_budget: 0, phones_ad_budget: 0, electronics_ad_budget: 0, shoes_ad_budget: 0, fashion_ad_budget: 0, furniture_ad_budget: 0, foods_ad_budget: 0, beauty_ad_budget: 0, general_ad_budget: 0 });
+            const [analytics, setAnalytics] = useState({ visits_today: 0, visits_week: 0, visits_month: 0, period_start: null, phones_searches: 0, electronics_searches: 0, shoes_searches: 0, fashion_searches: 0, furniture_searches: 0, foods_searches: 0, beauty_searches: 0, general_searches: 0 });
             const [pendingPayments, setPendingPayments] = useState([]);
             const [pendingAccounts, setPendingAccounts] = useState([]);
             const [totalSellers, setTotalSellers] = useState(0);
@@ -3962,9 +3970,11 @@
                                     { key: 'fashion_searches', label: '👔 Clothes & Fashion' },
                                     { key: 'furniture_searches', label: '🏠 Home & Furniture' },
                                     { key: 'foods_searches', label: '🍕 Foods & Edibles' },
+                                    { key: 'beauty_searches', label: '💄 Beauty & Personal Care' },
+                                    { key: 'general_searches', label: '🛒 General Store' },
                                 ].map(({ key, label }) => {
                                     const val = analytics[key] || 0;
-                                    const total = ['phones_searches','electronics_searches','shoes_searches','fashion_searches','furniture_searches','foods_searches'].reduce((s, k) => s + (analytics[k] || 0), 0);
+                                    const total = ['phones_searches','electronics_searches','shoes_searches','fashion_searches','furniture_searches','foods_searches','beauty_searches','general_searches'].reduce((s, k) => s + (analytics[k] || 0), 0);
                                     const pct = total > 0 ? Math.round((val / total) * 100) : 0;
                                     return (
                                         <div key={key}>
