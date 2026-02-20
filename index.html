@@ -350,7 +350,7 @@
                                     images: product.images || [DEFAULT_PRODUCT_IMAGE],
                                     keywords: product.keywords || [],
                                     likes: product.likes || 0,
-                                    liked: false,
+                                    liked: isProductLiked(product.id),
                                     isTrusted: isTrusted && product.is_trusted
                                 }))
                         };
@@ -797,6 +797,16 @@
                 setWhatsappModal({ seller, product });
             };
 
+            // Liked products persistence via localStorage
+            const getLikedProducts = () => {
+                try { return JSON.parse(localStorage.getItem('sp_liked_products') || '[]'); }
+                catch { return []; }
+            };
+            const saveLikedProducts = (ids) => {
+                try { localStorage.setItem('sp_liked_products', JSON.stringify(ids)); } catch {}
+            };
+            const isProductLiked = (productId) => getLikedProducts().includes(productId);
+
             const toggleProductLike = async (sellerId, productId) => {
                 const seller = sellers.find(s => s.id === sellerId);
                 const product = seller?.products.find(p => p.id === productId);
@@ -804,7 +814,17 @@
                 if (!product) return;
                 
                 const newLikedState = !product.liked;
-                const newLikesCount = newLikedState ? product.likes + 1 : product.likes - 1;
+                const newLikesCount = newLikedState ? product.likes + 1 : Math.max(0, product.likes - 1);
+
+                // Persist liked state in localStorage
+                const likedList = getLikedProducts();
+                if (newLikedState) {
+                    if (!likedList.includes(productId)) likedList.push(productId);
+                } else {
+                    const idx = likedList.indexOf(productId);
+                    if (idx > -1) likedList.splice(idx, 1);
+                }
+                saveLikedProducts(likedList);
                 
                 try {
                     // Update in database
@@ -1033,7 +1053,7 @@
                         images: insertedProduct.images,
                         keywords: insertedProduct.keywords,
                         likes: insertedProduct.likes,
-                        liked: false,
+                        liked: isProductLiked(insertedProduct.id),
                         isTrusted: insertedProduct.is_trusted
                     };
 
@@ -2848,7 +2868,7 @@
                             images: p.images || [DEFAULT_PRODUCT_IMAGE],
                             keywords: p.keywords || [],
                             likes: p.likes || 0,
-                            liked: false,
+                            liked: isProductLiked(p.id),
                             isTrusted: p.is_trusted || false
                         })),
                         subscription: profile.subscription_plan || 'free'
