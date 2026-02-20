@@ -798,44 +798,45 @@
             };
 
             const toggleProductLike = async (sellerId, productId) => {
-                const seller = sellers.find(s => s.id === sellerId);
-                const product = seller?.products.find(p => p.id === productId);
-                if (!product) return;
+                // Use functional updater to always get fresh state - avoids stale closure bug
+                let currentLiked = false;
+                let currentLikes = 0;
 
-                const newLiked = !product.liked;
-                const newLikesCount = newLiked ? product.likes + 1 : Math.max(0, product.likes - 1);
+                setSellers(prev => {
+                    const seller = prev.find(s => s.id === sellerId);
+                    const product = seller?.products.find(p => p.id === productId);
+                    if (!product) return prev;
 
-                // Update UI immediately so heart turns red/white instantly
-                const updateState = (liked, count) => {
-                    setSellers(prev => prev.map(s => {
+                    currentLiked = !product.liked;
+                    currentLikes = currentLiked ? product.likes + 1 : Math.max(0, product.likes - 1);
+
+                    return prev.map(s => {
                         if (s.id !== sellerId) return s;
                         return {
                             ...s,
                             products: s.products.map(p =>
-                                p.id === productId ? { ...p, liked, likes: count } : p
+                                p.id === productId ? { ...p, liked: currentLiked, likes: currentLikes } : p
                             )
                         };
-                    }));
-                    setDisplayedProducts(prev => prev.map(p =>
-                        (p.seller.id === sellerId && p.id === productId) ? { ...p, liked, likes: count } : p
-                    ));
-                    setSelectedProduct(prev =>
-                        (prev && prev.id === productId && prev.seller.id === sellerId) ? { ...prev, liked, likes: count } : prev
-                    );
-                };
+                    });
+                });
 
-                updateState(newLiked, newLikesCount);
+                setDisplayedProducts(prev => prev.map(p =>
+                    (p.seller.id === sellerId && p.id === productId) ? { ...p, liked: currentLiked, likes: currentLikes } : p
+                ));
+
+                setSelectedProduct(prev =>
+                    (prev && prev.id === productId) ? { ...prev, liked: currentLiked, likes: currentLikes } : prev
+                );
 
                 // Save to Supabase in background
                 try {
                     const { error } = await supabaseClient
                         .from('products')
-                        .update({ likes: newLikesCount })
+                        .update({ likes: currentLikes })
                         .eq('id', productId);
                     if (error) throw error;
                 } catch (error) {
-                    // Revert if save failed
-                    updateState(!newLiked, product.likes);
                     console.error('Error updating likes:', error);
                 }
             };
