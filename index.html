@@ -3697,9 +3697,11 @@
                         return;
                     }
 
-                    // Step 2: Update admin stats
-                    const profit = Math.floor(payment.amount * 0.6);
-                    const adBudget = Math.floor(payment.amount * 0.4);
+                    // Step 2: Update admin stats - fixed splits per plan
+                    // Starter (₦3,900): ₦2,000 ad budget, ₦1,900 profit
+                    // Verified Pro (₦7,900): ₦4,000 ad budget, ₦3,900 profit
+                    const adBudget = payment.plan_type === 'verified_pro' ? 400000 : 200000;
+                    const profit = payment.amount - adBudget;
                     const categoryField = `${payment.category}_ad_budget`;
                     const { error: statsError } = await supabaseClient
                         .from('admin_stats')
@@ -4317,37 +4319,40 @@
 
                         {showAdBudgetBreakdown && (
                             <div className="fixed inset-0 bg-black/80 z-[210] flex items-center justify-center p-4" onClick={() => setShowAdBudgetBreakdown(false)}>
-                                <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                                    <h3 className="text-2xl font-bold text-white mb-6">Ad Budget by Category</h3>
-                                    <div className="space-y-4">
-                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                                            <span className="text-gray-300">📱 Phones & Gadgets</span>
-                                            <span className="text-white font-bold">₦{(stats.phones_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                                            <span className="text-gray-300">💻 Electronics</span>
-                                            <span className="text-white font-bold">₦{(stats.electronics_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                                            <span className="text-gray-300">👟 Shoes & Footwear</span>
-                                            <span className="text-white font-bold">₦{(stats.shoes_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                                            <span className="text-gray-300">👔 Clothes & Fashion</span>
-                                            <span className="text-white font-bold">₦{(stats.fashion_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pb-3 border-b border-gray-800">
-                                            <span className="text-gray-300">🏠 Home & Furniture</span>
-                                            <span className="text-white font-bold">₦{(stats.furniture_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                                        </div>
-                                        <div className="flex justify-between items-center pb-3">
-                                            <span className="text-gray-300">🍕 Foods & Edibles</span>
-                                            <span className="text-white font-bold">₦{(stats.foods_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
-                                        </div>
+                                <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between mb-5">
+                                        <h3 className="text-xl font-bold text-white">Ad Budget by Category</h3>
+                                        <span className="text-purple-400 font-bold">₦{(stats.total_ad_budget / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {[
+                                            { key: 'phones_ad_budget', label: 'Phones & Gadgets' },
+                                            { key: 'electronics_ad_budget', label: 'Electronics' },
+                                            { key: 'shoes_ad_budget', label: 'Shoes & Footwear' },
+                                            { key: 'fashion_ad_budget', label: 'Clothes & Fashion' },
+                                            { key: 'furniture_ad_budget', label: 'Home & Furniture' },
+                                            { key: 'foods_ad_budget', label: 'Foods & Edibles' },
+                                            { key: 'beauty_ad_budget', label: 'Beauty & Personal Care' },
+                                            { key: 'general_ad_budget', label: 'General Store' },
+                                        ].map(({ key, label }) => {
+                                            const val = stats[key] || 0;
+                                            const pct = stats.total_ad_budget > 0 ? Math.round((val / stats.total_ad_budget) * 100) : 0;
+                                            return (
+                                                <div key={key}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-gray-300 text-sm">{label}</span>
+                                                        <span className="text-white font-bold text-sm">₦{(val / 100).toLocaleString('en-NG', { minimumFractionDigits: 2 })}</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-purple-500 rounded-full" style={{ width: pct + '%' }}/>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
                                     </div>
                                     <button
                                         onClick={() => setShowAdBudgetBreakdown(false)}
-                                        className="w-full mt-6 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg font-bold transition-colors"
+                                        className="w-full mt-5 bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors"
                                     >
                                         Close
                                     </button>
