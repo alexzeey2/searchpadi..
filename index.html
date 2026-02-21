@@ -3616,10 +3616,22 @@
                         .eq('status', 'approved')
                         .order('approved_at', { ascending: false });
                     if (runningData) {
+                        // For any campaign missing seller_whatsapp, fetch from profiles
+                        const enriched = await Promise.all(runningData.map(async (c) => {
+                            if (!c.seller_whatsapp && c.seller_id) {
+                                const { data: profile } = await supabaseClient
+                                    .from('profiles')
+                                    .select('whatsapp')
+                                    .eq('id', c.seller_id)
+                                    .single();
+                                return { ...c, seller_whatsapp: profile?.whatsapp || '' };
+                            }
+                            return c;
+                        }));
                         const now = new Date();
                         const running = [];
                         const completed = [];
-                        runningData.forEach(c => {
+                        enriched.forEach(c => {
                             const approvedAt = new Date(c.approved_at || c.updated_at);
                             const days = c.plan_type === 'verified_pro' ? 2 : 1;
                             const expiresAt = new Date(approvedAt.getTime() + days * 24 * 60 * 60 * 1000);
