@@ -2010,15 +2010,15 @@
                                             onClick={onShowSubscription}
                                             className="flex-1 bg-purple-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-1.5"
                                         >
-                                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
-                                            Get Verified
+                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                            Get Customers
                                         </button>
                                         <button
                                             onClick={onAttractCustomers}
                                             className="flex-1 bg-[#2a2a2a] border border-gray-700 text-gray-300 py-2 px-3 rounded-lg text-sm font-semibold hover:border-purple-500 hover:text-purple-400 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
                                         >
-                                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-                                            Attract Customers
+                                            <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
+                                            Verify for Free
                                         </button>
                                     </div>
                                 ) : (
@@ -2113,13 +2113,20 @@
             const [touchStart, setTouchStart] = useState(0);
             const [touchEnd, setTouchEnd] = useState(0);
             const [showDescriptionModal, setShowDescriptionModal] = useState(false);
-            const liked = product.liked || false;
-            const likesCount = product.likes || 0;
+            const [liked, setLiked] = useState(false);
+            const [likesCount, setLikesCount] = useState(product.likes || 0);
 
             const handleLike = () => {
-                if (onToggleLike) {
-                    onToggleLike(product.seller?.id || product.sellerId, product.id);
-                }
+                const newLiked = !liked;
+                const newCount = newLiked ? likesCount + 1 : Math.max(0, likesCount - 1);
+                setLiked(newLiked);
+                setLikesCount(newCount);
+                // Save to Supabase silently
+                supabaseClient
+                    .from('products')
+                    .update({ likes: newCount })
+                    .eq('id', product.id)
+                    .then(({ error }) => { if (error) console.error('Likes error:', error); });
             };
 
             const minSwipeDistance = 50;
@@ -2280,23 +2287,11 @@
                                         e.stopPropagation();
                                         handleLike();
                                     }}
-                                    className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center transition-all"
-                                    style={{ transform: liked ? 'scale(1.15)' : 'scale(1)', transition: 'transform 0.2s ease' }}
+                                    className="w-12 h-12 rounded-lg bg-white/10 backdrop-blur-sm flex items-center justify-center active:scale-95 transition-all"
                                 >
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="26"
-                                        height="26"
-                                        viewBox="0 0 24 24"
-                                        fill={liked ? "#ef4444" : "none"}
-                                        stroke={liked ? "#ef4444" : "#ffffff"}
-                                        strokeWidth="2"
-                                        strokeLinecap="round"
-                                        strokeLinejoin="round"
-                                        style={{ transition: 'fill 0.2s ease, stroke 0.2s ease' }}
-                                    >
-                                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
-                                    </svg>
+                                    <span className="text-2xl">
+                                        {liked ? '❤️' : '🤍'}
+                                    </span>
                                 </button>
                             </div>
                         </div>
@@ -3152,77 +3147,58 @@
             );
         }
 
-        // Subscription Modal
+        // Campaign Modal
         function SubscriptionModal({ onClose, currentUser }) {
-            const [showPaymentInstructions, setShowPaymentInstructions] = useState(false);
             const [selectedPlan, setSelectedPlan] = useState(null);
+            const [selectedProduct, setSelectedProduct] = useState(null);
             const [screenshot, setScreenshot] = useState(null);
             const [screenshotPreview, setScreenshotPreview] = useState(null);
+            const [step, setStep] = useState(1); // 1: choose plan, 2: choose product, 3: payment
             const screenshotInputRef = useRef(null);
-            
+
             const BANK_DETAILS = {
                 bank: 'Opay',
                 accountNumber: '9058150220',
                 accountName: 'AlexanderBede Somtochukwu Ugwu'
             };
-            
+
             const plans = [
                 {
-                    name: 'Basic Plan',
-                    price: 'Free',
-                    period: '',
-                    features: [
-                        { text: 'Limited WhatsApp Buyer Chats', included: false },
-                        { text: 'No Verified Badge', included: false },
-                        { text: 'No Search Ranking Boost', included: false },
-                        { text: 'Basic Product Listing', included: true },
-                        { text: 'Standard Support', included: true }
-                    ],
-                    borderColor: 'border-gray-300',
-                    buttonText: 'Current Plan',
-                    buttonColor: 'bg-gray-300 text-gray-600 cursor-default',
-                    textColor: 'text-gray-600'
-                },
-                {
-                    name: 'Verified Plus',
+                    name: 'Starter',
+                    planType: 'starter',
                     price: '₦3,900',
-                    period: '/mo',
-                    features: [
-                        { text: 'Verified Profile Badge', included: true },
-                        { text: 'Standard Product Listings', included: true },
-                        { text: 'Basic Search Visibility', included: true }
-                    ],
-                    borderColor: 'border-blue-400',
-                    buttonText: 'Choose Plan',
+                    amount: 390000,
+                    duration: '1 day',
+                    promise: 'Get 2 to 5 people asking about your product',
+                    color: 'border-blue-500',
                     buttonColor: 'bg-blue-600 hover:bg-blue-700 text-white',
-                    textColor: 'text-blue-700',
-                    popular: true,
-                    badge: 'MOST POPULAR'
+                    textColor: 'text-blue-600',
+                    badge: null,
                 },
                 {
-                    name: 'Growth Pro Plan',
-                    price: '₦9,900',
-                    period: '/mo',
-                    features: [
-                        { text: 'Verified Profile Badge', included: true, highlight: true },
-                        { text: 'Product Trusted Badge', included: true, highlight: true },
-                        { text: 'Enhanced Product Visibility', included: true },
-                        { text: 'Priority Customer Support', included: true }
-                    ],
-                    borderColor: 'border-orange-400',
-                    buttonText: 'Go Pro',
-                    buttonColor: 'bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white',
-                    textColor: 'text-orange-600',
-                    recommended: true,
-                    badge: 'RECOMMENDED'
-                }
+                    name: 'Verified Pro',
+                    planType: 'verified_pro',
+                    price: '₦7,900',
+                    amount: 790000,
+                    duration: '2 days',
+                    promise: 'Get 5 to 10 people asking about your product + 30 day Verified badge',
+                    color: 'border-purple-500',
+                    buttonColor: 'bg-purple-600 hover:bg-purple-700 text-white',
+                    textColor: 'text-purple-600',
+                    badge: 'BEST VALUE',
+                },
             ];
 
-            const handleUpgrade = (plan) => {
-                if (plan.buttonText === 'Current Plan') return;
-                const planType = plan.name === 'Verified Plus' ? 'verified_plus' : 'growth_pro';
-                setSelectedPlan({ ...plan, planType });
-                setShowPaymentInstructions(true);
+            const sellerProducts = currentUser?.data?.products || [];
+
+            const handleSelectPlan = (plan) => {
+                setSelectedPlan(plan);
+                setStep(2);
+            };
+
+            const handleSelectProduct = (product) => {
+                setSelectedProduct(product);
+                setStep(3);
             };
 
             const handleScreenshotUpload = (e) => {
@@ -3241,17 +3217,15 @@
                 }
             };
 
-            const handlePaidConfirmation = async () => {
-                if (!currentUser || !selectedPlan) {
-                    alert('Please login first');
+            const handleSubmit = async () => {
+                if (!currentUser || !selectedPlan || !selectedProduct) {
+                    alert('Please complete all steps');
                     return;
                 }
-
                 if (!screenshot) {
-                    alert('Please upload payment screenshot');
+                    alert('Please upload your payment screenshot');
                     return;
                 }
-
                 try {
                     const { error } = await supabaseClient
                         .from('pending_payments')
@@ -3259,222 +3233,190 @@
                             seller_id: currentUser.data.id,
                             seller_name: currentUser.data.name,
                             seller_email: currentUser.data.email,
+                            seller_whatsapp: currentUser.data.whatsappNumber || currentUser.data.whatsapp || '',
                             plan_type: selectedPlan.planType,
-                            amount: selectedPlan.planType === 'verified_plus' ? 390000 : 990000,
+                            amount: selectedPlan.amount,
                             category: currentUser.data.category,
+                            product_id: selectedProduct.id,
+                            product_name: selectedProduct.name,
+                            product_image: selectedProduct.images?.[0] || null,
                             payment_timestamp: new Date().toISOString(),
                             payment_screenshot: screenshot,
                             status: 'pending'
                         }]);
-
                     if (error) throw error;
-
-                    alert('✅ Payment submitted!\n\nYour payment is being reviewed.\nYou\'ll be activated within 5-10 minutes.');
+                    alert('Payment submitted! We will review and contact you on WhatsApp within 5-10 minutes.');
                     onClose();
                 } catch (error) {
-                    console.error('Error creating payment record:', error);
-                    alert('❌ Failed to submit. Please try again or contact support.');
+                    console.error('Error submitting payment:', error);
+                    alert('Failed to submit. Please try again.');
                 }
             };
 
             return (
                 <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4" onClick={onClose}>
-                    <div className="bg-gradient-to-br from-gray-50 to-white rounded-3xl max-w-6xl w-full max-h-[90vh] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
-                        <div className="sticky top-0 bg-white/95 backdrop-blur-sm border-b border-gray-200 p-6 z-10 rounded-t-3xl">
-                            <div className="flex justify-between items-start">
-                                <div className="text-center flex-1">
-                                    <h2 className="text-2xl md:text-3xl font-bold text-[#0f2942] leading-snug">
-                                        Choose a Growth Plan, Attract More Buyers
-                                    </h2>
-                                </div>
-                                <button 
-                                    onClick={onClose} 
-                                    className="w-10 h-10 rounded-full bg-gray-200 flex items-center justify-center text-gray-700 hover:bg-gray-300 transition-colors ml-4 flex-shrink-0"
-                                >
-                                    ✕
-                                </button>
+                    <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-800" onClick={(e) => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div className="p-5 border-b border-gray-800 flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                                {step > 1 && (
+                                    <button onClick={() => setStep(step - 1)} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white">
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
+                                    </button>
+                                )}
+                                <h2 className="text-white font-bold text-lg">
+                                    {step === 1 ? 'Promote Your Product' : step === 2 ? 'Choose a Product' : 'Complete Payment'}
+                                </h2>
                             </div>
+                            <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white">✕</button>
                         </div>
 
-                        <div className="p-6 md:p-10">
-                            <div className="grid md:grid-cols-3 gap-6 md:gap-8">
-                                {plans.map((plan, idx) => (
-                                    <div 
-                                        key={idx}
-                                        className={`bg-white rounded-2xl p-7 border-[3px] ${plan.borderColor} relative hover:shadow-2xl transition-all duration-300 ${plan.popular ? 'transform md:scale-105' : ''}`}
-                                    >
-                                        {(plan.popular || plan.recommended) && (
-                                            <div className={`absolute -top-3 -right-3 ${plan.popular ? 'bg-gradient-to-br from-blue-500 to-blue-600' : 'bg-gradient-to-br from-orange-500 to-orange-600'} text-white text-xs font-bold px-5 py-2 rounded-full shadow-lg`}>
-                                                {plan.badge}
+                        {/* Step indicators */}
+                        <div className="flex items-center gap-2 px-5 pt-4">
+                            {[1,2,3].map(s => (
+                                <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= step ? 'bg-purple-500' : 'bg-gray-700'}`}/>
+                            ))}
+                        </div>
+
+                        <div className="p-5">
+
+                            {/* Step 1: Choose Plan */}
+                            {step === 1 && (
+                                <div className="space-y-4">
+                                    <p className="text-gray-400 text-sm mb-4">Real buyers will see your product and message you directly on WhatsApp.</p>
+                                    {plans.map((plan, idx) => (
+                                        <div key={idx} className={`border-2 ${plan.color} rounded-xl p-4 relative cursor-pointer hover:bg-gray-800/50 transition-all`} onClick={() => handleSelectPlan(plan)}>
+                                            {plan.badge && (
+                                                <span className="absolute -top-2.5 right-4 bg-purple-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">{plan.badge}</span>
+                                            )}
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div>
+                                                    <h3 className={`font-bold text-lg ${plan.textColor}`}>{plan.name}</h3>
+                                                    <span className="text-gray-500 text-xs">{plan.duration}</span>
+                                                </div>
+                                                <span className={`text-2xl font-extrabold ${plan.textColor}`}>{plan.price}</span>
                                             </div>
-                                        )}
-                                        
-                                        <div className="mb-6 text-center pb-6 border-b-2 border-gray-100">
-                                            <h3 className={`text-2xl font-bold ${plan.textColor} mb-4`}>{plan.name}</h3>
-                                            <div className="flex items-baseline justify-center gap-1">
-                                                <span className={`text-5xl md:text-6xl font-extrabold ${plan.price === 'Free' ? 'text-gray-500' : plan.textColor}`}>
-                                                    {plan.price}
-                                                </span>
-                                                {plan.period && <span className="text-gray-500 text-2xl font-medium">{plan.period}</span>}
-                                            </div>
+                                            <p className="text-gray-300 text-sm">{plan.promise}</p>
+                                            <button className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold ${plan.buttonColor} transition-colors`}>
+                                                Choose {plan.name}
+                                            </button>
                                         </div>
+                                    ))}
+                                </div>
+                            )}
 
-                                        <ul className="space-y-4 mb-8">
-                                            {plan.features.map((feature, fIdx) => (
-                                                <li 
-                                                    key={fIdx} 
-                                                    className={`flex items-start gap-3 ${
-                                                        feature.highlight 
-                                                            ? 'text-orange-600 font-bold text-base' 
-                                                            : feature.included 
-                                                                ? 'text-gray-700' 
-                                                                : 'text-gray-400'
-                                                    }`}
+                            {/* Step 2: Choose Product */}
+                            {step === 2 && (
+                                <div>
+                                    <p className="text-gray-400 text-sm mb-4">Which product do you want people to ask about?</p>
+                                    {sellerProducts.length === 0 ? (
+                                        <div className="text-center py-8">
+                                            <p className="text-gray-500 text-sm">You have no products yet. Add a product first.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {sellerProducts.map((product, idx) => (
+                                                <div
+                                                    key={idx}
+                                                    onClick={() => handleSelectProduct(product)}
+                                                    className={`cursor-pointer rounded-xl border-2 overflow-hidden transition-all ${selectedProduct?.id === product.id ? 'border-purple-500' : 'border-gray-700 hover:border-gray-500'}`}
                                                 >
-                                                    {feature.included ? (
-                                                        <svg className={`w-6 h-6 flex-shrink-0 mt-0.5 ${feature.highlight ? 'text-orange-500' : plan.textColor}`} fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
-                                                        </svg>
-                                                    ) : (
-                                                        <svg className="w-6 h-6 text-gray-300 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd"/>
-                                                        </svg>
-                                                    )}
-                                                    <span className="text-sm leading-relaxed">{feature.text}</span>
-                                                </li>
+                                                    <img src={product.images?.[0]} alt={product.name} className="w-full h-28 object-cover"/>
+                                                    <div className="p-2">
+                                                        <p className="text-white text-xs font-semibold truncate">{product.name}</p>
+                                                        <p className="text-purple-400 text-xs">₦{Number(product.price).toLocaleString()}</p>
+                                                    </div>
+                                                </div>
                                             ))}
-                                        </ul>
-
-                                        <button
-                                            onClick={() => handleUpgrade(plan)}
-                                            className={`w-full py-4 rounded-xl font-bold transition-all shadow-lg text-lg ${plan.buttonColor}`}
-                                        >
-                                            {plan.buttonText}
+                                        </div>
+                                    )}
+                                    {selectedProduct && (
+                                        <button onClick={() => setStep(3)} className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors">
+                                            Continue with "{selectedProduct.name}"
                                         </button>
-                                    </div>
-                                ))}
-                            </div>
+                                    )}
+                                </div>
+                            )}
 
-                            <div className="mt-10 text-center space-y-3">
-                                <p className="text-gray-500 text-base">
-                                    Cancel or upgrade anytime. Billed monthly.
-                                </p>
-                                <p className="text-gray-400 text-sm">
-                                    💳 Secure payments • 24/7 Support • Money-back guarantee
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Payment Instructions Overlay */}
-                        {showPaymentInstructions && (
-                            <div className="absolute inset-0 bg-black/95 rounded-3xl flex items-center justify-center p-4 z-20 overflow-y-auto">
-                                <div className="bg-white rounded-2xl p-6 md:p-8 max-w-lg w-full my-8">
-                                    <h3 className="text-2xl font-bold text-[#0f2942] mb-4">Complete Your Payment</h3>
-                                    
-                                    {/* Amount */}
-                                    <div className="bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl p-5 mb-5 text-center">
-                                        <p className="text-sm opacity-90 mb-1">Amount to Pay</p>
-                                        <p className="text-4xl font-bold">{selectedPlan?.price}</p>
-                                        <p className="text-sm opacity-90 mt-1">{selectedPlan?.name}</p>
+                            {/* Step 3: Payment */}
+                            {step === 3 && (
+                                <div>
+                                    {/* Summary */}
+                                    <div className="bg-gray-800/50 rounded-xl p-4 mb-4 flex items-center gap-3">
+                                        <img src={selectedProduct?.images?.[0]} className="w-14 h-14 rounded-lg object-cover flex-shrink-0"/>
+                                        <div>
+                                            <p className="text-white text-sm font-semibold">{selectedProduct?.name}</p>
+                                            <p className="text-gray-400 text-xs">{selectedPlan?.name} — {selectedPlan?.duration}</p>
+                                            <p className="text-purple-400 font-bold">{selectedPlan?.price}</p>
+                                        </div>
                                     </div>
 
                                     {/* Bank Details */}
-                                    <div className="bg-gray-50 rounded-xl p-5 mb-5 border-2 border-gray-200">
-                                        <p className="text-xs text-gray-500 uppercase tracking-wider mb-3 font-semibold">Transfer to:</p>
-                                        <div className="space-y-3">
+                                    <div className="bg-[#0f2942] rounded-xl p-4 mb-4 border border-blue-900">
+                                        <p className="text-gray-400 text-xs uppercase tracking-wider mb-3 font-semibold">Transfer to</p>
+                                        <div className="space-y-2">
                                             <div>
-                                                <p className="text-xs text-gray-500 mb-1">Bank Name</p>
-                                                <p className="text-lg font-bold text-gray-900">{BANK_DETAILS.bank}</p>
+                                                <p className="text-gray-500 text-xs">Bank</p>
+                                                <p className="text-white font-bold">{BANK_DETAILS.bank}</p>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500 mb-1">Account Number</p>
+                                                <p className="text-gray-500 text-xs">Account Number</p>
                                                 <div className="flex items-center gap-2">
-                                                    <p className="text-2xl font-bold text-purple-600 tracking-wider">{BANK_DETAILS.accountNumber}</p>
+                                                    <p className="text-purple-400 text-xl font-bold tracking-widest">{BANK_DETAILS.accountNumber}</p>
                                                     <button
-                                                        onClick={() => {
-                                                            navigator.clipboard.writeText(BANK_DETAILS.accountNumber);
-                                                            alert('Account number copied!');
-                                                        }}
-                                                        className="bg-purple-100 text-purple-600 px-3 py-1 rounded-lg text-xs font-semibold hover:bg-purple-200"
-                                                    >
-                                                        Copy
-                                                    </button>
+                                                        onClick={() => { navigator.clipboard.writeText(BANK_DETAILS.accountNumber); alert('Copied!'); }}
+                                                        className="bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded text-xs font-semibold"
+                                                    >Copy</button>
                                                 </div>
                                             </div>
                                             <div>
-                                                <p className="text-xs text-gray-500 mb-1">Account Name</p>
-                                                <p className="text-sm font-semibold text-gray-900">{BANK_DETAILS.accountName}</p>
+                                                <p className="text-gray-500 text-xs">Account Name</p>
+                                                <p className="text-white text-sm font-semibold">{BANK_DETAILS.accountName}</p>
+                                            </div>
+                                            <div className="pt-1 border-t border-blue-900">
+                                                <p className="text-gray-500 text-xs">Amount</p>
+                                                <p className="text-white text-2xl font-extrabold">{selectedPlan?.price}</p>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Important Note */}
-                                    <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-5">
-                                        <p className="text-sm text-blue-900">
-                                            <span className="font-bold">💡 Note:</span> This is SearchPadi's founder account. We're a new startup building trust one seller at a time. Your payment is secure and you'll be activated within 5-10 minutes.
-                                        </p>
+                                    <div className="bg-yellow-900/20 border border-yellow-800/40 rounded-lg p-3 mb-4">
+                                        <p className="text-yellow-300 text-xs">After payment, upload your screenshot below. We will review and contact you on WhatsApp within 5–10 minutes.</p>
                                     </div>
 
-                                    {/* Upload Screenshot */}
-                                    <div className="mb-5">
-                                        <label className="block text-sm font-semibold text-gray-700 mb-2">Upload Payment Screenshot</label>
-                                        <input
-                                            type="file"
-                                            ref={screenshotInputRef}
-                                            onChange={handleScreenshotUpload}
-                                            accept="image/*"
-                                            className="hidden"
-                                        />
+                                    {/* Screenshot Upload */}
+                                    <input type="file" ref={screenshotInputRef} onChange={handleScreenshotUpload} accept="image/*" className="hidden"/>
+                                    <div className="mb-4">
                                         {screenshotPreview ? (
                                             <div className="relative">
-                                                <img src={screenshotPreview} className="w-full h-48 object-contain bg-gray-100 rounded-lg border-2 border-green-500" />
-                                                <button
-                                                    onClick={() => screenshotInputRef.current.click()}
-                                                    className="absolute top-2 right-2 bg-white text-gray-700 px-3 py-1 rounded-lg text-xs font-semibold shadow-lg hover:bg-gray-100"
-                                                >
-                                                    Change
-                                                </button>
+                                                <img src={screenshotPreview} className="w-full h-40 object-contain bg-gray-800 rounded-lg border-2 border-green-500"/>
+                                                <button onClick={() => screenshotInputRef.current.click()} className="absolute top-2 right-2 bg-white text-gray-700 px-2 py-1 rounded text-xs font-semibold">Change</button>
                                             </div>
                                         ) : (
-                                            <button
-                                                onClick={() => screenshotInputRef.current.click()}
-                                                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-purple-500 hover:bg-purple-50 transition-colors"
-                                            >
-                                                <p className="text-gray-600 font-medium mb-1">📸 Click to Upload Screenshot</p>
-                                                <p className="text-xs text-gray-500">After making the transfer, upload proof of payment</p>
+                                            <button onClick={() => screenshotInputRef.current.click()} className="w-full border-2 border-dashed border-gray-700 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
+                                                <p className="text-gray-400 text-sm font-medium">Upload Payment Screenshot</p>
+                                                <p className="text-gray-600 text-xs mt-1">Tap to upload proof of payment</p>
                                             </button>
                                         )}
                                     </div>
 
-                                    {/* Actions */}
-                                    <div className="space-y-3">
-                                        <button
-                                            onClick={handlePaidConfirmation}
-                                            disabled={!screenshot}
-                                            className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold transition-colors"
-                                        >
-                                            ✓ Submit Payment
-                                        </button>
-                                        <button
-                                            onClick={() => {
-                                                setShowPaymentInstructions(false);
-                                                setScreenshot(null);
-                                                setScreenshotPreview(null);
-                                            }}
-                                            className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 py-3 rounded-lg font-medium transition-colors"
-                                        >
-                                            Cancel
-                                        </button>
-                                    </div>
+                                    <button
+                                        onClick={handleSubmit}
+                                        disabled={!screenshot}
+                                        className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold transition-colors"
+                                    >
+                                        Submit Payment
+                                    </button>
                                 </div>
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
                 </div>
             );
         }
 
-        // WhatsApp Safety Modal
+                // WhatsApp Safety Modal
         function WhatsAppModal({ seller, product, onClose }) {
             const [agreed, setAgreed] = useState(false);
 
@@ -3626,6 +3568,10 @@
             const [searchQuery, setSearchQuery] = useState('');
             const [searchResults, setSearchResults] = useState([]);
             const [showAdBudgetBreakdown, setShowAdBudgetBreakdown] = useState(false);
+            const [runningCampaigns, setRunningCampaigns] = useState([]);
+            const [completedCampaigns, setCompletedCampaigns] = useState([]);
+            const [showSellersByCategory, setShowSellersByCategory] = useState(false);
+            const [sellersByCategory, setSellersByCategory] = useState({});
             const [selectedSeller, setSelectedSeller] = useState(null);
             const [activeTab, setActiveTab] = useState('accounts');
             const [balanceView, setBalanceView] = useState('total'); // 'total' | 'period'
@@ -3663,6 +3609,30 @@
                         .order('created_at', { ascending: false });
                     if (paymentsData) setPendingPayments(paymentsData);
 
+                    // Load running campaigns (approved, not yet expired)
+                    const { data: runningData } = await supabaseClient
+                        .from('pending_payments')
+                        .select('*')
+                        .eq('status', 'approved')
+                        .order('approved_at', { ascending: false });
+                    if (runningData) {
+                        const now = new Date();
+                        const running = [];
+                        const completed = [];
+                        runningData.forEach(c => {
+                            const approvedAt = new Date(c.approved_at || c.updated_at);
+                            const days = c.plan_type === 'verified_pro' ? 2 : 1;
+                            const expiresAt = new Date(approvedAt.getTime() + days * 24 * 60 * 60 * 1000);
+                            if (now < expiresAt) {
+                                running.push({ ...c, expiresAt });
+                            } else {
+                                completed.push({ ...c, expiresAt });
+                            }
+                        });
+                        setRunningCampaigns(running);
+                        setCompletedCampaigns(completed);
+                    }
+
                     // Load pending accounts (sellers waiting for approval)
                     const { data: accountsData } = await supabaseClient
                         .from('profiles')
@@ -3677,6 +3647,20 @@
                         .select('*', { count: 'exact', head: true })
                         .eq('account_status', 'approved');
                     setTotalSellers(count || 0);
+
+                    // Load sellers grouped by category
+                    const { data: categoryData } = await supabaseClient
+                        .from('profiles')
+                        .select('category')
+                        .eq('account_status', 'approved');
+                    if (categoryData) {
+                        const grouped = categoryData.reduce((acc, s) => {
+                            const cat = s.category || 'unknown';
+                            acc[cat] = (acc[cat] || 0) + 1;
+                            return acc;
+                        }, {});
+                        setSellersByCategory(grouped);
+                    }
                 } catch (error) {
                     console.error('Error loading admin data:', error);
                 }
@@ -3684,50 +3668,57 @@
 
             const handleApprove = async (payment) => {
                 try {
-                    // Update seller subscription
-                    const planType = payment.plan_type === 'verified_plus' ? 'verified_plus' : 'growth_pro';
+                    // Step 1: Update seller profile
+                    const giveVerified = payment.plan_type === 'verified_pro';
+                    const updateData = { subscription_plan: payment.plan_type };
+                    if (giveVerified) {
+                        updateData.is_verified = true;
+                        updateData.temp_verified_until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+                    }
                     const { error: updateError } = await supabaseClient
                         .from('profiles')
-                        .update({ 
-                            subscription_plan: planType,
-                            is_verified: true
-                        })
+                        .update(updateData)
                         .eq('id', payment.seller_id);
                     
-                    if (updateError) throw updateError;
+                    if (updateError) {
+                        alert('❌ Step 1 failed (profile update): ' + updateError.message);
+                        return;
+                    }
 
-                    // Calculate splits
-                    const profit = Math.floor(payment.amount * 0.6); // 60%
-                    const adBudget = Math.floor(payment.amount * 0.4); // 40%
-                    
-                    // Update stats
+                    // Step 2: Update admin stats
+                    const profit = Math.floor(payment.amount * 0.6);
+                    const adBudget = Math.floor(payment.amount * 0.4);
                     const categoryField = `${payment.category}_ad_budget`;
                     const { error: statsError } = await supabaseClient
                         .from('admin_stats')
                         .update({
                             total_profit: stats.total_profit + profit,
                             total_ad_budget: stats.total_ad_budget + adBudget,
-                            [categoryField]: stats[categoryField] + adBudget,
+                            [categoryField]: (stats[categoryField] || 0) + adBudget,
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', 1);
                     
-                    if (statsError) throw statsError;
+                    if (statsError) {
+                        alert('❌ Step 2 failed (stats update): ' + statsError.message);
+                        return;
+                    }
 
-                    // Mark payment as approved
+                    // Step 3: Mark payment approved, clear screenshot to save space
                     const { error: paymentError } = await supabaseClient
                         .from('pending_payments')
-                        .update({ status: 'approved' })
+                        .update({ status: 'approved', approved_at: new Date().toISOString(), payment_screenshot: null })
                         .eq('id', payment.id);
                     
-                    if (paymentError) throw paymentError;
+                    if (paymentError) {
+                        alert('❌ Step 3 failed (payment status): ' + paymentError.message);
+                        return;
+                    }
 
-                    // Reload data
                     loadAdminData();
                     alert('✅ Payment approved and seller activated!');
                 } catch (error) {
-                    console.error('Error approving payment:', error);
-                    alert('❌ Failed to approve payment');
+                    alert('❌ Unexpected error: ' + error.message);
                 }
             };
 
@@ -3737,7 +3728,7 @@
                 try {
                     const { error } = await supabaseClient
                         .from('pending_payments')
-                        .update({ status: 'declined' })
+                        .update({ status: 'declined', payment_screenshot: null })
                         .eq('id', payment.id);
                     
                     if (error) throw error;
@@ -3914,9 +3905,13 @@
                         {/* Stats Cards */}
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                             {/* Total Sellers */}
-                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
-                                <div className="text-gray-400 text-sm mb-2">Total Sellers</div>
+                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6 cursor-pointer hover:border-blue-500 transition-colors" onClick={() => setShowSellersByCategory(true)}>
+                                <div className="flex items-center justify-between mb-2">
+                                    <div className="text-gray-400 text-sm">Total Sellers</div>
+                                    <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7"/></svg>
+                                </div>
                                 <div className="text-3xl font-bold text-white">{totalSellers}</div>
+                                <div className="text-gray-600 text-xs mt-1">Tap to see by category</div>
                             </div>
 
                             {/* Profit (60%) with period dropdown */}
@@ -4007,7 +4002,19 @@
                                 onClick={() => setActiveTab('payments')}
                                 className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'payments' ? 'bg-purple-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-gray-800 hover:border-purple-500'}`}
                             >
-                                Pending Subscriptions {pendingPayments.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendingPayments.length}</span>}
+                                Pending {pendingPayments.length > 0 && <span className="ml-1 bg-red-500 text-white text-xs px-1.5 py-0.5 rounded-full">{pendingPayments.length}</span>}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('running')}
+                                className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'running' ? 'bg-green-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-gray-800 hover:border-purple-500'}`}
+                            >
+                                Running {runningCampaigns.length > 0 && <span className="ml-1 bg-green-500 text-white text-xs px-1.5 py-0.5 rounded-full">{runningCampaigns.length}</span>}
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('completed')}
+                                className={`px-5 py-2 rounded-lg font-semibold text-sm transition-colors ${activeTab === 'completed' ? 'bg-gray-600 text-white' : 'bg-[#1a1a1a] text-gray-400 border border-gray-800 hover:border-purple-500'}`}
+                            >
+                                Completed
                             </button>
                         </div>
 
@@ -4089,7 +4096,7 @@
                         {/* Pending Subscriptions Tab */}
                         {activeTab === 'payments' && (
                         <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
-                            <h2 className="text-xl font-bold text-white mb-4">Pending Subscriptions</h2>
+                            <h2 className="text-xl font-bold text-white mb-4">Pending Campaigns</h2>
                             {pendingPayments.length === 0 ? (
                                 <div className="text-center py-12 text-gray-500">No pending payments</div>
                             ) : (
@@ -4120,6 +4127,15 @@
                                                         <p className="text-gray-400">
                                                             <span className="text-gray-500">Plan:</span> 
                                                             <span className="text-white ml-2 capitalize">{payment.plan_type.replace('_', ' ')}</span>
+                                                            {payment.product_name && (
+                                                                <div className="mt-2 flex items-center gap-2">
+                                                                    {payment.product_image && <img src={payment.product_image} className="w-10 h-10 rounded object-cover"/>}
+                                                                    <div>
+                                                                        <p className="text-gray-500 text-xs">Product to promote</p>
+                                                                        <p className="text-white text-sm font-semibold">{payment.product_name}</p>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </p>
                                                         <p className="text-gray-400">
                                                             <span className="text-gray-500">Amount:</span> 
@@ -4158,7 +4174,135 @@
                         </div>
                         )}
 
+                        {/* Running Campaigns Tab */}
+                        {activeTab === 'running' && (
+                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                                <h2 className="text-xl font-bold text-white mb-4">Running Campaigns</h2>
+                                {runningCampaigns.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-500">No active campaigns right now</div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {runningCampaigns.map(campaign => {
+                                            const now = new Date();
+                                            const msLeft = campaign.expiresAt - now;
+                                            const hoursLeft = Math.max(0, Math.ceil(msLeft / (1000 * 60 * 60)));
+                                            const isUrgent = hoursLeft <= 3;
+                                            const whatsappNum = (campaign.seller_whatsapp || '').replace(/\D/g, '');
+                                            return (
+                                                <div key={campaign.id} className={`bg-[#2a2a2a] rounded-xl p-4 border ${isUrgent ? 'border-red-700' : 'border-green-800'}`}>
+                                                    <div className="flex items-center gap-3">
+                                                        {/* Product image */}
+                                                        {campaign.product_image && (
+                                                            <img src={campaign.product_image} className="w-14 h-14 rounded-lg object-cover flex-shrink-0"/>
+                                                        )}
+                                                        {/* Info */}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-white font-bold truncate">{campaign.seller_name}</p>
+                                                            <p className="text-gray-400 text-xs capitalize">{campaign.plan_type.replace('_', ' ')} — {campaign.product_name || 'No product'}</p>
+                                                            <div className={`inline-flex items-center gap-1 mt-1 px-2 py-0.5 rounded-full text-xs font-semibold ${isUrgent ? 'bg-red-900/50 text-red-300' : 'bg-green-900/50 text-green-300'}`}>
+                                                                <div className={`w-1.5 h-1.5 rounded-full ${isUrgent ? 'bg-red-400' : 'bg-green-400'}`}/>
+                                                                {hoursLeft}h remaining
+                                                            </div>
+                                                        </div>
+                                                        {/* WhatsApp button */}
+                                                        <a
+                                                            href={`https://wa.me/${whatsappNum}`}
+                                                            target="_blank"
+                                                            className="flex-shrink-0 bg-green-600 hover:bg-green-700 text-white p-2.5 rounded-lg transition-colors"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                                            </svg>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Completed Campaigns Tab */}
+                        {activeTab === 'completed' && (
+                            <div className="bg-[#1a1a1a] border border-gray-800 rounded-xl p-6">
+                                <h2 className="text-xl font-bold text-white mb-4">Completed Campaigns</h2>
+                                {completedCampaigns.length === 0 ? (
+                                    <div className="text-center py-12 text-gray-500">No completed campaigns yet</div>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {completedCampaigns.map(campaign => {
+                                            const whatsappNum = (campaign.seller_whatsapp || '').replace(/\D/g, '');
+                                            return (
+                                                <div key={campaign.id} className="bg-[#2a2a2a] rounded-xl p-4 border border-gray-700 opacity-75">
+                                                    <div className="flex items-center gap-3">
+                                                        {campaign.product_image && (
+                                                            <img src={campaign.product_image} className="w-14 h-14 rounded-lg object-cover flex-shrink-0 grayscale"/>
+                                                        )}
+                                                        <div className="flex-1 min-w-0">
+                                                            <p className="text-white font-bold truncate">{campaign.seller_name}</p>
+                                                            <p className="text-gray-400 text-xs capitalize">{campaign.plan_type.replace('_', ' ')} — {campaign.product_name || 'No product'}</p>
+                                                            <p className="text-gray-600 text-xs mt-1">Ended {campaign.expiresAt.toLocaleDateString()}</p>
+                                                        </div>
+                                                        <a
+                                                            href={`https://wa.me/${whatsappNum}`}
+                                                            target="_blank"
+                                                            className="flex-shrink-0 bg-gray-700 hover:bg-gray-600 text-white p-2.5 rounded-lg transition-colors"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                                                                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                                            </svg>
+                                                        </a>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         {/* Ad Budget Breakdown Modal */}
+                        {showSellersByCategory && (
+                            <div className="fixed inset-0 bg-black/80 z-[210] flex items-center justify-center p-4" onClick={() => setShowSellersByCategory(false)}>
+                                <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-6 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
+                                    <div className="flex items-center justify-between mb-5">
+                                        <h3 className="text-xl font-bold text-white">Sellers by Category</h3>
+                                        <span className="bg-blue-900/50 text-blue-300 text-sm font-bold px-3 py-1 rounded-full">{totalSellers} total</span>
+                                    </div>
+                                    <div className="space-y-3">
+                                        {[
+                                            { key: 'phones', label: 'Phones & Gadgets' },
+                                            { key: 'electronics', label: 'Electronics' },
+                                            { key: 'shoes', label: 'Shoes & Footwear' },
+                                            { key: 'fashion', label: 'Clothes & Fashion' },
+                                            { key: 'furniture', label: 'Home & Furniture' },
+                                            { key: 'foods', label: 'Foods & Edibles' },
+                                            { key: 'beauty', label: 'Beauty & Personal Care' },
+                                            { key: 'general', label: 'General Store' },
+                                        ].map(({ key, label }) => {
+                                            const count = sellersByCategory[key] || 0;
+                                            const pct = totalSellers > 0 ? Math.round((count / totalSellers) * 100) : 0;
+                                            return (
+                                                <div key={key}>
+                                                    <div className="flex items-center justify-between mb-1">
+                                                        <span className="text-gray-300 text-sm">{label}</span>
+                                                        <span className="text-white font-bold text-sm">{count}</span>
+                                                    </div>
+                                                    <div className="h-1.5 bg-gray-800 rounded-full overflow-hidden">
+                                                        <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: pct + '%' }}/>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                    <button onClick={() => setShowSellersByCategory(false)} className="w-full mt-6 bg-gray-800 hover:bg-gray-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {showAdBudgetBreakdown && (
                             <div className="fixed inset-0 bg-black/80 z-[210] flex items-center justify-center p-4" onClick={() => setShowAdBudgetBreakdown(false)}>
                                 <div className="bg-[#1a1a1a] border border-gray-800 rounded-2xl p-8 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
