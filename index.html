@@ -133,6 +133,10 @@
             animation: none;
         }
 
+        @keyframes bubble-pulse {
+            0%, 100% { box-shadow: 0 0 0 3px rgba(124,58,237,0.25), 0 4px 15px rgba(0,0,0,0.4); }
+            50% { box-shadow: 0 0 0 6px rgba(124,58,237,0.15), 0 4px 20px rgba(124,58,237,0.3); }
+        }
         @keyframes glow-pulse {
             0%, 100% {
                 box-shadow: 0 0 0 2px rgba(147, 51, 234, 0.3),
@@ -213,6 +217,12 @@
             const [showSubscription, setShowSubscription] = useState(false);
             const [showEditProfile, setShowEditProfile] = useState(false);
             const [showAttractCustomers, setShowAttractCustomers] = useState(false);
+            const [showBubbleMessage, setShowBubbleMessage] = useState(false);
+            const [bubblePos, setBubblePos] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 160 });
+            const [isDragging, setIsDragging] = useState(false);
+            const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+            const bubbleDragRef = React.useRef(false);
+            const bubbleMoveRef = React.useRef(false);
             
             // Admin states
             const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -1185,6 +1195,23 @@
                 : [];
 
             const currentSeller = selectedSeller ? sellers.find(s => s.id === selectedSeller.id) : null;
+            // Show bubble message on login and every 20 minutes (only if seller has 20+ views)
+            React.useEffect(() => {
+                if (currentUser?.type !== 'seller') return;
+                const sellerData = sellers.find(s => s.id === currentUser.data.id);
+                const views = sellerData?.views || currentUser.data.views || 0;
+                if (views < 20) return;
+                // Show immediately on login
+                setShowBubbleMessage(true);
+                const timer = setTimeout(() => setShowBubbleMessage(false), 30000);
+                // Then every 20 minutes
+                const interval = setInterval(() => {
+                    setShowBubbleMessage(true);
+                    setTimeout(() => setShowBubbleMessage(false), 30000);
+                }, 20 * 60 * 1000);
+                return () => { clearTimeout(timer); clearInterval(interval); };
+            }, [currentUser?.type, sellers]);
+
             const updatedCurrentUser = currentUser?.type === 'seller' 
                 ? sellers.find(s => s.id === currentUser.data.id) 
                 : null;
@@ -1568,6 +1595,112 @@
                                 onWhatsApp={handleWhatsAppMessage}
                                 onToggleLike={toggleProductLike}
                             />
+                        );
+                    })()}
+
+                    {/* Somto Floating Bubble - shows for all sellers */}
+                    {currentUser?.type === 'seller' && (() => {
+                        const seller = currentUser.data;
+                        const photo = seller.profilePhoto || seller.profile_photo || DEFAULT_PROFILE_IMAGE;
+
+                        const handleBubbleTouchStart = (e) => {
+                            const touch = e.touches[0];
+                            bubbleDragRef.current = true;
+                            bubbleMoveRef.current = false;
+                            setDragOffset({
+                                x: touch.clientX - bubblePos.x,
+                                y: touch.clientY - bubblePos.y
+                            });
+                        };
+
+                        const handleBubbleTouchMove = (e) => {
+                            if (!bubbleDragRef.current) return;
+                            bubbleMoveRef.current = true;
+                            const touch = e.touches[0];
+                            const newX = Math.min(Math.max(0, touch.clientX - dragOffset.x), window.innerWidth - 64);
+                            const newY = Math.min(Math.max(0, touch.clientY - dragOffset.y), window.innerHeight - 64);
+                            setBubblePos({ x: newX, y: newY });
+                        };
+
+                        const handleBubbleTouchEnd = () => {
+                            bubbleDragRef.current = false;
+                            if (!bubbleMoveRef.current) {
+                                // It was a tap not a drag - open campaign modal
+                                setShowSubscription(true);
+                            }
+                        };
+
+                        const handleBubbleClick = () => {
+                            if (!bubbleMoveRef.current) {
+                                setShowSubscription(true);
+                            }
+                        };
+
+                        return (
+                            <div style={{ position: 'fixed', left: bubblePos.x, top: bubblePos.y, zIndex: 999, touchAction: 'none' }}>
+                                {/* Speech bubble message */}
+                                {showBubbleMessage && (
+                                    <div
+                                        style={{
+                                            position: 'absolute',
+                                            bottom: '72px',
+                                            right: '0px',
+                                            width: '200px',
+                                            background: '#1a1a1a',
+                                            border: '1px solid #7c3aed',
+                                            borderRadius: '12px',
+                                            padding: '10px 12px',
+                                            boxShadow: '0 4px 20px rgba(124,58,237,0.3)'
+                                        }}
+                                    >
+                                        <button
+                                            onClick={() => setShowBubbleMessage(false)}
+                                            style={{ position: 'absolute', top: '6px', right: '8px', background: 'none', border: 'none', color: '#9ca3af', fontSize: '12px', cursor: 'pointer' }}
+                                        >✕</button>
+                                        <p style={{ color: '#9ca3af', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', marginRight: '16px' }}>Somto</p>
+                                        <p style={{ color: '#e5e7eb', fontSize: '12px', lineHeight: '1.5', marginRight: '12px' }}>
+                                            You have <span style={{ color: '#a78bfa', fontWeight: 'bold' }}>{seller.views || 0} view{(seller.views || 0) !== 1 ? 's' : ''}</span> — people are starting to notice you. Would you like me to convince people to ask about your product?
+                                        </p>
+                                        <button
+                                            onClick={() => { setShowBubbleMessage(false); setShowSubscription(true); }}
+                                            style={{ marginTop: '8px', width: '100%', background: '#7c3aed', color: 'white', border: 'none', borderRadius: '8px', padding: '6px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer' }}
+                                        >
+                                            Yes, Get Me Customers
+                                        </button>
+                                        {/* Triangle pointer */}
+                                        <div style={{ position: 'absolute', bottom: '-7px', right: '22px', width: '12px', height: '12px', background: '#1a1a1a', borderRight: '1px solid #7c3aed', borderBottom: '1px solid #7c3aed', transform: 'rotate(45deg)' }}/>
+                                    </div>
+                                )}
+
+                                {/* Bubble */}
+                                <div
+                                    onTouchStart={handleBubbleTouchStart}
+                                    onTouchMove={handleBubbleTouchMove}
+                                    onTouchEnd={handleBubbleTouchEnd}
+                                    onClick={handleBubbleClick}
+                                    style={{
+                                        width: '58px',
+                                        height: '58px',
+                                        borderRadius: '50%',
+                                        overflow: 'hidden',
+                                        border: '2.5px solid #7c3aed',
+                                        boxShadow: '0 0 0 3px rgba(124,58,237,0.25), 0 4px 15px rgba(0,0,0,0.4)',
+                                        cursor: 'pointer',
+                                        userSelect: 'none',
+                                        animation: 'bubble-pulse 3s ease-in-out infinite'
+                                    }}
+                                >
+                                    <img src={photo} alt="Somto" style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }}/>
+                                </div>
+
+                                {/* Notification dot */}
+                                <div style={{
+                                    position: 'absolute', top: '2px', right: '2px',
+                                    width: '14px', height: '14px', borderRadius: '50%',
+                                    background: '#ef4444', border: '2px solid #0a0a0a',
+                                    animation: 'bubble-pulse 2s ease-in-out infinite'
+                                }}/>
+                            </div>
                         );
                     })()}
 
@@ -3174,7 +3307,7 @@
                     price: '₦3,900',
                     amount: 390000,
                     duration: '1 day',
-                    promise: 'Get 2 to 5 people asking about your product',
+                    promise: 'Convince 2 to 5 people to ask about your product',
                     color: 'border-blue-500',
                     buttonColor: 'bg-blue-600 hover:bg-blue-700 text-white',
                     textColor: 'text-blue-600',
@@ -3186,7 +3319,7 @@
                     price: '₦7,900',
                     amount: 790000,
                     duration: '2 days',
-                    promise: 'Get 5 to 10 people asking about your product + 30 day Verified badge',
+                    promise: 'Convince 5 to 12 people to ask about your product + 30 day Verified badge',
                     color: 'border-purple-500',
                     buttonColor: 'bg-purple-600 hover:bg-purple-700 text-white',
                     textColor: 'text-purple-600',
