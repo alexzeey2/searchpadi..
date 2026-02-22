@@ -1637,6 +1637,20 @@
                         };
 
                         return (
+                            <>
+                            {/* Blur backdrop */}
+                            {showBubbleMessage && (
+                                <div
+                                    onClick={() => setShowBubbleMessage(false)}
+                                    style={{
+                                        position: 'fixed', inset: 0, zIndex: 998,
+                                        backdropFilter: 'blur(6px)',
+                                        WebkitBackdropFilter: 'blur(6px)',
+                                        background: 'rgba(0,0,0,0.45)',
+                                        transition: 'opacity 0.3s ease'
+                                    }}
+                                />
+                            )}
                             <div style={{ position: 'fixed', left: bubblePos.x, top: bubblePos.y, zIndex: 999, touchAction: 'none' }}>
                                 {/* Speech bubble message */}
                                 {showBubbleMessage && (
@@ -1701,6 +1715,7 @@
                                     animation: 'bubble-pulse 2s ease-in-out infinite'
                                 }}/>
                             </div>
+                            </>
                         );
                     })()}
 
