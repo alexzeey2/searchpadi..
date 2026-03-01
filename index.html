@@ -266,11 +266,9 @@
             const [showRegistration, setShowRegistration] = useState(false);
             const [showLogin, setShowLogin] = useState(false);
             const [showAddProduct, setShowAddProduct] = useState(false);
-            const [showSubscription, setShowSubscription] = useState(false);
             const [showSomtoPromote, setShowSomtoPromote] = useState(false);
             const [headerFreeSlots, setHeaderFreeSlots] = useState(null); // null = not loaded yet
             const [showEditProfile, setShowEditProfile] = useState(false);
-            const [showAttractCustomers, setShowAttractCustomers] = useState(false);
             const [showBubbleMessage, setShowBubbleMessage] = useState(false);
             const [bubblePos, setBubblePos] = useState({ x: window.innerWidth - 80, y: window.innerHeight - 160 });
             const [isDragging, setIsDragging] = useState(false);
@@ -1701,7 +1699,6 @@
                             onDeleteProduct={handleDeleteProduct}
                             onEditProfile={() => setShowEditProfile(true)}
                             onShare={handleShare}
-                            onAttractCustomers={() => setShowAttractCustomers(true)}
                         />
                     )}
 
@@ -1869,14 +1866,6 @@
                     }} />}
                     {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
                     {showSomtoPromote && <SomtoPromoteChat onClose={() => setShowSomtoPromote(false)} currentUser={currentUser} />}
-                    {/* SubscriptionModal removed — Somto chat flow is the only upgrade path */}
-                    {showAttractCustomers && currentUser?.type === 'seller' && (
-                        <AttractCustomersModal
-                            seller={currentUser.data}
-                            onClose={() => setShowAttractCustomers(false)}
-                            onShare={handleShare}
-                        />
-                    )}
                     {showEditProfile && currentUser?.type === 'seller' && (
                         <EditProfileModal
                             seller={{ ...currentUser.data }}
@@ -2074,115 +2063,6 @@
                         >
                             {saving ? 'Saving...' : '✓ Save Changes'}
                         </button>
-                    </div>
-                </div>
-            );
-        }
-
-        function AttractCustomersModal({ seller, onClose, onShare }) {
-            const isTempVerified = seller.tempVerifiedUntil && new Date(seller.tempVerifiedUntil) > new Date();
-            const tempDaysLeft = seller.tempVerifiedUntil
-                ? Math.ceil((new Date(seller.tempVerifiedUntil) - new Date()) / (1000 * 60 * 60 * 24))
-                : 0;
-            const shareCount = seller.shareCount || 0;
-            const appUrl = 'https://searchpadi-phi.vercel.app';
-            const shareMsg = 'Hi! 👋 Visit ' + appUrl + ' to find my products on SearchPadi!\n\nSearchPadi\'s AI assistant Somto will help you find exactly what you need from my store. Just tell Somto what you\'re looking for! 🛍️';
-
-            const handleWhatsAppShare = () => {
-                onShare();
-                onClose();
-            };
-
-            const [copied, setCopied] = React.useState(false);
-            const handleCopyLink = () => {
-                const fallback = (str) => {
-                    const el = document.createElement('textarea');
-                    el.value = str;
-                    el.style.position = 'fixed';
-                    el.style.opacity = '0';
-                    document.body.appendChild(el);
-                    el.focus();
-                    el.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(el);
-                };
-                if (navigator.clipboard && navigator.clipboard.writeText) {
-                    navigator.clipboard.writeText(shareMsg).then(() => {
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                    }).catch(() => {
-                        fallback(shareMsg);
-                        setCopied(true);
-                        setTimeout(() => setCopied(false), 2000);
-                    });
-                } else {
-                    fallback(shareMsg);
-                    setCopied(true);
-                    setTimeout(() => setCopied(false), 2000);
-                }
-            };
-            const handleSMSShare = () => {
-                window.location.href = 'sms:?body=' + encodeURIComponent(shareMsg);
-            };
-
-            return (
-                <div className="fixed inset-0 z-[150] flex flex-col justify-end" onClick={onClose}>
-                    {/* Backdrop */}
-                    <div className="absolute inset-0 bg-black/60"></div>
-
-                    {/* Slide-up panel */}
-                    <div
-                        className="relative bg-[#1a1a1a] rounded-t-3xl p-6 pb-10 border-t border-gray-800"
-                        style={{ animation: 'slideUp 0.3s ease-out' }}
-                        onClick={e => e.stopPropagation()}
-                    >
-                        {/* Handle bar */}
-                        <div className="w-10 h-1 bg-gray-700 rounded-full mx-auto mb-5"></div>
-
-                        <h3 className="text-white font-bold text-lg mb-1">Share Your Store</h3>
-                        <p className="text-gray-400 text-sm mb-5">Send this to your customers — they can find your products on SearchPadi anytime.</p>
-
-                        {/* Message preview */}
-                        <div className="bg-[#2a2a2a] rounded-2xl p-4 mb-5 border border-gray-700">
-                            <p className="text-xs text-gray-500 mb-2 font-semibold uppercase tracking-wide">Ready to send</p>
-                            <p className="text-gray-200 text-sm leading-relaxed">
-                                👋 Hi! You can find my products on SearchPadi.{'\n\n'}
-                                🔗 Visit: <span className="text-purple-400 font-medium">{appUrl}</span>{'\n'}
-                                🔍 Then search for: <span className="text-yellow-400 font-medium">{seller.name}</span>{'\n\n'}
-                                Somto (the AI) will help you find exactly what you need from my store!
-                            </p>
-                        </div>
-
-                        {/* Buttons */}
-                        <div className="flex gap-2">
-                            <button
-                                onClick={handleWhatsAppShare}
-                                className="flex-1 bg-green-500 hover:bg-green-600 text-white py-2.5 rounded-lg text-sm font-semibold transition-colors flex items-center justify-center gap-1.5"
-                            >
-                                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-                                </svg>
-                                WhatsApp
-                            </button>
-                            <button
-                                onClick={handleSMSShare}
-                                className="flex-1 bg-[#2a2a2a] border border-gray-700 text-gray-300 py-2.5 rounded-lg text-sm font-semibold hover:border-blue-500 hover:text-blue-400 transition-colors flex items-center justify-center gap-1.5"
-                            >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
-                                SMS
-                            </button>
-                            <button
-                                onClick={handleCopyLink}
-                                className="flex-1 bg-[#2a2a2a] border border-gray-700 text-gray-300 py-2.5 rounded-lg text-sm font-semibold hover:border-purple-500 hover:text-purple-400 transition-colors flex items-center justify-center gap-1.5"
-                            >
-                                {copied ? (
-                                    <svg className="w-4 h-4 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                ) : (
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
-                                )}
-                                {copied ? 'Copied!' : 'Copy'}
-                            </button>
-                        </div>
                     </div>
                 </div>
             );
@@ -3355,275 +3235,6 @@
             );
         }
 
-        // Campaign Modal
-        function SubscriptionModal({ onClose, currentUser }) {
-            const [selectedPlan, setSelectedPlan] = useState(null);
-            const [selectedProduct, setSelectedProduct] = useState(null);
-            const [screenshot, setScreenshot] = useState(null);
-            const [screenshotPreview, setScreenshotPreview] = useState(null);
-            const [step, setStep] = useState(1); // 1: choose plan, 2: choose product, 3: payment
-            const screenshotInputRef = useRef(null);
-
-            const BANK_DETAILS = {
-                bank: 'Opay',
-                accountNumber: '9058150220',
-                accountName: 'AlexanderBede Somtochukwu Ugwu'
-            };
-
-            const plans = [
-                {
-                    name: 'Starter',
-                    planType: 'starter',
-                    price: '₦3,900',
-                    amount: 390000,
-                    duration: '1 day',
-                    promise: 'Convince 2 to 5 people to ask about your product',
-                    color: 'border-blue-500',
-                    buttonColor: 'bg-blue-600 hover:bg-blue-700 text-white',
-                    textColor: 'text-blue-600',
-                    badge: null,
-                },
-                {
-                    name: 'Verified Pro',
-                    planType: 'verified_pro',
-                    price: '₦7,900',
-                    amount: 790000,
-                    duration: '2 days',
-                    promise: 'Convince 5 to 12 people to ask about your product + 30 day Verified badge',
-                    color: 'border-purple-500',
-                    buttonColor: 'bg-purple-600 hover:bg-purple-700 text-white',
-                    textColor: 'text-purple-600',
-                    badge: 'BEST VALUE',
-                },
-            ];
-
-            const sellerProducts = currentUser?.data?.products || [];
-
-            const handleSelectPlan = (plan) => {
-                setSelectedPlan(plan);
-                setStep(2);
-            };
-
-            const handleSelectProduct = (product) => {
-                setSelectedProduct(product);
-                setStep(3);
-            };
-
-            const handleScreenshotUpload = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    if (file.size > 5 * 1024 * 1024) {
-                        alert('Image must be less than 5MB');
-                        return;
-                    }
-                    const reader = new FileReader();
-                    reader.onload = (ev) => {
-                        setScreenshot(ev.target.result);
-                        setScreenshotPreview(ev.target.result);
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-
-            const handleSubmit = async () => {
-                if (!currentUser || !selectedPlan || !selectedProduct) {
-                    alert('Please complete all steps');
-                    return;
-                }
-                if (!screenshot) {
-                    alert('Please upload your payment screenshot');
-                    return;
-                }
-                try {
-                    const { error } = await supabaseClient
-                        .from('pending_payments')
-                        .insert([{
-                            seller_id: currentUser.data.id,
-                            seller_name: currentUser.data.name,
-                            seller_email: currentUser.data.email,
-                            seller_whatsapp: currentUser.data.whatsappNumber || currentUser.data.whatsapp || '',
-                            plan_type: selectedPlan.planType,
-                            amount: selectedPlan.amount,
-                            category: currentUser.data.category,
-                            product_id: selectedProduct.id,
-                            product_name: selectedProduct.name,
-                            product_image: selectedProduct.images?.[0] || null,
-                            payment_timestamp: new Date().toISOString(),
-                            payment_screenshot: screenshot,
-                            status: 'pending'
-                        }]);
-                    if (error) throw error;
-                    alert('Payment submitted! We will review and contact you on WhatsApp within 5-10 minutes.');
-                    onClose();
-                } catch (error) {
-                    console.error('Error submitting payment:', error);
-                    alert('Failed to submit. Please try again.');
-                }
-            };
-
-            return (
-                <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4" onClick={onClose}>
-                    <div className="bg-[#1a1a1a] rounded-2xl max-w-md w-full max-h-[90vh] overflow-y-auto border border-gray-800" onClick={(e) => e.stopPropagation()}>
-                        
-                        {/* Header */}
-                        <div className="p-5 border-b border-gray-800 flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                {step > 1 && (
-                                    <button onClick={() => setStep(step - 1)} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/></svg>
-                                    </button>
-                                )}
-                                <h2 className="text-white font-bold text-lg">
-                                    {step === 1 ? 'Promote Your Product' : step === 2 ? 'Choose a Product' : 'Complete Payment'}
-                                </h2>
-                            </div>
-                            <button onClick={onClose} className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-gray-400 hover:text-white">✕</button>
-                        </div>
-
-                        {/* Step indicators */}
-                        <div className="flex items-center gap-2 px-5 pt-4">
-                            {[1,2,3].map(s => (
-                                <div key={s} className={`h-1 flex-1 rounded-full transition-all ${s <= step ? 'bg-purple-500' : 'bg-gray-700'}`}/>
-                            ))}
-                        </div>
-
-                        <div className="p-5">
-
-                            {/* Step 1: Choose Plan */}
-                            {step === 1 && (
-                                <div className="space-y-4">
-                                    <p className="text-gray-400 text-sm mb-4">Real buyers will see your product and message you directly on WhatsApp.</p>
-                                    {plans.map((plan, idx) => (
-                                        <div key={idx} className={`border-2 ${plan.color} rounded-xl p-4 relative cursor-pointer hover:bg-gray-800/50 transition-all`} onClick={() => handleSelectPlan(plan)}>
-                                            {plan.badge && (
-                                                <span className="absolute -top-2.5 right-4 bg-purple-600 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">{plan.badge}</span>
-                                            )}
-                                            <div className="flex items-start justify-between mb-2">
-                                                <div>
-                                                    <h3 className={`font-bold text-lg ${plan.textColor}`}>{plan.name}</h3>
-                                                    <span className="text-gray-500 text-xs">{plan.duration}</span>
-                                                </div>
-                                                <span className={`text-2xl font-extrabold ${plan.textColor}`}>{plan.price}</span>
-                                            </div>
-                                            <p className="text-gray-300 text-sm">{plan.promise}</p>
-                                            <button className={`mt-3 w-full py-2 rounded-lg text-sm font-semibold ${plan.buttonColor} transition-colors`}>
-                                                Choose {plan.name}
-                                            </button>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-
-                            {/* Step 2: Choose Product */}
-                            {step === 2 && (
-                                <div>
-                                    <p className="text-gray-400 text-sm mb-4">Which product do you want people to ask about?</p>
-                                    {sellerProducts.length === 0 ? (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-500 text-sm">You have no products yet. Add a product first.</p>
-                                        </div>
-                                    ) : (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {sellerProducts.map((product, idx) => (
-                                                <div
-                                                    key={idx}
-                                                    onClick={() => handleSelectProduct(product)}
-                                                    className={`cursor-pointer rounded-xl border-2 overflow-hidden transition-all ${selectedProduct?.id === product.id ? 'border-purple-500' : 'border-gray-700 hover:border-gray-500'}`}
-                                                >
-                                                    <img src={product.images?.[0]} alt={product.name} className="w-full h-28 object-cover"/>
-                                                    <div className="p-2">
-                                                        <p className="text-white text-xs font-semibold truncate">{product.name}</p>
-                                                        <p className="text-purple-400 text-xs">₦{Number(product.price).toLocaleString()}</p>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                    {selectedProduct && (
-                                        <button onClick={() => setStep(3)} className="mt-4 w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-lg font-semibold text-sm transition-colors">
-                                            Continue with "{selectedProduct.name}"
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Step 3: Payment */}
-                            {step === 3 && (
-                                <div>
-                                    {/* Summary */}
-                                    <div className="bg-gray-800/50 rounded-xl p-4 mb-4 flex items-center gap-3">
-                                        <img src={selectedProduct?.images?.[0]} className="w-14 h-14 rounded-lg object-cover flex-shrink-0"/>
-                                        <div>
-                                            <p className="text-white text-sm font-semibold">{selectedProduct?.name}</p>
-                                            <p className="text-gray-400 text-xs">{selectedPlan?.name} — {selectedPlan?.duration}</p>
-                                            <p className="text-purple-400 font-bold">{selectedPlan?.price}</p>
-                                        </div>
-                                    </div>
-
-                                    {/* Bank Details */}
-                                    <div className="bg-[#0f2942] rounded-xl p-4 mb-4 border border-blue-900">
-                                        <p className="text-gray-400 text-xs uppercase tracking-wider mb-3 font-semibold">Transfer to</p>
-                                        <div className="space-y-2">
-                                            <div>
-                                                <p className="text-gray-500 text-xs">Bank</p>
-                                                <p className="text-white font-bold">{BANK_DETAILS.bank}</p>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 text-xs">Account Number</p>
-                                                <div className="flex items-center gap-2">
-                                                    <p className="text-purple-400 text-xl font-bold tracking-widest">{BANK_DETAILS.accountNumber}</p>
-                                                    <button
-                                                        onClick={() => { navigator.clipboard.writeText(BANK_DETAILS.accountNumber); alert('Copied!'); }}
-                                                        className="bg-purple-900/50 text-purple-300 px-2 py-0.5 rounded text-xs font-semibold"
-                                                    >Copy</button>
-                                                </div>
-                                            </div>
-                                            <div>
-                                                <p className="text-gray-500 text-xs">Account Name</p>
-                                                <p className="text-white text-sm font-semibold">{BANK_DETAILS.accountName}</p>
-                                            </div>
-                                            <div className="pt-1 border-t border-blue-900">
-                                                <p className="text-gray-500 text-xs">Amount</p>
-                                                <p className="text-white text-2xl font-extrabold">{selectedPlan?.price}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="bg-yellow-900/20 border border-yellow-800/40 rounded-lg p-3 mb-4">
-                                        <p className="text-yellow-300 text-xs">After payment, upload your screenshot below. We will review and contact you on WhatsApp within 5–10 minutes.</p>
-                                    </div>
-
-                                    {/* Screenshot Upload */}
-                                    <input type="file" ref={screenshotInputRef} onChange={handleScreenshotUpload} accept="image/*" className="hidden"/>
-                                    <div className="mb-4">
-                                        {screenshotPreview ? (
-                                            <div className="relative">
-                                                <img src={screenshotPreview} className="w-full h-40 object-contain bg-gray-800 rounded-lg border-2 border-green-500"/>
-                                                <button onClick={() => screenshotInputRef.current.click()} className="absolute top-2 right-2 bg-white text-gray-700 px-2 py-1 rounded text-xs font-semibold">Change</button>
-                                            </div>
-                                        ) : (
-                                            <button onClick={() => screenshotInputRef.current.click()} className="w-full border-2 border-dashed border-gray-700 rounded-lg p-6 text-center hover:border-purple-500 transition-colors">
-                                                <p className="text-gray-400 text-sm font-medium">Upload Payment Screenshot</p>
-                                                <p className="text-gray-600 text-xs mt-1">Tap to upload proof of payment</p>
-                                            </button>
-                                        )}
-                                    </div>
-
-                                    <button
-                                        onClick={handleSubmit}
-                                        disabled={!screenshot}
-                                        className="w-full bg-green-600 hover:bg-green-700 disabled:opacity-40 disabled:cursor-not-allowed text-white py-3 rounded-lg font-bold transition-colors"
-                                    >
-                                        Submit Payment
-                                    </button>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            );
-        }
-
         // ── SOMTO PROMOTE CHAT ──
         // Pricing: every 6 people = ₦4,000 | min 6 people
         function SomtoPromoteChat({ onClose, currentUser }) {
@@ -4418,7 +4029,7 @@
                     const isFree = payment.plan_type === 'free_campaign';
 
                     if (isFree) {
-                        // Free campaign — just mark approved, no profile/stats update needed
+                        // Free campaign — just mark approved, no badges
                         const { error } = await supabaseClient
                             .from('pending_payments')
                             .update({ status: 'approved', approved_at: new Date().toISOString() })
@@ -4429,27 +4040,31 @@
                         return;
                     }
 
-                    // Step 1: Update seller profile
-                    const giveVerified = payment.plan_type === 'verified_pro';
-                    const updateData = { subscription_plan: payment.plan_type };
-                    if (giveVerified) {
-                        updateData.is_verified = true;
-                        updateData.temp_verified_until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-                    }
-                    const { error: updateError } = await supabaseClient
+                    // Paid campaign — give seller verified badge + mark product as trusted
+                    // Step 1: Give seller verified badge
+                    const { error: profileError } = await supabaseClient
                         .from('profiles')
-                        .update(updateData)
+                        .update({
+                            is_verified: true,
+                            temp_verified_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                        })
                         .eq('id', payment.seller_id);
-                    
-                    if (updateError) {
-                        alert('❌ Step 1 failed (profile update): ' + updateError.message);
+
+                    if (profileError) {
+                        alert('❌ Step 1 failed (verified badge): ' + profileError.message);
                         return;
                     }
 
-                    // Step 2: Update admin stats - fixed splits per plan
-                    // Starter (₦3,900): ₦2,000 ad budget, ₦1,900 profit
-                    // Verified Pro (₦7,900): ₦4,000 ad budget, ₦3,900 profit
-                    const adBudget = payment.plan_type === 'verified_pro' ? 400000 : 200000;
+                    // Step 2: Mark promoted product as trusted
+                    if (payment.product_id) {
+                        await supabaseClient
+                            .from('products')
+                            .update({ is_trusted: true })
+                            .eq('id', payment.product_id);
+                    }
+
+                    // Step 3: Update admin stats
+                    const adBudget = Math.round(payment.amount * 0.49); // ~49% goes to ad spend
                     const profit = payment.amount - adBudget;
                     const categoryField = `${payment.category}_ad_budget`;
                     const { error: statsError } = await supabaseClient
@@ -4461,25 +4076,27 @@
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', 1);
-                    
+
                     if (statsError) {
-                        alert('❌ Step 2 failed (stats update): ' + statsError.message);
+                        alert('❌ Step 2 failed (stats): ' + statsError.message);
                         return;
                     }
 
-                    // Step 3: Mark payment approved, clear screenshot to save space
+                    // Step 4: Mark payment approved
                     const { error: paymentError } = await supabaseClient
                         .from('pending_payments')
                         .update({ status: 'approved', approved_at: new Date().toISOString(), payment_screenshot: null })
                         .eq('id', payment.id);
-                    
+
                     if (paymentError) {
                         alert('❌ Step 3 failed (payment status): ' + paymentError.message);
                         return;
                     }
 
                     loadAdminData();
-                    alert('✅ Payment approved and seller activated!');
+                    alert('✅ Approved! ' + payment.seller_name + ' now has a verified badge and their product is marked trusted.');
+                } catch (error) {
+                    alert('❌ Unexpected error: ' + error.message);
                 } catch (error) {
                     alert('❌ Unexpected error: ' + error.message);
                 }
