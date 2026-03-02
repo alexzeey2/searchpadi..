@@ -3812,11 +3812,33 @@
 
             const handlePay = async () => {
                 if (isFreeOrder) {
-                    // Free — submit directly, claim slot in background (don't block on it)
                     setSubmitting(true);
                     try {
-                        // Try to claim the slot (non-blocking — if it fails we still submit)
-                        claimFreeSlot().catch(e => console.warn('Slot claim failed:', e));
+                        // Check if seller already has a pending or approved free campaign this month
+                        const now = new Date();
+                        const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                        
+                        const { data: existing } = await supabaseClient
+                            .from('pending_payments')
+                            .select('id')
+                            .eq('seller_id', currentUser.data.id)
+                            .eq('plan_type', 'free_campaign')
+                            .in('status', ['pending', 'approved'])
+                            .gte('payment_timestamp', `${monthYear}-01T00:00:00.000Z`);
+
+                        if (existing && existing.length > 0) {
+                            alert('You already have a free campaign this month. You can only claim one free campaign per month.');
+                            setSubmitting(false);
+                            return;
+                        }
+
+                        // Claim the slot first — blocking this time
+                        const claimed = await claimFreeSlot();
+                        if (!claimed) {
+                            alert('Sorry, the free campaign slot is no longer available. Please try again next month.');
+                            setSubmitting(false);
+                            return;
+                        }
 
                         const insertData = {
                             seller_id: currentUser.data.id,
@@ -4400,7 +4422,7 @@
                     const isFree = payment.plan_type === 'free_campaign';
 
                     if (isFree) {
-                        // Free campaign — just mark approved, no profile/stats update needed
+                        // Free campaign — just mark approved, no badges
                         const { error } = await supabaseClient
                             .from('pending_payments')
                             .update({ status: 'approved', approved_at: new Date().toISOString() })
@@ -4411,27 +4433,32 @@
                         return;
                     }
 
-                    // Step 1: Update seller profile
-                    const giveVerified = payment.plan_type === 'verified_pro';
-                    const updateData = { subscription_plan: payment.plan_type };
-                    if (giveVerified) {
-                        updateData.is_verified = true;
-                        updateData.temp_verified_until = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-                    }
-                    const { error: updateError } = await supabaseClient
+                    // Paid campaign — give verified badge + trusted product badge
+
+                    // Step 1: Give seller verified badge (no subscription_plan update)
+                    const { error: profileError } = await supabaseClient
                         .from('profiles')
-                        .update(updateData)
+                        .update({
+                            is_verified: true,
+                            temp_verified_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+                        })
                         .eq('id', payment.seller_id);
-                    
-                    if (updateError) {
-                        alert('❌ Step 1 failed (profile update): ' + updateError.message);
+
+                    if (profileError) {
+                        alert('❌ Step 1 failed (verified badge): ' + profileError.message);
                         return;
                     }
 
-                    // Step 2: Update admin stats - fixed splits per plan
-                    // Starter (₦3,900): ₦2,000 ad budget, ₦1,900 profit
-                    // Verified Pro (₦7,900): ₦4,000 ad budget, ₦3,900 profit
-                    const adBudget = payment.plan_type === 'verified_pro' ? 400000 : 200000;
+                    // Step 2: Mark promoted product as trusted
+                    if (payment.product_id) {
+                        await supabaseClient
+                            .from('products')
+                            .update({ is_trusted: true })
+                            .eq('id', payment.product_id);
+                    }
+
+                    // Step 3: Update admin stats
+                    const adBudget = Math.round(payment.amount * 0.49);
                     const profit = payment.amount - adBudget;
                     const categoryField = `${payment.category}_ad_budget`;
                     const { error: statsError } = await supabaseClient
@@ -4443,25 +4470,25 @@
                             updated_at: new Date().toISOString()
                         })
                         .eq('id', 1);
-                    
+
                     if (statsError) {
-                        alert('❌ Step 2 failed (stats update): ' + statsError.message);
+                        alert('❌ Step 2 failed (stats): ' + statsError.message);
                         return;
                     }
 
-                    // Step 3: Mark payment approved, clear screenshot to save space
+                    // Step 4: Mark payment approved
                     const { error: paymentError } = await supabaseClient
                         .from('pending_payments')
                         .update({ status: 'approved', approved_at: new Date().toISOString(), payment_screenshot: null })
                         .eq('id', payment.id);
-                    
+
                     if (paymentError) {
                         alert('❌ Step 3 failed (payment status): ' + paymentError.message);
                         return;
                     }
 
                     loadAdminData();
-                    alert('✅ Payment approved and seller activated!');
+                    alert('✅ Approved! ' + payment.seller_name + ' now has a verified badge and their product is marked trusted.');
                 } catch (error) {
                     alert('❌ Unexpected error: ' + error.message);
                 }
