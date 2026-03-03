@@ -764,6 +764,17 @@
                         setSellers(prev => prev.map(s => 
                             s.id === product.seller.id ? { ...s, views: s.views + 1 } : s
                         ));
+                        try {
+                            fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    seller_id: product.seller.id,
+                                    title: '👀 Someone viewed your product!',
+                                    body: `Your listing "${product.name}" just got a view!`
+                                })
+                            });
+                        } catch(e) {}
                     }
                 } catch (error) {
                     console.error('Error incrementing views:', error);
@@ -3059,6 +3070,26 @@
                     }
                     
                     onLoginSuccess(sellerData);
+                    // Request push notification permission
+                    if ('Notification' in window && 'serviceWorker' in navigator) {
+                        Notification.requestPermission().then(async (permission) => {
+                            if (permission === 'granted') {
+                                try {
+                                    const reg = await navigator.serviceWorker.ready;
+                                    const sub = await reg.pushManager.subscribe({
+                                        userVisibleOnly: true,
+                                        applicationServerKey: 'BMh9JcJgTwrWfj3Mr_T8RASxfwhCsHC3kcY6hQ_Zow5AZM-J3aebC90bOlRxEllhgYAVYoIDqQxgb03xZnT1oJs'
+                                    });
+                                    await supabaseClient.from('push_subscriptions').upsert({
+                                        seller_id: sellerData.id,
+                                        endpoint: sub.endpoint,
+                                        p256dh: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('p256dh')))),
+                                        auth: btoa(String.fromCharCode(...new Uint8Array(sub.getKey('auth'))))
+                                    }, { onConflict: 'seller_id,endpoint' });
+                                } catch(e) { console.error('Push subscription error:', e); }
+                            }
+                        });
+                    }
                     alert('✅ Login successful! Welcome back!');
                 } catch (error) {
                     console.error('Login error:', error);
@@ -5190,5 +5221,12 @@
             });
         }
     </script>
+<script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js')
+            .then(reg => console.log('SW registered:', reg.scope))
+            .catch(err => console.error('SW error:', err));
+    }
+</script>
 </body>
 </html>
