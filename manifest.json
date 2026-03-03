@@ -9,15 +9,15 @@
   "orientation": "portrait",
   "icons": [
     {
-      "src": "https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png",
+      "src": "https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg",
       "sizes": "192x192",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     },
     {
-      "src": "https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png",
+      "src": "https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg",
       "sizes": "512x512",
-      "type": "image/png",
+      "type": "image/jpeg",
       "purpose": "any maskable"
     }
   ]
