@@ -13,7 +13,17 @@
         .header-logo { font-size: 16px; font-weight: 800; color: white; }
         .header-sub { font-size: 11px; color: rgba(255,255,255,0.8); }
         .profile-top { padding: 20px 16px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2a2a2a; }
-        .profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; border: 3px solid #7c3aed; flex-shrink: 0; }
+        .avatar-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+        .avatar-ring {
+            position: absolute; inset: -4px; border-radius: 50%;
+            border: 2.5px solid transparent;
+            background: linear-gradient(#1a1a1a, #1a1a1a) padding-box,
+                        linear-gradient(90deg, #7c3aed, #c4b5fd, #7c3aed) border-box;
+            animation: spin-ring 1.8s linear infinite;
+            box-shadow: 0 0 14px rgba(124,58,237,0.8);
+        }
+        @keyframes spin-ring { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; flex-shrink: 0; }
         .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
         .profile-location { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
         .verified-badge { display: inline-flex; align-items: center; gap: 3px; background: #065f46; color: #34d399; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
@@ -24,7 +34,9 @@
         .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
         .bio-box { padding: 14px 16px; border-bottom: 1px solid #2a2a2a; }
         .bio-text { font-size: 14px; color: #9ca3af; line-height: 1.5; }
-        .wa-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 14px 16px; background: #16a34a; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 16px; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .btn-row { display: flex; gap: 10px; margin: 14px 16px; }
+        .wa-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .sp-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #7c3aed; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; }
         .products-title { padding: 14px 16px 10px; font-size: 15px; font-weight: 700; }
         .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
         .product-card { background: #2a2a2a; border-radius: 12px; overflow: hidden; cursor: pointer; text-decoration: none; display: block; }
@@ -96,7 +108,7 @@ function render(s, products) {
 
     document.getElementById('app').innerHTML = `
         <div class="profile-top">
-            <img class="profile-avatar" src="${s.profile_photo||'https://via.placeholder.com/80/6366f1/fff?text=S'}" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
+            <div class="avatar-wrap"><div class="avatar-ring"></div><img class="profile-avatar" src="${s.profile_photo||'https://via.placeholder.com/80/6366f1/fff?text=S'}" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" /></div>
             <div>
                 <div class="profile-name">${s.business_name}</div>
                 <div class="profile-location">📍 ${s.location||'Nigeria'}</div>
@@ -111,10 +123,16 @@ function render(s, products) {
             <div class="stat"><div class="stat-num">${totalLikes.toLocaleString()}</div><div class="stat-label">Likes</div></div>
         </div>
         ${s.bio ? `<div class="bio-box"><div class="bio-text">${s.bio}</div></div>` : ''}
-        <a class="wa-btn" href="https://wa.me/${wa}?text=${msg}" target="_blank">
-            <svg width="22" height="22" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-            Contact on WhatsApp
-        </a>
+        <div class="btn-row">
+            <a class="wa-btn" href="https://wa.me/${wa}?text=${msg}" target="_blank">
+                <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp
+            </a>
+            <a class="sp-btn" href="https://searchpadi-phi.vercel.app" target="_blank">
+                <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                SearchPadi
+            </a>
+        </div>
         <div class="products-title">Products (${products.length})</div>
         ${products.length === 0 
             ? '<div class="no-products">No products listed yet</div>'
