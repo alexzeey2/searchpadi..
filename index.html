@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SearchPadi - Your Search Padi for Trusted Sellers</title>
+    <meta name="description" content="Your search padi for trusted sellers. Find verified sellers across Nigeria with AI-powered assistance." />
+    <meta name="theme-color" content="#7c3aed" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="SearchPadi" />
+    <link rel="icon" type="image/png" sizes="192x192" href="https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png" />
+    <link rel="apple-touch-icon" href="https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png" />
+    <link rel="manifest" href="/manifest.json" />
+    <link rel="preconnect" href="https://fxjnbqymkdvuqfeagpur.supabase.co" crossorigin />
+  </head>
+  <body>
+    <!-- Splash screen shows instantly before JS loads -->
+    <div id="splash" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#3b0764 0%,#4c1d95 40%,#2e1065 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.4s ease;">
+      <img src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
+           onerror="this.style.display='none'"
+           style="width:110px;height:110px;border-radius:50%;object-fit:cover;margin-bottom:24px;border:3px solid rgba(167,139,250,0.5);box-shadow:0 0 40px rgba(124,58,237,0.6);" />
+      <h1 style="color:white;font-size:36px;font-weight:800;margin-bottom:10px;font-family:-apple-system,sans-serif;">SearchPadi</h1>
+      <p style="color:#c4b5fd;font-size:15px;margin-bottom:48px;font-family:-apple-system,sans-serif;">Your Search Padi for Trusted Sellers</p>
+      <div style="width:48px;height:48px;border:4px solid rgba(167,139,250,0.3);border-top:4px solid #a78bfa;border-radius:50%;animation:sp 0.9s linear infinite;"></div>
+      <style>@keyframes sp{to{transform:rotate(360deg)}}</style>
+    </div>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
