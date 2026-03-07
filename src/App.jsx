@@ -78,7 +78,7 @@ export default function App() {
         setTimeout(() => {
             const splash = document.getElementById('splash');
             if (splash) { splash.style.opacity = '0'; setTimeout(() => splash.remove(), 400); }
-        }, 1500);
+        }, 6000);
     }, []);
 
     const handleDeepLinks = async () => {
@@ -1095,35 +1095,7 @@ export default function App() {
         ? sellers.find(s => s.id === currentUser.data.id) 
         : null;
 
-    if (isLoadingData) {
-        return (
-            <div className="chat-container bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
-                <div className="flex items-center justify-center h-full">
-                    <div className="text-center px-6">
-                        {/* Logo */}
-                        <div className="mb-8">
-                            <div className="w-24 h-24 mx-auto mb-6">
-                                <img 
-                                    src="https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png"
-                                    alt="SearchPadi Logo"
-                                    className="w-full h-full object-contain"
-                                />
-                            </div>
-                            <h1 className="text-4xl font-bold text-white mb-3">SearchPadi</h1>
-                            <p className="text-purple-300 text-base">Your Search Padi for Trusted Sellers</p>
-                        </div>
-                        
-                        {/* Circular Spinner */}
-                        <div className="flex justify-center mb-6">
-                            <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-                        </div>
-                        
-                        <p className="text-purple-200 text-sm animate-pulse">Loading verified sellers...</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
+
 
     return (
         <div className="chat-container">
@@ -1224,6 +1196,28 @@ export default function App() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
+                {/* Skeleton loaders while data loads */}
+                {isLoadingData && (
+                    <div className="space-y-4">
+                        <div className="flex gap-2">
+                            <div className="w-8 h-8 rounded-full bg-gray-700 animate-pulse flex-shrink-0"></div>
+                            <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none p-3 w-48">
+                                <div className="h-3 bg-gray-700 rounded animate-pulse mb-2"></div>
+                                <div className="h-3 bg-gray-700 rounded animate-pulse w-3/4"></div>
+                            </div>
+                        </div>
+                        {[1,2,3].map(i => (
+                            <div key={i} className="bg-[#2a2a2a] rounded-xl border border-gray-700 overflow-hidden animate-pulse">
+                                <div className="h-36 bg-gray-700"></div>
+                                <div className="p-3">
+                                    <div className="h-3 bg-gray-600 rounded mb-2"></div>
+                                    <div className="h-3 bg-gray-600 rounded w-2/3 mb-2"></div>
+                                    <div className="h-8 bg-gray-700 rounded mt-3"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
                 {messages.map((message) => (
                     <div key={message.id} className="message-enter relative z-10">
                         {message.type === 'assistant' ? (
