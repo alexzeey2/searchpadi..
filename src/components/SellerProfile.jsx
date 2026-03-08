@@ -102,18 +102,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             <>
                             {/* Campaign Status Widget */}
                             <CampaignStatusWidget sellerId={seller.id} />
-                            {/* Demand data — show category search interest */}
-                            <div className="bg-purple-900/20 border border-purple-700/30 rounded-xl p-3 mb-3 flex items-center gap-3">
-                                <div className="w-8 h-8 bg-purple-900/60 rounded-full flex items-center justify-center flex-shrink-0">
-                                    <svg className="w-4 h-4 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
-                                </div>
-                                <div>
-                                    <p className="text-white text-sm font-bold">
-                                        <span className="text-yellow-400">{Math.floor(Math.random() * 80 + 20) + (seller.views || 0)}</span> people searched <span className="text-purple-300">{seller.category}</span> this week
-                                    </p>
-                                    <p className="text-gray-400 text-xs mt-0.5">Run a campaign to reach them before they find someone else</p>
-                                </div>
-                            </div>
+
                             <div className="flex gap-2">
                                 <button
                                     onClick={onShowSubscription}
