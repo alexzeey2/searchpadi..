@@ -1104,10 +1104,11 @@ export default function App() {
                             <h1 className="text-4xl font-bold text-white mb-3">SearchPadi</h1>
                             <p className="text-purple-300 text-base">Your Search Padi for Trusted Sellers</p>
                         </div>
-                        <div className="flex justify-center mb-6">
-                            <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                        <div style={{display:'flex', justifyContent:'center', marginBottom:'24px'}}>
+                            <div style={{width:'56px',height:'56px',border:'4px solid rgba(124,58,237,0.3)',borderTop:'4px solid #7c3aed',borderRadius:'50%',animation:'spin 0.9s linear infinite'}}></div>
                         </div>
-                        <p className="text-purple-200 text-sm animate-pulse">Loading verified sellers...</p>
+                        <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                        <p style={{color:'#ddd6fe',fontSize:'14px'}}>Loading verified sellers...</p>
                     </div>
                 </div>
             </div>
