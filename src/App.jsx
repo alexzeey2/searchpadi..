@@ -156,7 +156,11 @@ export default function App() {
                     subscription: sellerData.subscription_plan || 'free',
                     products: (productsData || []).map(p => ({
                         id: p.id, name: p.name, price: p.price || 'Ask for Price',
-                        description: p.description || '', images: p.images || [DEFAULT_PRODUCT_IMAGE]
+                        description: p.description || '',
+                        images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                        keywords: p.keywords || [],
+                        likes: p.likes || 0,
+                        liked: false
                     }))
                 };
                 // Check if this is the logged-in seller's own profile
