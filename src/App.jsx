@@ -1291,7 +1291,7 @@ export default function App() {
                             </button>
                         ) : (
                             <button
-                                onClick={() => window.location.href = '/signup.html'}
+                                onClick={() => window.open('/signup.html', '_blank')}
                                 className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap"
                             >
                                 Become a Seller
