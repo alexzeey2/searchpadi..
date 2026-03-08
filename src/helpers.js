@@ -11,12 +11,42 @@ export const DEFAULT_PROFILE_IMAGE = "https://via.placeholder.com/400x400/6366f1
 export const DEFAULT_PRODUCT_IMAGE = "https://via.placeholder.com/400x400/6366f1/ffffff?text=Product";
 
 export async function shortenLink(url) {
+    // Try TinyURL's CORS-friendly v1 API with a 4s timeout
     try {
-        const res = await fetch(`https://tinyurl.com/api-create.php?url=${encodeURIComponent(url)}`);
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch('https://tinyurl.com/api-create.php?url=' + encodeURIComponent(url), {
+            signal: controller.signal,
+            mode: 'cors',
+        });
+        clearTimeout(timer);
+
         if (res.ok) {
-            const short = await res.text();
-            if (short.startsWith('https://')) return short;
+            const short = (await res.text()).trim();
+            if (short.startsWith('https://tinyurl.com/')) return short;
         }
-    } catch(e) {}
+    } catch (e) {
+        // CORS blocked or timeout — try is.gd as backup
+    }
+
+    // Fallback: is.gd (supports CORS natively)
+    try {
+        const controller = new AbortController();
+        const timer = setTimeout(() => controller.abort(), 4000);
+
+        const res = await fetch(
+            `https://is.gd/create.php?format=simple&url=${encodeURIComponent(url)}`,
+            { signal: controller.signal }
+        );
+        clearTimeout(timer);
+
+        if (res.ok) {
+            const short = (await res.text()).trim();
+            if (short.startsWith('https://is.gd/')) return short;
+        }
+    } catch (e) {}
+
+    // Both failed — return original URL so copy still works
     return url;
 }
