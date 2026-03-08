@@ -49,7 +49,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     };
 
-    // Check free slots from Supabase
+    // Check free slots — returns values directly to avoid stale state reads in init()
     const checkFreeSlots = async () => {
         try {
             const monthYear = getMonthYear();
@@ -60,17 +60,19 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                 .eq('month_year', monthYear);
             const takenCount = slotData?.length || 0;
             const remaining = MAX_FREE_SLOTS - takenCount;
-            setSlotsLeft(remaining);
             const alreadyClaimed = slotData?.some(s => s.seller_id === sellerId) || false;
-            setSellerAlreadyClaimed(alreadyClaimed);
             const qualifies = sellerProducts.length >= PER && remaining > 0 && !alreadyClaimed;
+            // Update state for any UI that depends on it
+            setSlotsLeft(remaining);
+            setSellerAlreadyClaimed(alreadyClaimed);
             setFreeSlotAvailable(qualifies);
             setSlotCheckDone(true);
-            return qualifies;
+            // Return directly so init() doesnt read stale state
+            return { qualifies, alreadyClaimed, remaining };
         } catch (err) {
             console.error('Free slot check failed:', err);
             setSlotCheckDone(true);
-            return false;
+            return { qualifies: false, alreadyClaimed: false, remaining: 0 };
         }
     };
 
@@ -134,16 +136,16 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                 return;
             }
 
-            // Check free slots
-            const qualifies = await checkFreeSlots();
+            // Check free slots — use returned values directly, not state (state is async)
+            const { qualifies, alreadyClaimed, remaining } = await checkFreeSlots();
 
             if (qualifies) {
                 await say([
                     `🎉 Good news! You qualify for a FREE campaign this month.`,
-                    `We're running ${MAX_FREE_SLOTS} free campaigns every month for active sellers — and there's ${slotsLeft > 0 ? slotsLeft : 1} slot${slotsLeft !== 1 ? 's' : ''} left.`,
-                    `Your first 6 customers are on us. Which product would you like me to promote?`,
+                    `We're running ${MAX_FREE_SLOTS} free campaigns every month for active sellers — and there's ${remaining > 0 ? remaining : 1} slot${remaining !== 1 ? 's' : ''} left.`,
+                    `Your first ${PER} customers are on us. Which product would you like me to promote?`,
                 ], 800);
-            } else if (sellerAlreadyClaimed) {
+            } else if (alreadyClaimed) {
                 await say([
                     `You've already used your free campaign this month! 🙌`,
                     `Your next free slot opens in ${getRemainingDays()} days.`,
