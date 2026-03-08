@@ -72,10 +72,7 @@ export default function App() {
 
     // Load sellers and products from database on mount
     useEffect(() => {
-        if (window.__removePreSplash) window.__removePreSplash();
-        // Splash runs on its own fixed 6s timer — NOT linked to database
         setTimeout(() => setShowSplash(false), 6000);
-        // DB loads in parallel independently
         loadSellersFromDatabase();
         trackVisit();
         handleDeepLinks();
@@ -1101,7 +1098,7 @@ export default function App() {
                                 <img
                                     src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
                                     alt="SearchPadi Logo"
-                                    className="w-fclassName="w-full h-full object-contain"
+                                    className="w-full h-full object-contain"
                                 />
                             </div>
                             <h1 className="text-4xl font-bold text-white mb-3">SearchPadi</h1>
