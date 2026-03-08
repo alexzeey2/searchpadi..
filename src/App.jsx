@@ -1074,43 +1074,39 @@ export default function App() {
     const handleCopyProfileLink = async () => {
         if (!currentUser?.data) return;
         const sellerId = currentUser.data.id;
-        const profileUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
+        const fullUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
+        const url = await shortenLink(fullUrl);
         try {
-            await navigator.clipboard.writeText(profileUrl);
-            alert('Profile link copied! 🔗');
+            await navigator.clipboard.writeText(url);
         } catch (e) {
             const el = document.createElement('textarea');
-            el.value = profileUrl;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            alert('Profile link copied! 🔗');
+            el.value = url; document.body.appendChild(el); el.select();
+            document.execCommand('copy'); document.body.removeChild(el);
         }
+        alert('Profile link copied! 🔗\n' + url);
     };
 
     const handleCopyProductLink = async (productId) => {
-        const productUrl = `https://searchpadi-phi.vercel.app/product.html?id=${productId}`;
+        const fullUrl = `https://searchpadi-phi.vercel.app/product.html?id=${productId}`;
+        const url = await shortenLink(fullUrl);
         try {
-            await navigator.clipboard.writeText(productUrl);
-            alert('Product link copied! 🔗');
+            await navigator.clipboard.writeText(url);
         } catch (e) {
             const el = document.createElement('textarea');
-            el.value = productUrl;
-            document.body.appendChild(el);
-            el.select();
-            document.execCommand('copy');
-            document.body.removeChild(el);
-            alert('Product link copied! 🔗');
+            el.value = url; document.body.appendChild(el); el.select();
+            document.execCommand('copy'); document.body.removeChild(el);
         }
+        alert('Product link copied! 🔗\n' + url);
     };
 
     const handleShare = async () => {
         if (!currentUser?.data) return;
         const seller = currentUser.data;
         const sellerId = seller.id;
-        const profileUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
-        const shareMsg = `Hi! 👋 Check out ${seller.name || 'my store'} on SearchPadi!\n\n🛍️ Browse my products here:\n${profileUrl}\n\nSearchPadi's AI assistant Somto will help you find exactly what you need!`;
+        const fullUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
+        const profileUrl = await shortenLink(fullUrl);
+        const appUrl = 'https://searchpadi-phi.vercel.app';
+        const shareMsg = `Hi! 👋 Check out ${seller.name || 'my store'} on SearchPadi!\n\n🛍️ Browse my products:\n${profileUrl}\n\nSearchPadi's AI Somto will help find exactly what you need!`;
 
         try {
             const currentCount = seller.shareCount || 0;
