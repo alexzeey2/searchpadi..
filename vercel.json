@@ -1,0 +1,7 @@
+{
+  "rewrites": [
+    { "source": "/product.html", "destination": "/product.html" },
+    { "source": "/seller.html", "destination": "/seller.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
