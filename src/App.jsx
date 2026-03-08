@@ -88,7 +88,7 @@ export default function App() {
                 const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
                     ? new Date(profileData.free_trial_expires_at) > new Date()
                     : profileData.subscription_plan === 'growth_pro';
-                setCurrentUser({ type: 'seller', data: {
+                const sellerData = {
                     id: profileData.id,
                     name: profileData.business_name,
                     email: profileData.email,
@@ -103,7 +103,9 @@ export default function App() {
                     views: profileData.views || 0,
                     subscription: profileData.subscription_plan || 'free',
                     products: []
-                }});
+                };
+                setCurrentUser({ type: 'seller', data: sellerData });
+                setSelectedSeller(sellerData); // go straight to profile
             } catch(e) {}
         };
         autoLogin();
