@@ -286,7 +286,7 @@ export default function App() {
                             images: product.images || [DEFAULT_PRODUCT_IMAGE],
                             keywords: product.keywords || [],
                             likes: product.likes || 0,
-                            liked: false,
+                            liked: (() => { try { return JSON.parse(localStorage.getItem('sp_liked_products') || '[]').includes(product.id); } catch(e) { return false; } })(),
                             isTrusted: isTrusted && product.is_trusted
                         }))
                 };
@@ -294,7 +294,66 @@ export default function App() {
             
             setSellers(mappedSellers);
             console.log('✅ Loaded', mappedSellers.length, 'sellers with products');
-            
+
+            // Fetch logged-in seller's own products separately — never rely on 20-item global limit
+            try {
+                const { data: session } = await supabaseClient.auth.getSession();
+                const loggedInId = session?.session?.user?.id;
+                if (loggedInId) {
+                    const { data: myProducts } = await supabaseClient
+                        .from('products').select('*').eq('seller_id', loggedInId);
+                    if (myProducts && myProducts.length > 0) {
+                        const mapped = myProducts.map(p => ({
+                            id: p.id, name: p.name,
+                            price: p.price || 'Ask for Price',
+                            description: p.description || '',
+                            images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                            keywords: p.keywords || [],
+                            likes: p.likes || 0,
+                            liked: false,
+                        }));
+                        // Update sellers array
+                        setSellers(prev => prev.map(s =>
+                            s.id === loggedInId ? { ...s, products: mapped } : s
+                        ));
+                        // Update currentUser.data — this is the source of truth for own profile
+                        setCurrentUser(prev => {
+                            if (prev?.type !== 'seller' || prev.data.id !== loggedInId) return prev;
+                            return { ...prev, data: { ...prev.data, products: mapped } };
+                        });
+                    }
+                }
+            } catch (e) { /* silently fail */ }
+
+            // Always fetch logged-in seller's own products separately
+            // (they may not be in the top-20 limit above)
+            try {
+                const { data: session } = await supabaseClient.auth.getSession();
+                const loggedInId = session?.session?.user?.id;
+                if (loggedInId) {
+                    const { data: myProducts } = await supabaseClient
+                        .from('products').select('*').eq('seller_id', loggedInId);
+                    if (myProducts && myProducts.length > 0) {
+                        const mapped = myProducts.map(p => ({
+                            id: p.id, name: p.name,
+                            price: p.price || 'Ask for Price',
+                            description: p.description || '',
+                            images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                            keywords: p.keywords || [],
+                            likes: p.likes || 0,
+                            liked: false,
+                        }));
+                        setSellers(prev => prev.map(s =>
+                            s.id === loggedInId ? { ...s, products: mapped } : s
+                        ));
+                        setCurrentUser(prev => {
+                            if (prev?.type !== 'seller' || prev.data.id !== loggedInId) return prev;
+                            return { ...prev, data: { ...prev.data, products: mapped } };
+                        });
+                    }
+                }
+            } catch (e) { /* silently fail */ }
+
         } catch (error) {
             console.error('Error loading data from database:', error);
             setSellers([]);
@@ -834,6 +893,15 @@ export default function App() {
         const newLiked = !product.liked;
         const newLikes = newLiked ? product.likes + 1 : Math.max(0, product.likes - 1);
 
+        // Persist liked state to localStorage so it survives page reload
+        try {
+            const stored = JSON.parse(localStorage.getItem('sp_liked_products') || '[]');
+            const updated = newLiked
+                ? [...new Set([...stored, productId])]
+                : stored.filter(id => id !== productId);
+            localStorage.setItem('sp_liked_products', JSON.stringify(updated));
+        } catch (e) {}
+
         // Update all state synchronously before any async call
         setSellers(prev => prev.map(s => {
             if (s.id !== sellerId) return s;
@@ -1241,7 +1309,12 @@ export default function App() {
         }).slice(0, sellerOffset)
         : [];
 
-    const currentSeller = selectedSeller ? (sellers.find(s => s.id === selectedSeller.id) || selectedSeller) : null;
+    // For own profile, always use currentUser.data so products/stats are never overwritten by sellers array
+    const currentSeller = selectedSeller
+        ? (currentUser?.type === 'seller' && currentUser.data.id === selectedSeller.id
+            ? { ...currentUser.data, ...sellers.find(s => s.id === selectedSeller.id), products: currentUser.data.products?.length ? currentUser.data.products : (sellers.find(s => s.id === selectedSeller.id)?.products || []) }
+            : sellers.find(s => s.id === selectedSeller.id) || selectedSeller)
+        : null;
     // Show bubble message on login and every 20 minutes (only if seller has 20+ views)
     useEffect(() => {
         if (currentUser?.type !== 'seller') return;
@@ -1280,7 +1353,7 @@ export default function App() {
     }, [currentUser?.type]);
 
     const updatedCurrentUser = currentUser?.type === 'seller' 
-        ? sellers.find(s => s.id === currentUser.data.id) 
+        ? (sellers.find(s => s.id === currentUser.data.id) || currentUser.data)
         : null;
 
     if (showSplash) {
