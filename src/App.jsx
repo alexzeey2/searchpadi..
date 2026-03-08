@@ -286,14 +286,15 @@ export default function App() {
             const activeCampaignProductIds = new Set((activeCampaigns || []).map(c => c.product_id).filter(Boolean));
             const activeSellerIds = new Set((activeCampaigns || []).map(c => c.seller_id));
 
-            const shuffled = shuffleArray(allProductsList).sort((a, b) => {
-                const aPin = activeCampaignProductIds.has(a.id) || activeSellerIds.has(a.seller?.id) ? 1 : 0;
-                const bPin = activeCampaignProductIds.has(b.id) || activeSellerIds.has(b.seller?.id) ? 1 : 0;
-                return bPin - aPin;
-            });
-            const recommended = shuffled.slice(0, 4);
-            
-            setDisplayedProducts(recommended);
+            // Featured (campaign) products first, then shuffle the rest
+            const featured = allProductsList.filter(p => activeCampaignProductIds.has(p.id) || activeSellerIds.has(p.seller?.id));
+            const rest = shuffleArray(allProductsList.filter(p => !activeCampaignProductIds.has(p.id) && !activeSellerIds.has(p.seller?.id)));
+            const sorted = [...featured, ...rest];
+
+            // Show first 5, store rest for load more
+            setAllProducts(sorted);
+            setDisplayedProducts(sorted.slice(0, PRODUCTS_PER_PAGE));
+            setProductOffset(PRODUCTS_PER_PAGE);
             setShowProducts(true);
             })();
         } else if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
