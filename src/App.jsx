@@ -76,6 +76,36 @@ export default function App() {
         loadSellersFromDatabase();
         trackVisit();
         handleDeepLinks();
+        // Auto-login if seller has an active session
+        supabaseClient.auth.getSession().then(async ({ data }) => {
+            if (!data.session) return;
+            const { data: profileData } = await supabaseClient
+                .from('profiles')
+                .select('*')
+                .eq('id', data.session.user.id)
+                .single();
+            if (!profileData) return;
+            const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
+                ? new Date(profileData.free_trial_expires_at) > new Date()
+                : profileData.subscription_plan === 'growth_pro';
+            const sellerData = {
+                id: profileData.id,
+                name: profileData.business_name,
+                email: profileData.email,
+                category: profileData.category,
+                gender: profileData.gender || null,
+                location: profileData.location,
+                bio: profileData.bio || 'Seller on SearchPadi',
+                isVerified: profileData.is_verified || false,
+                isTrusted,
+                whatsappNumber: profileData.whatsapp,
+                profilePhoto: profileData.profile_photo,
+                views: profileData.views || 0,
+                subscription: profileData.subscription_plan || 'free',
+                products: []
+            };
+            setCurrentUser({ type: 'seller', data: sellerData });
+        });
     }, []);
 
     const handleDeepLinks = async () => {
