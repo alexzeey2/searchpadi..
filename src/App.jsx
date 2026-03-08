@@ -1094,9 +1094,9 @@ export default function App() {
                 <div className="flex items-center justify-center h-full">
                     <div className="text-center px-6">
                         <div className="mb-8">
-                            <div className="w-24 h-24 mx-auto mb-6">
+                            <div className="w-28 h-28 mx-auto mb-6">
                                 <img
-                                    src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
+                                    src="https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png"
                                     alt="SearchPadi Logo"
                                     className="w-full h-full object-contain"
                                 />
@@ -1216,17 +1216,38 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
 
                 {isLoadingData && (
-                    <div className="space-y-4">
-                        {[1,2,3].map(i => (
-                            <div key={i} className="bg-[#2a2a2a] rounded-xl border border-gray-700 overflow-hidden animate-pulse">
-                                <div className="h-36 bg-gray-700"></div>
-                                <div className="p-3">
-                                    <div className="h-3 bg-gray-600 rounded mb-2"></div>
-                                    <div className="h-3 bg-gray-600 rounded w-2/3 mb-2"></div>
-                                    <div className="h-8 bg-gray-700 rounded mt-3"></div>
+                    <div style={{animation:'pulse 1.5s ease-in-out infinite'}} className="space-y-4">
+                        {/* Avatar chat bubble skeleton */}
+                        <div className="flex gap-2">
+                            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',flexShrink:0}}></div>
+                            <div className="flex-1">
+                                <div style={{background:'#1f2937',borderRadius:'0 16px 16px 16px',padding:'12px',display:'inline-block',maxWidth:'85%'}}>
+                                    <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'8px',width:'180px'}}></div>
+                                    <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'140px'}}></div>
+                                </div>
+                                {/* Pill button skeletons */}
+                                <div style={{display:'flex',gap:'8px',marginTop:'12px',flexWrap:'wrap'}}>
+                                    {[1,2,3].map(i => (
+                                        <div key={i} style={{height:'36px',width:'90px',background:'#374151',borderRadius:'999px'}}></div>
+                                    ))}
                                 </div>
                             </div>
-                        ))}
+                        </div>
+
+                        {/* 2-column product grid skeleton */}
+                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
+                            {[1,2,3,4].map(i => (
+                                <div key={i} style={{background:'#1f2937',borderRadius:'12px',overflow:'hidden',border:'1px solid #374151'}}>
+                                    <div style={{height:'130px',background:'#374151'}}></div>
+                                    <div style={{padding:'10px'}}>
+                                        <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'6px'}}></div>
+                                        <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'60%',marginBottom:'10px'}}></div>
+                                        <div style={{height:'32px',background:'#374151',borderRadius:'6px'}}></div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
                     </div>
                 )}
 
