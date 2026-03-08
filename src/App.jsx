@@ -64,6 +64,8 @@ export default function App() {
     const [searchContext, setSearchContext] = useState(null);
     const [clickedButtons, setClickedButtons] = useState({});
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [showSplash, setShowSplash] = useState(true);
+    useEffect(() => { setTimeout(() => setShowSplash(false), 6000); }, []);
     const messagesEndRef = useRef(null);
 
     const PRODUCTS_PER_PAGE = 6;
@@ -71,8 +73,8 @@ export default function App() {
 
     // Load sellers and products from database on mount
     useEffect(() => {
-        const minLoadTimer = new Promise(resolve => setTimeout(resolve, 6000));
-        loadSellersFromDatabase(minLoadTimer);
+        if (window.__removePreSplash) window.__removePreSplash();
+        loadSellersFromDatabase();
         trackVisit();
         handleDeepLinks();
     }, []);
@@ -152,28 +154,24 @@ export default function App() {
         } catch (e) { /* silently fail */ }
     };
 
-    const loadSellersFromDatabase = async (minLoadTimer) => {
+    const loadSellersFromDatabase = async () => {
         try {
             setIsLoadingData(true);
             
-            // 10 second timeout to prevent hanging on slow networks
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 10000);
 
-            const { data: sellersData, error: sellersError } = await supabaseClient
-                .from('profiles')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
-            if (sellersError) throw sellersError;
-            
-            const { data: productsData, error: productsError } = await supabaseClient
-                .from('products')
-                .select('*')
-                .order('created_at', { ascending: false });
-            
+            const [sellersResult, productsResult] = await Promise.all([
+                supabaseClient.from('profiles').select('*').order('created_at', { ascending: false }),
+                supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(50)
+            ]);
+
             clearTimeout(timeout);
-            if (productsError) throw productsError;
+            if (sellersResult.error) throw sellersResult.error;
+            if (productsResult.error) throw productsResult.error;
+
+            const sellersData = sellersResult.data;
+            const productsData = productsResult.data;
             
             // Map sellers with their products
             const mappedSellers = (sellersData || []).map(seller => {
@@ -223,8 +221,6 @@ export default function App() {
             console.error('Error loading data from database:', error);
             setSellers([]);
         } finally {
-            // Wait for minimum 6s timer before hiding skeleton
-            if (minLoadTimer) await minLoadTimer;
             setIsLoadingData(false);
         }
     };
@@ -1093,7 +1089,7 @@ export default function App() {
         ? sellers.find(s => s.id === currentUser.data.id) 
         : null;
 
-    if (isLoadingData) {
+    if (showSplash) {
         return (
             <div className="chat-container bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
                 <div className="flex items-center justify-center h-full">
@@ -1219,7 +1215,22 @@ export default function App() {
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
 
-                {messages.map((message) => (
+                {isLoadingData && (
+                    <div className="space-y-4">
+                        {[1,2,3].map(i => (
+                            <div key={i} className="bg-[#2a2a2a] rounded-xl border border-gray-700 overflow-hidden animate-pulse">
+                                <div className="h-36 bg-gray-700"></div>
+                                <div className="p-3">
+                                    <div className="h-3 bg-gray-600 rounded mb-2"></div>
+                                    <div className="h-3 bg-gray-600 rounded w-2/3 mb-2"></div>
+                                    <div className="h-8 bg-gray-700 rounded mt-3"></div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                )}
+
+                {!isLoadingData && messages.map((message) => (
                     <div key={message.id} className="message-enter relative z-10">
                         {message.type === 'assistant' ? (
                             <div className="flex gap-2">
