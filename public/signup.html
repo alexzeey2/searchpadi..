@@ -273,6 +273,8 @@
                 const { data: profile } = await db.from('profiles').select('*').eq('id', authData.user.id).single();
                 if (!profile) throw new Error('Profile not found');
                 // Redirect back to app
+                // Store email in sessionStorage so main app can auto-login
+                sessionStorage.setItem('sp_login_email', loginPhone.trim().toLowerCase());
                 window.location.href = 'https://searchpadi-phi.vercel.app';
             } catch (err) {
                 setLoginError(err.message?.includes('Invalid') ? 'Wrong phone or password' : err.message);
@@ -283,6 +285,8 @@
 
         const handleButtonClick = (value, displayText) => {
             if (value === '__open_app__') {
+                // Store email in sessionStorage so main app can auto-login
+                sessionStorage.setItem('sp_login_email', loginPhone.trim().toLowerCase());
                 window.location.href = 'https://searchpadi-phi.vercel.app';
                 return;
             }
@@ -326,7 +330,7 @@
                         </div>
                     </div>
                     <button onClick={() => setShowLoginModal(true)}
-                        className="bg-white text-purple-700 text-xs font-bold px-3 py-2 rounded-lg hover:bg-purple-50 transition-colors">
+                        className="bg-white text-purple-700 text-sm font-bold px-4 py-2.5 rounded-lg hover:bg-purple-50 transition-colors">
                         Login
                     </button>
                 </div>
@@ -336,7 +340,7 @@
                     <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setShowLoginModal(false)}>
                         <div className="bg-[#1a1a1a] rounded-2xl w-full max-w-sm border border-gray-800 p-6" onClick={e => e.stopPropagation()}>
                             <div className="flex justify-between items-center mb-5">
-                                <h2 className="text-white text-xl font-bold">Seller Login</h2>
+                                <h2 className="text-white text-2xl font-bold">Seller Login</h2>
                                 <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-white text-lg">✕</button>
                             </div>
                             {loginError && <p className="text-red-400 text-sm mb-3 bg-red-500/10 border border-red-500/30 px-3 py-2 rounded-lg">{loginError}</p>}
