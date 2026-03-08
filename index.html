@@ -16,6 +16,20 @@
   </head>
   <body>
     <div id="root"></div>
+    <div id="pre-splash" style="position:fixed;inset:0;z-index:99999;background:linear-gradient(160deg,#3b0764 0%,#4c1d95 40%,#2e1065 100%);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.4s ease;">
+      <img src="https://i.postimg.cc/vBGbJsLw/grok-1771024869365-Photoroom-(1).png"
+           style="width:90px;height:90px;object-fit:contain;margin-bottom:20px;"
+           onerror="this.style.display='none'" />
+      <h1 style="color:white;font-size:32px;font-weight:800;margin-bottom:8px;font-family:-apple-system,sans-serif;">SearchPadi</h1>
+      <p style="color:#c4b5fd;font-size:14px;font-family:-apple-system,sans-serif;">Your Search Padi for Trusted Sellers</p>
+      <style>@keyframes sp{to{transform:rotate(360deg)}}</style>
+    </div>
+    <script>
+      window.__removePreSplash = function() {
+        var s = document.getElementById('pre-splash');
+        if (s) { s.style.opacity='0'; setTimeout(function(){ s.remove(); }, 400); }
+      };
+    </script>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
