@@ -64,7 +64,6 @@ export default function App() {
     const [searchContext, setSearchContext] = useState(null);
     const [clickedButtons, setClickedButtons] = useState({});
     const [isLoadingData, setIsLoadingData] = useState(true);
-    const [prefetchedProducts, setPrefetchedProducts] = useState([]);
     const [showSplash, setShowSplash] = useState(true);
     const messagesEndRef = useRef(null);
 
@@ -297,8 +296,6 @@ export default function App() {
             setDisplayedProducts(sorted.slice(0, PRODUCTS_PER_PAGE));
             setProductOffset(PRODUCTS_PER_PAGE);
             setShowProducts(true);
-            // Start prefetching next batch silently in background
-            prefetchNextProducts(PRODUCTS_PER_PAGE);
             })();
         } else if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
             // Truly no sellers at all - marketplace is empty
@@ -603,48 +600,13 @@ export default function App() {
     const handleFindMoreProducts = async () => {
         await simulateTyping(300);
 
-        let mapped = [];
+        const { data: nextData, error } = await supabaseClient
+            .from('products')
+            .select('id,seller_id,name,price,images,keywords,likes,description')
+            .order('created_at', { ascending: false })
+            .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
 
-        if (prefetchedProducts.length > 0) {
-            // Use prefetched data instantly — no waiting
-            mapped = prefetchedProducts;
-            setPrefetchedProducts([]);
-        } else {
-            // Fallback: fetch from Supabase now
-            const { data: nextData, error } = await supabaseClient
-                .from('products')
-                .select('id,seller_id,name,price,images,keywords,likes,description')
-                .order('created_at', { ascending: false })
-                .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
-
-            if (!error && nextData) {
-                mapped = nextData.map(product => {
-                    const seller = sellers.find(s => s.id === product.seller_id);
-                    if (!seller) return null;
-                    return {
-                        id: product.id,
-                        name: product.name,
-                        price: product.price || 'Ask for Price',
-                        description: product.description || '',
-                        images: product.images || [],
-                        keywords: product.keywords || [],
-                        likes: product.likes || 0,
-                        liked: false,
-                        seller: {
-                            id: seller.id,
-                            name: seller.name,
-                            whatsappNumber: seller.whatsappNumber,
-                            location: seller.location,
-                            profilePhoto: seller.profilePhoto,
-                            isVerified: seller.isVerified,
-                            isTrusted: seller.isTrusted,
-                        }
-                    };
-                }).filter(Boolean);
-            }
-        }
-
-        if (mapped.length === 0) {
+        if (error || !nextData || nextData.length === 0) {
             addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
             await simulateTyping(800);
             setShowProducts(false);
@@ -652,52 +614,44 @@ export default function App() {
             setCurrentStep('sellers');
             setSellerOffset(SELLERS_PER_PAGE);
         } else {
-            const newOffset = productOffset + DB_BATCH_SIZE;
-            setDisplayedProducts(prev => [...prev, ...mapped]);
-            setProductOffset(newOffset);
-            // Silently prefetch the NEXT batch in background
-            prefetchNextProducts(newOffset);
+            const mapped = nextData.map(product => {
+                const seller = sellers.find(s => s.id === product.seller_id);
+                if (!seller) return null;
+                return {
+                    id: product.id,
+                    name: product.name,
+                    price: product.price || 'Ask for Price',
+                    description: product.description || '',
+                    images: product.images || [],
+                    keywords: product.keywords || [],
+                    likes: product.likes || 0,
+                    liked: false,
+                    seller: {
+                        id: seller.id,
+                        name: seller.name,
+                        whatsappNumber: seller.whatsappNumber,
+                        location: seller.location,
+                        profilePhoto: seller.profilePhoto,
+                        isVerified: seller.isVerified,
+                        isTrusted: seller.isTrusted,
+                    }
+                };
+            }).filter(Boolean);
+
+            if (mapped.length === 0) {
+                addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
+                await simulateTyping(800);
+                setShowProducts(false);
+                setShowSellers(true);
+                setCurrentStep('sellers');
+                setSellerOffset(SELLERS_PER_PAGE);
+            } else {
+                setDisplayedProducts(prev => [...prev, ...mapped]);
+                setProductOffset(prev => prev + DB_BATCH_SIZE);
+            }
         }
     };
 
-    // Silently prefetch next batch in background
-    const prefetchNextProducts = async (currentOffset) => {
-        try {
-            const { data } = await supabaseClient
-                .from('products')
-                .select('id,seller_id,name,price,images,keywords,likes,description')
-                .order('created_at', { ascending: false })
-                .range(currentOffset, currentOffset + DB_BATCH_SIZE - 1);
-            if (data && data.length > 0) {
-                const mapped = data.map(product => {
-                    const seller = sellers.find(s => s.id === product.seller_id);
-                    if (!seller) return null;
-                    return {
-                        id: product.id,
-                        name: product.name,
-                        price: product.price || 'Ask for Price',
-                        description: product.description || '',
-                        images: product.images || [],
-                        keywords: product.keywords || [],
-                        likes: product.likes || 0,
-                        liked: false,
-                        seller: {
-                            id: seller.id,
-                            name: seller.name,
-                            whatsappNumber: seller.whatsappNumber,
-                            location: seller.location,
-                            profilePhoto: seller.profilePhoto,
-                            isVerified: seller.isVerified,
-                            isTrusted: seller.isTrusted,
-                        }
-                    };
-                }).filter(Boolean);
-                setPrefetchedProducts(mapped);
-            }
-        } catch (e) {
-            // silent fail — prefetch is best-effort
-        }
-    };
 
     const handleFindMoreSellers = async () => {
         await simulateTyping(500);
