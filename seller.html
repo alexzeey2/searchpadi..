@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SearchPadi - Seller</title>
+    <meta name="theme-color" content="#7c3aed">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a1a; color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+        .container { max-width: 500px; margin: 0 auto; }
+        .header { background: linear-gradient(to right, #7c3aed, #6d28d9); padding: 14px 16px; }
+        .header-logo { font-size: 16px; font-weight: 800; color: white; }
+        .header-sub { font-size: 11px; color: rgba(255,255,255,0.8); }
+        .profile-top { padding: 20px 16px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2a2a2a; }
+        .avatar-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+        .avatar-ring {
+            position: absolute; inset: -4px; border-radius: 50%;
+            border: 2.5px solid transparent;
+            background: linear-gradient(#1a1a1a, #1a1a1a) padding-box,
+                        linear-gradient(90deg, #7c3aed, #c4b5fd, #7c3aed) border-box;
+            animation: spin-ring 1.8s linear infinite;
+            box-shadow: 0 0 14px rgba(124,58,237,0.8);
+        }
+        @keyframes spin-ring { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; flex-shrink: 0; }
+        .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+        .profile-location { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
+        .verified-badge { display: inline-flex; align-items: center; gap: 3px; background: #065f46; color: #34d399; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+        .unverified-badge { display: inline-flex; align-items: center; gap: 3px; background: #292524; color: #a8a29e; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
+        .stats-row { display: flex; border-bottom: 1px solid #2a2a2a; }
+        .stat { flex: 1; text-align: center; padding: 14px 8px; }
+        .stat-num { font-size: 18px; font-weight: 700; }
+        .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
+        .bio-box { padding: 14px 16px; border-bottom: 1px solid #2a2a2a; }
+        .bio-text { font-size: 14px; color: #9ca3af; line-height: 1.5; }
+        .btn-row { display: flex; gap: 10px; margin: 14px 16px; }
+        .wa-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .sp-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #7c3aed; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; }
+        .products-title { padding: 14px 16px 10px; font-size: 15px; font-weight: 700; }
+        .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+        .product-card { background: #2a2a2a; border-radius: 12px; overflow: hidden; cursor: pointer; text-decoration: none; display: block; }
+        .product-card img { width: 100%; height: 130px; object-fit: cover; }
+        .product-info { padding: 8px 10px 10px; }
+        .product-name { font-size: 13px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .product-price { font-size: 12px; color: #a78bfa; margin-top: 2px; }
+        .browse-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 20px; background: #7c3aed; color: white; border: none; border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 600; text-decoration: none; }
+        .skeleton { background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
+        @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .error-box { text-align: center; padding: 60px 20px; }
+        .error-box h2 { color: #ef4444; margin-bottom: 8px; }
+        .error-box p { color: #9ca3af; font-size: 14px; margin-bottom: 20px; }
+        .error-box a { color: #a78bfa; text-decoration: none; font-weight: 600; }
+        .no-products { text-align: center; padding: 30px 16px; color: #6b7280; font-size: 14px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="header-logo">SearchPadi</div>
+        <div class="header-sub">Find Verified Sellers 🇳🇬</div>
+    </div>
+    <div id="app">
+        <div class="profile-top">
+            <div class="skeleton" style="width:72px;height:72px;border-radius:50%;flex-shrink:0;"></div>
+            <div style="flex:1">
+                <div class="skeleton" style="height:20px;width:60%;margin-bottom:8px;"></div>
+                <div class="skeleton" style="height:14px;width:40%;margin-bottom:8px;"></div>
+                <div class="skeleton" style="height:22px;width:30%;border-radius:20px;"></div>
+            </div>
+        </div>
+        <div style="padding:16px">
+            <div class="skeleton" style="height:50px;margin-bottom:12px;border-radius:14px;"></div>
+            <div class="skeleton" style="height:46px;border-radius:14px;"></div>
+        </div>
+    </div>
+</div>
+<script>
+const SUPABASE_URL = 'https://fxjnbqymkdvuqfeagpur.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4am5icXlta2R2dXFmZWFncHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTE0NTUsImV4cCI6MjA4NjU4NzQ1NX0.qcQPStoxVPdJfAEDJ-f0xiu_EQkRnZd2c2uDIhMMAdg';
+const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
+
+async function get(table, params) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers });
+    return res.json();
+}
+
+async function load() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) return showError('No seller specified.');
+    try {
+        const [sellers, products] = await Promise.all([
+            get('profiles', `id=eq.${encodeURIComponent(id)}&select=*`),
+            get('products', `seller_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.desc`)
+        ]);
+        if (!sellers?.length) return showError('Seller not found.');
+        render(sellers[0], products || []);
+    } catch(e) {
+        showError('Failed to load. Check your connection and try again.');
+    }
+}
+
+function render(s, products) {
+    const wa = (s.whatsapp || '').replace(/\D/g, '');
+    const msg = encodeURIComponent('Hi ' + s.business_name + '! I found you on SearchPadi and I\'m interested in your products.');
+    const totalLikes = products.reduce((sum, p) => sum + (p.likes || 0), 0);
+    document.title = s.business_name + ' - SearchPadi';
+
+    document.getElementById('app').innerHTML = `
+        <div class="profile-top">
+            <div class="avatar-wrap"><div class="avatar-ring"></div><img class="profile-avatar" src="${s.profile_photo||'https://via.placeholder.com/80/6366f1/fff?text=S'}" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" /></div>
+            <div>
+                <div class="profile-name">${s.business_name}</div>
+                <div class="profile-location">📍 ${s.location||'Nigeria'}</div>
+                ${s.is_verified 
+                    ? '<div class="verified-badge">✓ Verified Seller</div>' 
+                    : '<div class="unverified-badge">⚠ Unverified</div>'}
+            </div>
+        </div>
+        <div class="stats-row">
+            <div class="stat"><div class="stat-num">${products.length}</div><div class="stat-label">Products</div></div>
+            <div class="stat"><div class="stat-num">${(s.views||0).toLocaleString()}</div><div class="stat-label">Views</div></div>
+            <div class="stat"><div class="stat-num">${totalLikes.toLocaleString()}</div><div class="stat-label">Likes</div></div>
+        </div>
+        ${s.bio ? `<div class="bio-box"><div class="bio-text">${s.bio}</div></div>` : ''}
+        <div class="btn-row">
+            <a class="wa-btn" href="https://wa.me/${wa}?text=${msg}" target="_blank">
+                <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                WhatsApp
+            </a>
+            <a class="sp-btn" href="https://searchpadi-phi.vercel.app" target="_blank">
+                <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                SearchPadi
+            </a>
+        </div>
+        <div class="products-title">Products (${products.length})</div>
+        ${products.length === 0 
+            ? '<div class="no-products">No products listed yet</div>'
+            : `<div class="products-grid">${products.map(p => `
+                <a class="product-card" href="/product.html?id=${p.id}">
+                    <img src="${(p.images&&p.images[0])||'https://via.placeholder.com/300/6366f1/fff?text=Product'}" onerror="this.src='https://via.placeholder.com/300/6366f1/fff?text=Product'" />
+                    <div class="product-info">
+                        <div class="product-name">${p.name}</div>
+                        <div class="product-price">${p.price||'Ask for Price'}</div>
+                    </div>
+                </a>`).join('')}</div>`}
+        <a class="browse-btn" href="/?seller=${s.id}">
+            <svg width="18" height="18" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            View Full Store on SearchPadi
+        </a>`;
+}
+
+function showError(msg) {
+    document.getElementById('app').innerHTML = `<div class="error-box"><h2>Oops!</h2><p>${msg}</p><a href="/">← Back to SearchPadi</a></div>`;
+}
+
+load();
+</script>
+</body>
+</html>
