@@ -105,7 +105,6 @@ export default function App() {
                     products: []
                 };
                 setCurrentUser({ type: 'seller', data: sellerData });
-                setSelectedSeller(sellerData); // go straight to profile
             } catch(e) {}
         };
         autoLogin();
@@ -195,9 +194,9 @@ export default function App() {
 
             // Fetch only needed columns, limit initial load for speed
             const [sellersResult, campaignsResult, productsResult] = await Promise.all([
-                supabaseClient.from('profiles').select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until').order('created_at', { ascending: false }).limit(4),
+                supabaseClient.from('profiles').select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until').order('created_at', { ascending: false }).limit(20),
                 supabaseClient.from('pending_payments').select('product_id,seller_id').eq('status', 'running'),
-                supabaseClient.from('products').select('id,seller_id,name,price,images,keywords,likes,description').order('created_at', { ascending: false }).limit(5)
+                supabaseClient.from('products').select('id,seller_id,name,price,images,keywords,likes,description').order('created_at', { ascending: false }).limit(20)
             ]);
 
             clearTimeout(timeout);
@@ -280,6 +279,15 @@ export default function App() {
     useEffect(() => {
         scrollToBottom();
     }, [messages, isTyping, showProducts, showSellers]);
+
+    // Once session + sellers both loaded, go straight to seller profile
+    useEffect(() => {
+        if (currentUser?.type === 'seller' && sellers.length > 0 && !selectedSeller) {
+            const fullSeller = sellers.find(s => s.id === currentUser.data.id);
+            if (fullSeller) setSelectedSeller(fullSeller);
+            else setSelectedSeller(currentUser.data); // fallback
+        }
+    }, [currentUser, sellers]);
 
     // Load initial recommended products
     useEffect(() => {
