@@ -57,7 +57,8 @@ export default function LoginModal({ onClose, onLoginSuccess, onSwitchToRegister
                 products: []
             };
 
-            onLoginSuccess(sellerData);
+            // Open their full profile via deep link in main app
+            window.location.href = '/?seller=' + profileData.id;
 
         } catch (err) {
             console.error('Login error:', err);
