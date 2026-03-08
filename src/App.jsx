@@ -68,7 +68,7 @@ export default function App() {
     const messagesEndRef = useRef(null);
 
     const PRODUCTS_PER_PAGE = 5;
-    const SELLERS_PER_PAGE = 3;
+    const SELLERS_PER_PAGE = 4;
     const DB_BATCH_SIZE = 5;
 
     // Load sellers and products from database on mount
@@ -161,11 +161,11 @@ export default function App() {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 10000);
 
-            // Fetch sellers + active campaigns + first 10 products in parallel
+            // Fetch only needed columns, limit initial load for speed
             const [sellersResult, campaignsResult, productsResult] = await Promise.all([
-                supabaseClient.from('profiles').select('*').order('created_at', { ascending: false }),
-                supabaseClient.from('pending_payments').select('product_id').eq('status', 'running'),
-                supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(5)
+                supabaseClient.from('profiles').select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until').order('created_at', { ascending: false }).limit(4),
+                supabaseClient.from('pending_payments').select('product_id,seller_id').eq('status', 'running'),
+                supabaseClient.from('products').select('id,seller_id,name,price,images,keywords,likes,description').order('created_at', { ascending: false }).limit(5)
             ]);
 
             clearTimeout(timeout);
