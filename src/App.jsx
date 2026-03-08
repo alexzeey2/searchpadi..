@@ -67,8 +67,9 @@ export default function App() {
     const [showSplash, setShowSplash] = useState(true);
     const messagesEndRef = useRef(null);
 
-    const PRODUCTS_PER_PAGE = 6;
+    const PRODUCTS_PER_PAGE = 10;
     const SELLERS_PER_PAGE = 3;
+    const DB_BATCH_SIZE = 10;
 
     // Load sellers and products from database on mount
     useEffect(() => {
@@ -160,9 +161,11 @@ export default function App() {
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 10000);
 
-            const [sellersResult, productsResult] = await Promise.all([
+            // Fetch sellers + active campaigns + first 10 products in parallel
+            const [sellersResult, campaignsResult, productsResult] = await Promise.all([
                 supabaseClient.from('profiles').select('*').order('created_at', { ascending: false }),
-                supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(50)
+                supabaseClient.from('pending_payments').select('product_id').eq('status', 'running'),
+                supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(10)
             ]);
 
             clearTimeout(timeout);
@@ -170,7 +173,11 @@ export default function App() {
             if (productsResult.error) throw productsResult.error;
 
             const sellersData = sellersResult.data;
-            const productsData = productsResult.data;
+            // Put campaign products first in initial batch
+            const campaignProductIds = new Set((campaignsResult.data || []).map(c => c.product_id).filter(Boolean));
+            const productsData = [...(productsResult.data || [])].sort((a, b) => {
+                return (campaignProductIds.has(b.id) ? 1 : 0) - (campaignProductIds.has(a.id) ? 1 : 0);
+            });
             
             // Map sellers with their products
             const mappedSellers = (sellersData || []).map(seller => {
@@ -592,7 +599,14 @@ export default function App() {
     const handleFindMoreProducts = async () => {
         await simulateTyping(500);
         
-        if (productOffset >= allProducts.length) {
+        // Fetch next 10 from Supabase using offset
+        const { data: nextData, error } = await supabaseClient
+            .from('products')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
+
+        if (error || !nextData || nextData.length === 0) {
             addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
             await simulateTyping(800);
             setShowProducts(false);
@@ -600,9 +614,42 @@ export default function App() {
             setCurrentStep('sellers');
             setSellerOffset(SELLERS_PER_PAGE);
         } else {
-            const nextProducts = allProducts.slice(productOffset, productOffset + PRODUCTS_PER_PAGE);
-            setDisplayedProducts(prev => [...prev, ...nextProducts]);
-            setProductOffset(prev => prev + PRODUCTS_PER_PAGE);
+            // Map fetched products to seller context
+            const mapped = nextData.map(product => {
+                const seller = sellers.find(s => s.id === product.seller_id);
+                if (!seller) return null;
+                return {
+                    id: product.id,
+                    name: product.name,
+                    price: product.price || 'Ask for Price',
+                    description: product.description || '',
+                    images: product.images || [],
+                    keywords: product.keywords || [],
+                    likes: product.likes || 0,
+                    liked: false,
+                    seller: {
+                        id: seller.id,
+                        name: seller.name,
+                        whatsappNumber: seller.whatsappNumber,
+                        location: seller.location,
+                        profilePhoto: seller.profilePhoto,
+                        isVerified: seller.isVerified,
+                        isTrusted: seller.isTrusted,
+                    }
+                };
+            }).filter(Boolean);
+
+            if (mapped.length === 0) {
+                addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
+                await simulateTyping(800);
+                setShowProducts(false);
+                setShowSellers(true);
+                setCurrentStep('sellers');
+                setSellerOffset(SELLERS_PER_PAGE);
+            } else {
+                setDisplayedProducts(prev => [...prev, ...mapped]);
+                setProductOffset(prev => prev + DB_BATCH_SIZE);
+            }
         }
     };
 
