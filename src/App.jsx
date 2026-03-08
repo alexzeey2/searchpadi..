@@ -1071,12 +1071,46 @@ export default function App() {
         }
     };
 
+    const handleCopyProfileLink = async () => {
+        if (!currentUser?.data) return;
+        const sellerId = currentUser.data.id;
+        const profileUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
+        try {
+            await navigator.clipboard.writeText(profileUrl);
+            alert('Profile link copied! 🔗');
+        } catch (e) {
+            const el = document.createElement('textarea');
+            el.value = profileUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert('Profile link copied! 🔗');
+        }
+    };
+
+    const handleCopyProductLink = async (productId) => {
+        const productUrl = `https://searchpadi-phi.vercel.app/product.html?id=${productId}`;
+        try {
+            await navigator.clipboard.writeText(productUrl);
+            alert('Product link copied! 🔗');
+        } catch (e) {
+            const el = document.createElement('textarea');
+            el.value = productUrl;
+            document.body.appendChild(el);
+            el.select();
+            document.execCommand('copy');
+            document.body.removeChild(el);
+            alert('Product link copied! 🔗');
+        }
+    };
+
     const handleShare = async () => {
         if (!currentUser?.data) return;
         const seller = currentUser.data;
         const sellerId = seller.id;
-        const appUrl = 'https://searchpadi-phi.vercel.app';
-        const shareMsg = 'Hi! 👋 Visit ' + appUrl + ' to find my products on SearchPadi!\n\nSearchPadi\'s AI assistant Somto will help you find exactly what you need from my store. Just tell Somto what you\'re looking for! 🛍️';
+        const profileUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
+        const shareMsg = `Hi! 👋 Check out ${seller.name || 'my store'} on SearchPadi!\n\n🛍️ Browse my products here:\n${profileUrl}\n\nSearchPadi's AI assistant Somto will help you find exactly what you need!`;
 
         try {
             const currentCount = seller.shareCount || 0;
@@ -1674,6 +1708,8 @@ export default function App() {
                     onDeleteProduct={handleDeleteProduct}
                     onEditProfile={() => setShowEditProfile(true)}
                     onShare={handleShare}
+                    onCopyProfileLink={handleCopyProfileLink}
+                    onCopyProductLink={handleCopyProductLink}
                     onAttractCustomers={() => setShowAttractCustomers(true)}
                 />
             )}
