@@ -73,8 +73,10 @@ export default function App() {
     // Load sellers and products from database on mount
     useEffect(() => {
         if (window.__removePreSplash) window.__removePreSplash();
-        const minTimer = new Promise(resolve => setTimeout(resolve, 3000));
-        loadSellersFromDatabase(minTimer);
+        // Splash runs on its own fixed 6s timer — NOT linked to database
+        setTimeout(() => setShowSplash(false), 6000);
+        // DB loads in parallel independently
+        loadSellersFromDatabase();
         trackVisit();
         handleDeepLinks();
     }, []);
@@ -154,7 +156,7 @@ export default function App() {
         } catch (e) { /* silently fail */ }
     };
 
-    const loadSellersFromDatabase = async (minTimer) => {
+    const loadSellersFromDatabase = async () => {
         try {
             setIsLoadingData(true);
             
@@ -221,9 +223,7 @@ export default function App() {
             console.error('Error loading data from database:', error);
             setSellers([]);
         } finally {
-            if (minTimer) await minTimer;
             setIsLoadingData(false);
-            setShowSplash(false);
         }
     };
 
@@ -1101,7 +1101,7 @@ export default function App() {
                                 <img
                                     src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
                                     alt="SearchPadi Logo"
-                                    className="w-full h-full object-cover rounded-full"
+                                    className="w-fclassName="w-full h-full object-contain"
                                 />
                             </div>
                             <h1 className="text-4xl font-bold text-white mb-3">SearchPadi</h1>
@@ -1218,37 +1218,17 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
 
                 {isLoadingData && (
-                    <div className="space-y-4 animate-pulse">
-                        {/* Avatar chat bubble skeleton */}
-                        <div className="flex gap-2">
-                            <div className="w-8 h-8 rounded-full bg-gray-700 flex-shrink-0"></div>
-                            <div className="flex-1">
-                                <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none p-3 max-w-[85%] inline-block">
-                                    <div className="h-3 bg-gray-600 rounded w-48 mb-2"></div>
-                                    <div className="h-3 bg-gray-600 rounded w-36"></div>
-                                </div>
-                                {/* Category button skeletons */}
-                                <div className="flex flex-wrap gap-2 mt-3">
-                                    {[1,2,3].map(i => (
-                                        <div key={i} className="h-9 w-24 bg-gray-700 rounded-full"></div>
-                                    ))}
+                    <div className="space-y-4">
+                        {[1,2,3].map(i => (
+                            <div key={i} className="bg-[#2a2a2a] rounded-xl border border-gray-700 overflow-hidden animate-pulse">
+                                <div className="h-36 bg-gray-700"></div>
+                                <div className="p-3">
+                                    <div className="h-3 bg-gray-600 rounded mb-2"></div>
+                                    <div className="h-3 bg-gray-600 rounded w-2/3 mb-2"></div>
+                                    <div className="h-8 bg-gray-700 rounded mt-3"></div>
                                 </div>
                             </div>
-                        </div>
-
-                        {/* 2-column product grid skeleton */}
-                        <div className="grid grid-cols-2 gap-3 mt-2">
-                            {[1,2,3,4].map(i => (
-                                <div key={i} className="bg-[#2a2a2a] rounded-xl border border-gray-700 overflow-hidden">
-                                    <div className="h-36 bg-gray-700"></div>
-                                    <div className="p-3">
-                                        <div className="h-3 bg-gray-600 rounded mb-2"></div>
-                                        <div className="h-3 bg-gray-600 rounded w-2/3 mb-2"></div>
-                                        <div className="h-8 bg-gray-700 rounded mt-3"></div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                        ))}
                     </div>
                 )}
 
