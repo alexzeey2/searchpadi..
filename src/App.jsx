@@ -1091,7 +1091,7 @@ export default function App() {
 
     if (showSplash) {
         return (
-            <div className="chat-container bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900">
+            <div className="chat-container" style={{background: 'linear-gradient(160deg, #3b0764 0%, #4c1d95 40%, #2e1065 100%)'}}>
                 <div className="flex items-center justify-center h-full">
                     <div className="text-center px-6">
                         <div className="mb-8">
