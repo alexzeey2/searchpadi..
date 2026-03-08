@@ -67,9 +67,9 @@ export default function App() {
     const [showSplash, setShowSplash] = useState(true);
     const messagesEndRef = useRef(null);
 
-    const PRODUCTS_PER_PAGE = 10;
+    const PRODUCTS_PER_PAGE = 5;
     const SELLERS_PER_PAGE = 3;
-    const DB_BATCH_SIZE = 10;
+    const DB_BATCH_SIZE = 5;
 
     // Load sellers and products from database on mount
     useEffect(() => {
@@ -165,7 +165,7 @@ export default function App() {
             const [sellersResult, campaignsResult, productsResult] = await Promise.all([
                 supabaseClient.from('profiles').select('*').order('created_at', { ascending: false }),
                 supabaseClient.from('pending_payments').select('product_id').eq('status', 'running'),
-                supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(10)
+                supabaseClient.from('products').select('*').order('created_at', { ascending: false }).limit(5)
             ]);
 
             clearTimeout(timeout);
@@ -604,7 +604,7 @@ export default function App() {
             .from('products')
             .select('*')
             .order('created_at', { ascending: false })
-            .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
+            .range(productOffset, productOffset + 4);
 
         if (error || !nextData || nextData.length === 0) {
             addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
