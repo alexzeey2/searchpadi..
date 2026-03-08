@@ -3,7 +3,7 @@ import { supabaseClient } from '../supabase'
 import { shortenLink } from '../helpers'
 import CampaignStatusWidget from './CampaignStatusWidget'
 
-export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onAttractCustomers }) {
+export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers }) {
     const isTempVerified = seller.tempVerifiedUntil && new Date(seller.tempVerifiedUntil) > new Date();
     const tempDaysLeft = seller.tempVerifiedUntil ? Math.ceil((new Date(seller.tempVerifiedUntil) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
     const isVerifiedDisplay = seller.isVerified || isTempVerified;
@@ -25,15 +25,13 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     )}
                     <button
                         onClick={async () => {
+                            if (onCopyProfileLink) { onCopyProfileLink(); return; }
                             const link = `${window.location.origin}/seller.html?id=${seller.id}`;
-                            const short = await shortenLink(link);
-                            if (navigator.share) {
-                                navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short });
-                            } else {
-                                navigator.clipboard?.writeText(short).then(() => alert('🔗 Profile link copied!')).catch(() => {
-                                    prompt('Copy this link:', short);
-                                });
-                            }
+                            try {
+                                const short = await shortenLink(link);
+                                if (navigator.share) { navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short }); }
+                                else { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
+                            } catch(e) { await navigator.clipboard.writeText(link).catch(() => prompt('Copy this link:', link)); alert('🔗 Profile link copied!'); }
                         }}
                         className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
                         title="Share profile"
@@ -180,15 +178,13 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                                 <button
                                                     onClick={async (e) => {
                                                         e.stopPropagation();
+                                                        if (onCopyProductLink) { onCopyProductLink(product.id); return; }
                                                         const link = `${window.location.origin}/product.html?id=${product.id}`;
-                                                        const short = await shortenLink(link);
-                                                        if (navigator.share) {
-                                                            navigator.share({ title: product.name, text: `Check out ${product.name} on SearchPadi!`, url: short });
-                                                        } else {
-                                                            navigator.clipboard?.writeText(short).then(() => alert('🔗 Product link copied!')).catch(() => {
-                                                                prompt('Copy this link:', short);
-                                                            });
-                                                        }
+                                                        try {
+                                                            const short = await shortenLink(link);
+                                                            if (navigator.share) { navigator.share({ title: product.name, text: `Check out ${product.name} on SearchPadi!`, url: short }); }
+                                                            else { await navigator.clipboard.writeText(short); alert('🔗 Product link copied!'); }
+                                                        } catch(err) { await navigator.clipboard.writeText(link).catch(() => prompt('Copy this link:', link)); alert('🔗 Product link copied!'); }
                                                     }}
                                                     className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white"
                                                     title="Share product"
