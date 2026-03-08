@@ -194,7 +194,7 @@ async function get(table, params) {
     return res.json();
 }
 
-let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null;
+let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '';
 
 async function load() {
     const id = new URLSearchParams(window.location.search).get('id');
@@ -205,15 +205,42 @@ async function load() {
         if (!products?.length) return showError('Product not found.');
         const p = products[0];
         const sellers = await get('profiles', `id=eq.${encodeURIComponent(p.seller_id)}&select=*`);
-        render(p, sellers?.[0]);
+        const seller = sellers?.[0];
+        render(p, seller);
+        if (seller) incrementViews(seller);
     } catch(e) {
         showError('Failed to load. Check your connection.');
     }
 }
 
+async function incrementViews(seller) {
+    try {
+        const currentViews = seller.views || 0;
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${seller.id}`, {
+            method: 'PATCH',
+            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ views: currentViews + 1 })
+        });
+        // Fire push notification like the main app does
+        try {
+            fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    seller_id: seller.id,
+                    title: '👀 Someone viewed your product!',
+                    body: `Your listing just got a view from a shared link!`
+                })
+            });
+        } catch(e) {}
+    } catch(e) {}
+}
+
 function render(p, seller) {
     images = (p.images && p.images.length) ? p.images : ['https://via.placeholder.com/400x600/6366f1/fff?text=Product'];
     likesCount = p.likes || 0;
+    currentSeller = seller;
+    productName = p.name;
     document.title = p.name + ' - SearchPadi';
 
     document.getElementById('productTitle').textContent = p.name;

@@ -4,84 +4,143 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SearchPadi - Seller</title>
-    <meta name="theme-color" content="#7c3aed">
+    <meta name="theme-color" content="#1a1a1a">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #1a1a1a; color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
         .container { max-width: 500px; margin: 0 auto; }
-        .header { background: linear-gradient(to right, #7c3aed, #6d28d9); padding: 14px 16px; }
-        .header-logo { font-size: 16px; font-weight: 800; color: white; }
-        .header-sub { font-size: 11px; color: rgba(255,255,255,0.8); }
-        .profile-top { padding: 20px 16px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid #2a2a2a; }
-        .avatar-wrap { position: relative; width: 72px; height: 72px; flex-shrink: 0; }
+
+        .top-bar { background: #1a1a1a; padding: 16px; border-bottom: 1px solid #2a2a2a; display: flex; justify-content: space-between; align-items: center; }
+        .top-bar-title { font-size: 17px; font-weight: 700; color: white; }
+        .top-bar-right { display: flex; align-items: center; gap: 8px; }
+        .icon-btn { width: 32px; height: 32px; border-radius: 50%; background: #2a2a2a; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+        .profile-section { padding: 20px 16px 16px; }
+        .profile-top-row { display: flex; align-items: center; gap: 16px; margin-bottom: 14px; }
+        .avatar-wrap { position: relative; width: 80px; height: 80px; flex-shrink: 0; }
         .avatar-ring {
-            position: absolute; inset: -4px; border-radius: 50%;
+            position: absolute; inset: -3px; border-radius: 50%;
             border: 2.5px solid transparent;
             background: linear-gradient(#1a1a1a, #1a1a1a) padding-box,
                         linear-gradient(90deg, #7c3aed, #c4b5fd, #7c3aed) border-box;
             animation: spin-ring 1.8s linear infinite;
-            box-shadow: 0 0 14px rgba(124,58,237,0.8);
         }
         @keyframes spin-ring { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        .profile-avatar { width: 72px; height: 72px; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; flex-shrink: 0; }
-        .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-        .profile-location { font-size: 13px; color: #9ca3af; margin-bottom: 6px; }
-        .verified-badge { display: inline-flex; align-items: center; gap: 3px; background: #065f46; color: #34d399; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
-        .unverified-badge { display: inline-flex; align-items: center; gap: 3px; background: #292524; color: #a8a29e; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; }
-        .stats-row { display: flex; border-bottom: 1px solid #2a2a2a; }
-        .stat { flex: 1; text-align: center; padding: 14px 8px; }
-        .stat-num { font-size: 18px; font-weight: 700; }
+        .profile-avatar { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; border: 2px solid #2a2a2a; }
+
+        .stats-row { display: flex; flex: 1; justify-content: space-around; text-align: center; }
+        .stat-num { font-size: 18px; font-weight: 700; color: white; }
         .stat-label { font-size: 11px; color: #6b7280; margin-top: 2px; }
-        .bio-box { padding: 14px 16px; border-bottom: 1px solid #2a2a2a; }
-        .bio-text { font-size: 14px; color: #9ca3af; line-height: 1.5; }
-        .btn-row { display: flex; gap: 10px; margin: 14px 16px; }
-        .wa-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #16a34a; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; }
-        .sp-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; background: #7c3aed; color: white; border: none; border-radius: 14px; padding: 15px; font-size: 15px; font-weight: 700; cursor: pointer; text-decoration: none; }
-        .products-title { padding: 14px 16px 10px; font-size: 15px; font-weight: 700; }
-        .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 16px; }
+
+        .seller-name-row { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .seller-name { font-size: 15px; font-weight: 700; color: white; }
+        .blue-tick { color: #3b82f6; display: flex; align-items: center; }
+        .verified-badge { display: inline-flex; align-items: center; gap: 4px; background: #064e3b; color: #34d399; font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 20px; margin-bottom: 8px; }
+        .unverified-badge { display: inline-flex; align-items: center; gap: 4px; background: #292524; color: #a8a29e; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 20px; border: 1px solid #3a3a3a; margin-bottom: 8px; }
+        .seller-location { display: flex; align-items: center; gap: 4px; font-size: 13px; color: #6b7280; margin-bottom: 12px; }
+        .seller-bio { font-size: 13px; color: #9ca3af; line-height: 1.5; margin-bottom: 12px; }
+
+        .btn-row { display: flex; gap: 10px; margin-bottom: 20px; }
+        .wa-btn {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #16a34a; color: white; border: none; border-radius: 12px;
+            padding: 14px; font-size: 14px; font-weight: 700; cursor: pointer;
+            text-decoration: none; transition: opacity 0.15s;
+        }
+        .sp-btn {
+            flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #2a2a2a; color: #d1d5db; border: 1px solid #3a3a3a;
+            border-radius: 12px; padding: 14px; font-size: 14px; font-weight: 600;
+            cursor: pointer; text-decoration: none; transition: all 0.15s;
+        }
+
+        .divider { height: 1px; background: #2a2a2a; }
+        .products-header { padding: 16px 16px 10px; font-size: 15px; font-weight: 700; color: white; }
+        .products-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 0 16px 100px; }
         .product-card { background: #2a2a2a; border-radius: 12px; overflow: hidden; cursor: pointer; text-decoration: none; display: block; }
-        .product-card img { width: 100%; height: 130px; object-fit: cover; }
+        .product-card img { width: 100%; height: 130px; object-fit: cover; display: block; }
         .product-info { padding: 8px 10px 10px; }
         .product-name { font-size: 13px; font-weight: 600; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .product-price { font-size: 12px; color: #a78bfa; margin-top: 2px; }
-        .browse-btn { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 0 16px 20px; background: #7c3aed; color: white; border: none; border-radius: 14px; padding: 14px; font-size: 15px; font-weight: 600; text-decoration: none; }
+        .product-price { font-size: 12px; color: #a78bfa; margin-top: 3px; }
+
+        .bottom-cta { position: fixed; bottom: 0; left: 0; right: 0; padding: 12px 16px 28px; background: linear-gradient(to top, #1a1a1a 70%, transparent); }
+        .bottom-cta-inner { max-width: 500px; margin: 0 auto; }
+        .open-app-btn {
+            width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
+            background: #7c3aed; color: white; border: none; border-radius: 12px;
+            padding: 14px; font-size: 15px; font-weight: 700; cursor: pointer;
+            text-decoration: none;
+        }
+
         .skeleton { background: linear-gradient(90deg, #2a2a2a 25%, #333 50%, #2a2a2a 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; border-radius: 8px; }
         @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+        .no-products { text-align: center; padding: 40px 16px; color: #6b7280; font-size: 14px; }
         .error-box { text-align: center; padding: 60px 20px; }
-        .error-box h2 { color: #ef4444; margin-bottom: 8px; }
+        .error-box h2 { color: #ef4444; margin-bottom: 8px; font-size: 20px; }
         .error-box p { color: #9ca3af; font-size: 14px; margin-bottom: 20px; }
         .error-box a { color: #a78bfa; text-decoration: none; font-weight: 600; }
-        .no-products { text-align: center; padding: 30px 16px; color: #6b7280; font-size: 14px; }
     </style>
 </head>
 <body>
 <div class="container">
-    <div class="header">
-        <div class="header-logo">SearchPadi</div>
-        <div class="header-sub">Find Verified Sellers 🇳🇬</div>
+    <div class="top-bar">
+        <div class="top-bar-title">Seller Profile</div>
+        <div class="top-bar-right">
+            <button class="icon-btn" onclick="shareProfile()" title="Share">
+                <svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
+                </svg>
+            </button>
+            <button class="icon-btn" onclick="history.back()" title="Close">
+                <svg width="16" height="16" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
     </div>
-    <div id="app">
-        <div class="profile-top">
-            <div class="skeleton" style="width:72px;height:72px;border-radius:50%;flex-shrink:0;"></div>
-            <div style="flex:1">
-                <div class="skeleton" style="height:20px;width:60%;margin-bottom:8px;"></div>
-                <div class="skeleton" style="height:14px;width:40%;margin-bottom:8px;"></div>
-                <div class="skeleton" style="height:22px;width:30%;border-radius:20px;"></div>
+
+    <div id="skeletonLoader">
+        <div class="profile-section">
+            <div class="profile-top-row">
+                <div class="skeleton" style="width:80px;height:80px;border-radius:50%;flex-shrink:0;"></div>
+                <div class="stats-row" style="flex:1">
+                    <div><div class="skeleton" style="height:20px;width:32px;margin:0 auto 6px;"></div><div class="skeleton" style="height:11px;width:44px;margin:0 auto;"></div></div>
+                    <div><div class="skeleton" style="height:20px;width:32px;margin:0 auto 6px;"></div><div class="skeleton" style="height:11px;width:44px;margin:0 auto;"></div></div>
+                    <div><div class="skeleton" style="height:20px;width:32px;margin:0 auto 6px;"></div><div class="skeleton" style="height:11px;width:44px;margin:0 auto;"></div></div>
+                </div>
+            </div>
+            <div class="skeleton" style="height:15px;width:50%;margin-bottom:8px;"></div>
+            <div class="skeleton" style="height:13px;width:35%;margin-bottom:14px;"></div>
+            <div class="btn-row">
+                <div class="skeleton" style="height:48px;flex:1;border-radius:12px;"></div>
+                <div class="skeleton" style="height:48px;flex:1;border-radius:12px;"></div>
             </div>
         </div>
-        <div style="padding:16px">
-            <div class="skeleton" style="height:50px;margin-bottom:12px;border-radius:14px;"></div>
-            <div class="skeleton" style="height:46px;border-radius:14px;"></div>
-        </div>
+    </div>
+
+    <div id="app" style="display:none;"></div>
+</div>
+
+<div class="bottom-cta" id="bottomCta" style="display:none;">
+    <div class="bottom-cta-inner">
+        <a class="open-app-btn" href="https://searchpadi-phi.vercel.app" target="_blank">
+            <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Discover More on SearchPadi
+        </a>
     </div>
 </div>
+
 <script>
 const SUPABASE_URL = 'https://fxjnbqymkdvuqfeagpur.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4am5icXlta2R2dXFmZWFncHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTE0NTUsImV4cCI6MjA4NjU4NzQ1NX0.qcQPStoxVPdJfAEDJ-f0xiu_EQkRnZd2c2uDIhMMAdg';
-const headers = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
+const H = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
+
+let currentSeller = null;
 
 async function get(table, params) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers });
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
     return res.json();
 }
 
@@ -94,64 +153,104 @@ async function load() {
             get('products', `seller_id=eq.${encodeURIComponent(id)}&select=*&order=created_at.desc`)
         ]);
         if (!sellers?.length) return showError('Seller not found.');
-        render(sellers[0], products || []);
+        currentSeller = sellers[0];
+        render(currentSeller, products || []);
+        incrementViews(currentSeller);
     } catch(e) {
         showError('Failed to load. Check your connection and try again.');
     }
 }
 
+async function incrementViews(seller) {
+    try {
+        const currentViews = seller.views || 0;
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${seller.id}`, {
+            method: 'PATCH',
+            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ views: currentViews + 1 })
+        });
+        const viewEl = document.getElementById('viewCount');
+        if (viewEl) viewEl.textContent = (currentViews + 1).toLocaleString();
+    } catch(e) {}
+}
+
 function render(s, products) {
     const wa = (s.whatsapp || '').replace(/\D/g, '');
-    const msg = encodeURIComponent('Hi ' + s.business_name + '! I found you on SearchPadi and I\'m interested in your products.');
+    const msg = encodeURIComponent(`Hi ${s.business_name || 'there'}! I found you on SearchPadi and I'm interested in your products.`);
     const totalLikes = products.reduce((sum, p) => sum + (p.likes || 0), 0);
-    document.title = s.business_name + ' - SearchPadi';
+    document.title = (s.business_name || 'Seller') + ' - SearchPadi';
+    const isVerified = s.is_verified || (s.temp_verified_until && new Date(s.temp_verified_until) > new Date());
 
     document.getElementById('app').innerHTML = `
-        <div class="profile-top">
-            <div class="avatar-wrap"><div class="avatar-ring"></div><img class="profile-avatar" src="${s.profile_photo||'https://via.placeholder.com/80/6366f1/fff?text=S'}" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" /></div>
-            <div>
-                <div class="profile-name">${s.business_name}</div>
-                <div class="profile-location">📍 ${s.location||'Nigeria'}</div>
-                ${s.is_verified 
-                    ? '<div class="verified-badge">✓ Verified Seller</div>' 
-                    : '<div class="unverified-badge">⚠ Unverified</div>'}
+        <div class="profile-section">
+            <div class="profile-top-row">
+                <div class="avatar-wrap">
+                    <div class="avatar-ring"></div>
+                    <img class="profile-avatar" src="${s.profile_photo || 'https://via.placeholder.com/80/6366f1/fff?text=S'}" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
+                </div>
+                <div class="stats-row">
+                    <div><div class="stat-num">${products.length}</div><div class="stat-label">Products</div></div>
+                    <div><div class="stat-num" id="viewCount">${(s.views || 0).toLocaleString()}</div><div class="stat-label">Views</div></div>
+                    <div><div class="stat-num">${totalLikes.toLocaleString()}</div><div class="stat-label">Likes</div></div>
+                </div>
+            </div>
+
+            <div class="seller-name-row">
+                <span class="seller-name">${s.business_name || s.full_name || 'Seller'}</span>
+                ${isVerified ? `<span class="blue-tick"><svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg></span>` : ''}
+            </div>
+            ${isVerified ? '<div><span class="verified-badge">✓ Verified Seller</span></div>' : '<div><span class="unverified-badge">Unverified</span></div>'}
+            ${s.bio ? `<p class="seller-bio">${s.bio}</p>` : ''}
+            <div class="seller-location">
+                <svg width="13" height="13" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/></svg>
+                <span>${s.location || 'Nigeria'}</span>
+            </div>
+
+            <div class="btn-row">
+                <a class="wa-btn" href="${wa ? `https://wa.me/${wa}?text=${msg}` : '#'}" target="_blank">
+                    <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    WhatsApp
+                </a>
+                <a class="sp-btn" href="https://searchpadi-phi.vercel.app" target="_blank">
+                    <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                    SearchPadi
+                </a>
             </div>
         </div>
-        <div class="stats-row">
-            <div class="stat"><div class="stat-num">${products.length}</div><div class="stat-label">Products</div></div>
-            <div class="stat"><div class="stat-num">${(s.views||0).toLocaleString()}</div><div class="stat-label">Views</div></div>
-            <div class="stat"><div class="stat-num">${totalLikes.toLocaleString()}</div><div class="stat-label">Likes</div></div>
-        </div>
-        ${s.bio ? `<div class="bio-box"><div class="bio-text">${s.bio}</div></div>` : ''}
-        <div class="btn-row">
-            <a class="wa-btn" href="https://wa.me/${wa}?text=${msg}" target="_blank">
-                <svg width="20" height="20" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                WhatsApp
-            </a>
-            <a class="sp-btn" href="https://searchpadi-phi.vercel.app" target="_blank">
-                <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                SearchPadi
-            </a>
-        </div>
-        <div class="products-title">Products (${products.length})</div>
-        ${products.length === 0 
+
+        <div class="divider"></div>
+        <div class="products-header">Products (${products.length})</div>
+        ${products.length === 0
             ? '<div class="no-products">No products listed yet</div>'
             : `<div class="products-grid">${products.map(p => `
                 <a class="product-card" href="/product.html?id=${p.id}">
-                    <img src="${(p.images&&p.images[0])||'https://via.placeholder.com/300/6366f1/fff?text=Product'}" onerror="this.src='https://via.placeholder.com/300/6366f1/fff?text=Product'" />
+                    <img src="${(p.images && p.images[0]) || 'https://via.placeholder.com/300/6366f1/fff?text=Product'}" onerror="this.src='https://via.placeholder.com/300/6366f1/fff?text=Product'" loading="lazy" />
                     <div class="product-info">
                         <div class="product-name">${p.name}</div>
-                        <div class="product-price">${p.price||'Ask for Price'}</div>
+                        <div class="product-price">${p.price || 'Ask for Price'}</div>
                     </div>
                 </a>`).join('')}</div>`}
-        <a class="browse-btn" href="/?seller=${s.id}">
-            <svg width="18" height="18" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            View Full Store on SearchPadi
-        </a>`;
+    `;
+
+    document.getElementById('skeletonLoader').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('bottomCta').style.display = 'block';
+}
+
+async function shareProfile() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    const name = currentSeller?.business_name || 'this seller';
+    const url = `${window.location.origin}/seller.html?id=${id}`;
+    try {
+        if (navigator.share) await navigator.share({ title: name + ' on SearchPadi', text: `Check out ${name} on SearchPadi!`, url });
+        else { await navigator.clipboard.writeText(url); alert('Link copied!'); }
+    } catch(e) {}
 }
 
 function showError(msg) {
-    document.getElementById('app').innerHTML = `<div class="error-box"><h2>Oops!</h2><p>${msg}</p><a href="/">← Back to SearchPadi</a></div>`;
+    document.getElementById('skeletonLoader').style.display = 'none';
+    document.getElementById('app').innerHTML = `<div class="error-box"><h2>Oops!</h2><p>${msg}</p><a href="https://searchpadi-phi.vercel.app">Back to SearchPadi</a></div>`;
+    document.getElementById('app').style.display = 'block';
 }
 
 load();
