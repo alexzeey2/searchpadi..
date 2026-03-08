@@ -19,7 +19,6 @@ export default function CampaignStatusWidget({ sellerId }) {
     if (!campaign) return (
         <div className="bg-white/5 rounded-xl p-3 mb-3 text-center">
             <p className="text-gray-400 text-xs">No active campaign</p>
-            <p className="text-gray-500 text-xs mt-0.5">Run a campaign — ₦4,000 for 5 clicks</p>
         </div>
     );
     const clicks = campaign.ad_clicks || 0;
