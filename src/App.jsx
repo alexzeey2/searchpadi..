@@ -1290,12 +1290,14 @@ export default function App() {
                                 )}
                             </button>
                         ) : (
-                            <button
-                                onClick={() => window.open('/signup.html', '_blank')}
-                                className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap"
+                            <a
+                                href="/signup.html"
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap inline-block"
                             >
                                 Become a Seller
-                            </button>
+                            </a>
                         )}
                     </div>
                 </div>
