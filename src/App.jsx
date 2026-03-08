@@ -140,19 +140,31 @@ export default function App() {
             if (sellerData) {
                 const { data: productsData } = await supabaseClient
                     .from('products').select('*').eq('seller_id', sellerId);
-                setSelectedSeller({
+                const isTrusted = sellerData.is_free_trial && sellerData.free_trial_expires_at
+                    ? new Date(sellerData.free_trial_expires_at) > new Date()
+                    : sellerData.subscription_plan === 'growth_pro';
+                const fullSeller = {
                     id: sellerData.id, name: sellerData.business_name,
                     email: sellerData.email, category: sellerData.category,
+                    gender: sellerData.gender || null,
                     location: sellerData.location, bio: sellerData.bio || 'Seller on SearchPadi',
                     isVerified: sellerData.is_verified || false,
+                    isTrusted,
                     whatsappNumber: sellerData.whatsapp,
                     profilePhoto: sellerData.profile_photo || DEFAULT_PROFILE_IMAGE,
                     views: sellerData.views || 0,
+                    subscription: sellerData.subscription_plan || 'free',
                     products: (productsData || []).map(p => ({
                         id: p.id, name: p.name, price: p.price || 'Ask for Price',
                         description: p.description || '', images: p.images || [DEFAULT_PRODUCT_IMAGE]
                     }))
-                });
+                };
+                // Check if this is the logged-in seller's own profile
+                const { data: session } = await supabaseClient.auth.getSession();
+                if (session?.session?.user?.id === sellerId) {
+                    setCurrentUser({ type: 'seller', data: fullSeller });
+                }
+                setSelectedSeller(fullSeller);
             }
         }
     };
