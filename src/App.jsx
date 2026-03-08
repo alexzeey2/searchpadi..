@@ -77,37 +77,51 @@ export default function App() {
         trackVisit();
         handleDeepLinks();
         // Auto-login if seller has an active session
-        const autoLogin = async () => {
-            try {
-                const { data } = await supabaseClient.auth.getSession();
-                const userId = data.session?.user?.id;
-                if (!userId) return;
-                const { data: profileData } = await supabaseClient
-                    .from('profiles').select('*').eq('id', userId).single();
-                if (!profileData) return;
-                const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
-                    ? new Date(profileData.free_trial_expires_at) > new Date()
-                    : profileData.subscription_plan === 'growth_pro';
-                const sellerData = {
-                    id: profileData.id,
-                    name: profileData.business_name,
-                    email: profileData.email,
-                    category: profileData.category,
-                    gender: profileData.gender || null,
-                    location: profileData.location,
-                    bio: profileData.bio || 'Seller on SearchPadi',
-                    isVerified: profileData.is_verified || false,
-                    isTrusted,
-                    whatsappNumber: profileData.whatsapp,
-                    profilePhoto: profileData.profile_photo,
-                    views: profileData.views || 0,
-                    subscription: profileData.subscription_plan || 'free',
-                    products: []
-                };
-                setCurrentUser({ type: 'seller', data: sellerData });
-            } catch(e) {}
-        };
-        autoLogin();
+        // Only auto-login if there's no ?seller= param (deep link handles that case)
+        const urlParams = new URLSearchParams(window.location.search);
+        if (!urlParams.get('seller') && !urlParams.get('product')) {
+            const autoLogin = async () => {
+                try {
+                    const { data } = await supabaseClient.auth.getSession();
+                    const userId = data.session?.user?.id;
+                    if (!userId) return;
+                    const { data: profileData } = await supabaseClient
+                        .from('profiles').select('*').eq('id', userId).single();
+                    if (!profileData) return;
+                    const { data: productsData } = await supabaseClient
+                        .from('products').select('*').eq('seller_id', userId);
+                    const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
+                        ? new Date(profileData.free_trial_expires_at) > new Date()
+                        : profileData.subscription_plan === 'growth_pro';
+                    const sellerData = {
+                        id: profileData.id,
+                        name: profileData.business_name,
+                        email: profileData.email,
+                        category: profileData.category,
+                        gender: profileData.gender || null,
+                        location: profileData.location,
+                        bio: profileData.bio || 'Seller on SearchPadi',
+                        isVerified: profileData.is_verified || false,
+                        isTrusted,
+                        whatsappNumber: profileData.whatsapp,
+                        profilePhoto: profileData.profile_photo,
+                        views: profileData.views || 0,
+                        subscription: profileData.subscription_plan || 'free',
+                        products: (productsData || []).map(p => ({
+                            id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                            description: p.description || '',
+                            images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                            keywords: p.keywords || [],
+                            likes: p.likes || 0,
+                            liked: false
+                        }))
+                    };
+                    setCurrentUser({ type: 'seller', data: sellerData });
+                    setSelectedSeller(sellerData);
+                } catch(e) {}
+            };
+            autoLogin();
+        }
     }, []);
 
     const handleDeepLinks = async () => {
@@ -296,14 +310,7 @@ export default function App() {
         scrollToBottom();
     }, [messages, isTyping, showProducts, showSellers]);
 
-    // Once session + sellers both loaded, go straight to seller profile
-    useEffect(() => {
-        if (currentUser?.type === 'seller' && sellers.length > 0 && !selectedSeller) {
-            const fullSeller = sellers.find(s => s.id === currentUser.data.id);
-            if (fullSeller) setSelectedSeller(fullSeller);
-            else setSelectedSeller(currentUser.data); // fallback
-        }
-    }, [currentUser, sellers]);
+
 
     // Load initial recommended products
     useEffect(() => {
