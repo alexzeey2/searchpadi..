@@ -64,6 +64,7 @@ export default function App() {
     const [searchContext, setSearchContext] = useState(null);
     const [clickedButtons, setClickedButtons] = useState({});
     const [isLoadingData, setIsLoadingData] = useState(true);
+    const [prefetchedProducts, setPrefetchedProducts] = useState([]);
     const [showSplash, setShowSplash] = useState(true);
     const messagesEndRef = useRef(null);
 
@@ -296,6 +297,8 @@ export default function App() {
             setDisplayedProducts(sorted.slice(0, PRODUCTS_PER_PAGE));
             setProductOffset(PRODUCTS_PER_PAGE);
             setShowProducts(true);
+            // Start prefetching next batch silently in background
+            prefetchNextProducts(PRODUCTS_PER_PAGE);
             })();
         } else if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
             // Truly no sellers at all - marketplace is empty
@@ -598,16 +601,50 @@ export default function App() {
     };
 
     const handleFindMoreProducts = async () => {
-        await simulateTyping(500);
-        
-        // Fetch next 10 from Supabase using offset
-        const { data: nextData, error } = await supabaseClient
-            .from('products')
-            .select('*')
-            .order('created_at', { ascending: false })
-            .range(productOffset, productOffset + 4);
+        await simulateTyping(300);
 
-        if (error || !nextData || nextData.length === 0) {
+        let mapped = [];
+
+        if (prefetchedProducts.length > 0) {
+            // Use prefetched data instantly — no waiting
+            mapped = prefetchedProducts;
+            setPrefetchedProducts([]);
+        } else {
+            // Fallback: fetch from Supabase now
+            const { data: nextData, error } = await supabaseClient
+                .from('products')
+                .select('id,seller_id,name,price,images,keywords,likes,description')
+                .order('created_at', { ascending: false })
+                .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
+
+            if (!error && nextData) {
+                mapped = nextData.map(product => {
+                    const seller = sellers.find(s => s.id === product.seller_id);
+                    if (!seller) return null;
+                    return {
+                        id: product.id,
+                        name: product.name,
+                        price: product.price || 'Ask for Price',
+                        description: product.description || '',
+                        images: product.images || [],
+                        keywords: product.keywords || [],
+                        likes: product.likes || 0,
+                        liked: false,
+                        seller: {
+                            id: seller.id,
+                            name: seller.name,
+                            whatsappNumber: seller.whatsappNumber,
+                            location: seller.location,
+                            profilePhoto: seller.profilePhoto,
+                            isVerified: seller.isVerified,
+                            isTrusted: seller.isTrusted,
+                        }
+                    };
+                }).filter(Boolean);
+            }
+        }
+
+        if (mapped.length === 0) {
             addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
             await simulateTyping(800);
             setShowProducts(false);
@@ -615,59 +652,110 @@ export default function App() {
             setCurrentStep('sellers');
             setSellerOffset(SELLERS_PER_PAGE);
         } else {
-            // Map fetched products to seller context
-            const mapped = nextData.map(product => {
-                const seller = sellers.find(s => s.id === product.seller_id);
-                if (!seller) return null;
-                return {
-                    id: product.id,
-                    name: product.name,
-                    price: product.price || 'Ask for Price',
-                    description: product.description || '',
-                    images: product.images || [],
-                    keywords: product.keywords || [],
-                    likes: product.likes || 0,
-                    liked: false,
-                    seller: {
-                        id: seller.id,
-                        name: seller.name,
-                        whatsappNumber: seller.whatsappNumber,
-                        location: seller.location,
-                        profilePhoto: seller.profilePhoto,
-                        isVerified: seller.isVerified,
-                        isTrusted: seller.isTrusted,
-                    }
-                };
-            }).filter(Boolean);
+            const newOffset = productOffset + DB_BATCH_SIZE;
+            setDisplayedProducts(prev => [...prev, ...mapped]);
+            setProductOffset(newOffset);
+            // Silently prefetch the NEXT batch in background
+            prefetchNextProducts(newOffset);
+        }
+    };
 
-            if (mapped.length === 0) {
-                addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
-                await simulateTyping(800);
-                setShowProducts(false);
-                setShowSellers(true);
-                setCurrentStep('sellers');
-                setSellerOffset(SELLERS_PER_PAGE);
-            } else {
-                setDisplayedProducts(prev => [...prev, ...mapped]);
-                setProductOffset(prev => prev + DB_BATCH_SIZE);
+    // Silently prefetch next batch in background
+    const prefetchNextProducts = async (currentOffset) => {
+        try {
+            const { data } = await supabaseClient
+                .from('products')
+                .select('id,seller_id,name,price,images,keywords,likes,description')
+                .order('created_at', { ascending: false })
+                .range(currentOffset, currentOffset + DB_BATCH_SIZE - 1);
+            if (data && data.length > 0) {
+                const mapped = data.map(product => {
+                    const seller = sellers.find(s => s.id === product.seller_id);
+                    if (!seller) return null;
+                    return {
+                        id: product.id,
+                        name: product.name,
+                        price: product.price || 'Ask for Price',
+                        description: product.description || '',
+                        images: product.images || [],
+                        keywords: product.keywords || [],
+                        likes: product.likes || 0,
+                        liked: false,
+                        seller: {
+                            id: seller.id,
+                            name: seller.name,
+                            whatsappNumber: seller.whatsappNumber,
+                            location: seller.location,
+                            profilePhoto: seller.profilePhoto,
+                            isVerified: seller.isVerified,
+                            isTrusted: seller.isTrusted,
+                        }
+                    };
+                }).filter(Boolean);
+                setPrefetchedProducts(mapped);
             }
+        } catch (e) {
+            // silent fail — prefetch is best-effort
         }
     };
 
     const handleFindMoreSellers = async () => {
         await simulateTyping(500);
-        
+
+        // First check sellers already in memory for this category
         const categorySellers = sellers.filter(s => {
             if (s.category !== selectedCategory) return false;
             if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
             return true;
         });
-        
-        if (sellerOffset >= categorySellers.length) {
-            setShowNoMoreMessage(true);
-            addMessage("These are all the verified sellers we have in this category right now. Try 'Start Afresh' to explore a different category!", 'assistant');
-        } else {
+
+        if (sellerOffset < categorySellers.length) {
+            // Still have sellers in memory to show
             setSellerOffset(prev => Math.min(prev + SELLERS_PER_PAGE, categorySellers.length));
+        } else {
+            // Fetch more sellers from Supabase
+            let query = supabaseClient
+                .from('profiles')
+                .select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until')
+                .order('created_at', { ascending: false })
+                .range(sellers.length, sellers.length + SELLERS_PER_PAGE - 1);
+
+            if (selectedCategory) query = query.eq('category', selectedCategory);
+
+            const { data: moreSellers } = await query;
+
+            if (!moreSellers || moreSellers.length === 0) {
+                setShowNoMoreMessage(true);
+                addMessage("These are all the verified sellers we have in this category right now. Try 'Start Afresh' to explore a different category!", 'assistant');
+            } else {
+                const mapped = moreSellers.map(seller => {
+                    const isTrusted = seller.is_free_trial && seller.free_trial_expires_at
+                        ? new Date(seller.free_trial_expires_at) > new Date()
+                        : seller.subscription_plan === 'growth_pro';
+                    return {
+                        id: seller.id,
+                        name: seller.business_name,
+                        email: seller.email,
+                        category: seller.category,
+                        gender: seller.gender || null,
+                        location: seller.location,
+                        bio: seller.bio || 'Seller on SearchPadi',
+                        isVerified: seller.is_verified || false,
+                        isTrusted,
+                        isFreeTrial: seller.is_free_trial || false,
+                        freeTrialExpiresAt: seller.free_trial_expires_at,
+                        whatsappNumber: seller.whatsapp,
+                        profilePhoto: seller.profile_photo,
+                        views: seller.views || 0,
+                        subscription: seller.subscription_plan || 'free',
+                        shareCount: seller.share_count || 0,
+                        tempVerifiedUntil: seller.temp_verified_until || null,
+                        products: []
+                    };
+                });
+                setSellers(prev => [...prev, ...mapped]);
+                setSellerOffset(prev => prev + mapped.length);
+            }
         }
     };
 
