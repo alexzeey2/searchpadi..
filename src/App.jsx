@@ -5,7 +5,6 @@ import EditProfileModal from './components/EditProfileModal'
 import AttractCustomersModal from './components/AttractCustomersModal'
 import SellerProfile from './components/SellerProfile'
 import ProductDetail from './components/ProductDetail'
-import RegistrationModal from './components/RegistrationModal'
 import LoginModal from './components/LoginModal'
 import AddProductModal from './components/AddProductModal'
 import SubscriptionModal from './components/SubscriptionModal'
@@ -1292,7 +1291,7 @@ export default function App() {
                             </button>
                         ) : (
                             <button
-                                onClick={() => setShowRegistration(true)}
+                                onClick={() => window.location.href = '/signup.html'}
                                 className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap"
                             >
                                 Become a Seller
@@ -1759,10 +1758,7 @@ export default function App() {
                 setShowLogin(false);
                 setShowRegistration(true);
             }} />}
-            {showRegistration && <RegistrationModal onClose={() => setShowRegistration(false)} onRegister={handleRegistration} onSwitchToLogin={() => {
-                setShowRegistration(false);
-                setShowLogin(true);
-            }} />}
+
             {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
             {showSomtoPromote && <SomtoPromoteChat onClose={() => setShowSomtoPromote(false)} currentUser={currentUser} />}
             {/* SubscriptionModal removed — Somto chat flow is the only upgrade path */}
