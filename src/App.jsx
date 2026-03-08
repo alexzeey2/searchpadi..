@@ -77,35 +77,36 @@ export default function App() {
         trackVisit();
         handleDeepLinks();
         // Auto-login if seller has an active session
-        supabaseClient.auth.getSession().then(async ({ data }) => {
-            if (!data.session) return;
-            const { data: profileData } = await supabaseClient
-                .from('profiles')
-                .select('*')
-                .eq('id', data.session.user.id)
-                .single();
-            if (!profileData) return;
-            const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
-                ? new Date(profileData.free_trial_expires_at) > new Date()
-                : profileData.subscription_plan === 'growth_pro';
-            const sellerData = {
-                id: profileData.id,
-                name: profileData.business_name,
-                email: profileData.email,
-                category: profileData.category,
-                gender: profileData.gender || null,
-                location: profileData.location,
-                bio: profileData.bio || 'Seller on SearchPadi',
-                isVerified: profileData.is_verified || false,
-                isTrusted,
-                whatsappNumber: profileData.whatsapp,
-                profilePhoto: profileData.profile_photo,
-                views: profileData.views || 0,
-                subscription: profileData.subscription_plan || 'free',
-                products: []
-            };
-            setCurrentUser({ type: 'seller', data: sellerData });
-        });
+        const autoLogin = async () => {
+            try {
+                const { data } = await supabaseClient.auth.getSession();
+                const userId = data.session?.user?.id;
+                if (!userId) return;
+                const { data: profileData } = await supabaseClient
+                    .from('profiles').select('*').eq('id', userId).single();
+                if (!profileData) return;
+                const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
+                    ? new Date(profileData.free_trial_expires_at) > new Date()
+                    : profileData.subscription_plan === 'growth_pro';
+                setCurrentUser({ type: 'seller', data: {
+                    id: profileData.id,
+                    name: profileData.business_name,
+                    email: profileData.email,
+                    category: profileData.category,
+                    gender: profileData.gender || null,
+                    location: profileData.location,
+                    bio: profileData.bio || 'Seller on SearchPadi',
+                    isVerified: profileData.is_verified || false,
+                    isTrusted,
+                    whatsappNumber: profileData.whatsapp,
+                    profilePhoto: profileData.profile_photo,
+                    views: profileData.views || 0,
+                    subscription: profileData.subscription_plan || 'free',
+                    products: []
+                }});
+            } catch(e) {}
+        };
+        autoLogin();
     }, []);
 
     const handleDeepLinks = async () => {
@@ -282,9 +283,10 @@ export default function App() {
     useEffect(() => {
         if (currentStep === 'recommendations' && displayedProducts.length === 0 && sellers.length > 0 && !isLoadingData) {
             (async () => {
-            // Get all products from all sellers
+            // Get all products from all sellers - shuffle sellers first so same seller doesn't dominate
             const allProductsList = [];
-            sellers.forEach(seller => {
+            const shuffledSellers = shuffleArray([...sellers]);
+            shuffledSellers.forEach(seller => {
                 seller.products.forEach(product => {
                     allProductsList.push({
                         ...product,
