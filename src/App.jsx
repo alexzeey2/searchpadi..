@@ -498,16 +498,23 @@ export default function App() {
             setShowProducts(true);
             })();
         } else if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
-            // Truly no sellers at all - marketplace is empty
-            setMessages([
-                { 
-                    id: 1, 
-                    type: 'assistant', 
-                    text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\n🚀 Be the first! Click "Become a Seller" to start.', 
-                    timestamp: new Date(),
-                    messageId: 1
-                }
-            ]);
+            // Wait a bit longer before showing empty state — sellers may still be populating
+            setTimeout(() => {
+                setSellers(prev => {
+                    if (prev.length === 0) {
+                        setMessages([
+                            { 
+                                id: 1, 
+                                type: 'assistant', 
+                                text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\n🚀 Be the first! Click "Become a Seller" to start.', 
+                                timestamp: new Date(),
+                                messageId: 1
+                            }
+                        ]);
+                    }
+                    return prev;
+                });
+            }, 3000);
         }
     }, [currentStep, sellers, isLoadingData]);
 
