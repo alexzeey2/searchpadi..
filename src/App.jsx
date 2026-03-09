@@ -1211,26 +1211,30 @@ export default function App() {
         const fullUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${id}`;
         const url = await shortenLink(fullUrl);
         try {
-            await navigator.clipboard.writeText(url);
-        } catch (e) {
-            const el = document.createElement('textarea');
-            el.value = url; document.body.appendChild(el); el.select();
-            document.execCommand('copy'); document.body.removeChild(el);
+            if (navigator.share) {
+                await navigator.share({ title: 'SearchPadi Seller', text: 'Check out this seller on SearchPadi!', url });
+            } else {
+                try { await navigator.clipboard.writeText(url); alert('Profile link copied!'); }
+                catch(e) { prompt('Copy this link:', url); }
+            }
+        } catch(e) {
+            prompt('Copy this link:', url);
         }
-        alert('Profile link copied! 🔗\n' + url);
     };
 
     const handleCopyProductLink = async (productId) => {
         const fullUrl = `https://searchpadi-phi.vercel.app/product.html?id=${productId}`;
         const url = await shortenLink(fullUrl);
         try {
-            await navigator.clipboard.writeText(url);
-        } catch (e) {
-            const el = document.createElement('textarea');
-            el.value = url; document.body.appendChild(el); el.select();
-            document.execCommand('copy'); document.body.removeChild(el);
+            if (navigator.share) {
+                await navigator.share({ title: 'SearchPadi Product', text: 'Check out this product on SearchPadi!', url });
+            } else {
+                try { await navigator.clipboard.writeText(url); alert('Product link copied!'); }
+                catch(e) { prompt('Copy this link:', url); }
+            }
+        } catch(e) {
+            prompt('Copy this link:', url);
         }
-        alert('Product link copied! 🔗\n' + url);
     };
 
     const handleShare = async () => {
