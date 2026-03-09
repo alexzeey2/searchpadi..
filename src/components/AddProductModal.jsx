@@ -101,19 +101,11 @@ export default function AddProductModal({ onClose, onAdd, isUploading }) {
 
                     {/* Instruction Banner */}
                     <div className="bg-purple-900/30 border border-purple-700/50 rounded-xl p-4 mb-5">
-                        <p className="text-purple-300 text-sm font-semibold mb-1">📸 One product, one photo</p>
-                        <p className="text-gray-300 text-xs leading-relaxed">Add the <span className="text-white font-bold">best picture of that product</span> — a great photo attracts more customers!</p>
-                        <div className="mt-2 space-y-1">
-                            <p className="text-green-400 text-xs">✅ Round Neck Sweaters → one form, one photo</p>
-                            <p className="text-green-400 text-xs">✅ Joggers → a separate form, one photo</p>
-                            <p className="text-red-400 text-xs">❌ Don't mix different products in one form</p>
-                        </div>
+                        <p className="text-white text-sm font-semibold">📸 Add the best picture of that product — a great photo attracts more customers!</p>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Product Image *</label>
-                            <p className="text-xs text-gray-400 mb-2">Upload your best photo (Max 5MB, auto-compressed)</p>
                             <div className="relative w-full">
                                 <img 
                                     src={previewImages[0]} 
