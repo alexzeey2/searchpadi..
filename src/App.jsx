@@ -129,14 +129,72 @@ export default function App() {
 
                 // If URL has a deep link param, handle that instead of auto-opening own profile
                 const urlParams = new URLSearchParams(window.location.search);
-                const hasDeepLink = urlParams.get('seller') || urlParams.get('product');
-                if (hasDeepLink) {
-                    handleDeepLinks();
+                const deepSellerId = urlParams.get('seller');
+                const deepProductId = urlParams.get('product');
+
+                if (deepProductId) {
+                    // Deep link to a product — load and show it
+                    const { data: productData } = await supabaseClient
+                        .from('products').select('*, profiles(*)').eq('id', deepProductId).single();
+                    if (productData) {
+                        const pSeller = productData.profiles;
+                        setSelectedProduct({
+                            id: productData.id, name: productData.name,
+                            price: productData.price || 'Ask for Price',
+                            description: productData.description || '',
+                            images: productData.images || [],
+                            keywords: productData.keywords || [],
+                            likes: productData.likes || 0, liked: false,
+                            seller: {
+                                id: pSeller.id, name: pSeller.business_name,
+                                whatsappNumber: pSeller.whatsapp, location: pSeller.location,
+                                profilePhoto: pSeller.profile_photo || DEFAULT_PROFILE_IMAGE,
+                                isVerified: pSeller.is_verified
+                            }
+                        });
+                    }
+                } else if (deepSellerId) {
+                    // Deep link to a seller profile — load and show them (not self)
+                    const { data: deepSellerData } = await supabaseClient
+                        .from('profiles').select('*').eq('id', deepSellerId).single();
+                    if (deepSellerData) {
+                        const { data: deepProducts } = await supabaseClient
+                            .from('products').select('*').eq('seller_id', deepSellerId);
+                        const deepIsTrusted = deepSellerData.is_free_trial && deepSellerData.free_trial_expires_at
+                            ? new Date(deepSellerData.free_trial_expires_at) > new Date()
+                            : deepSellerData.subscription_plan === 'growth_pro';
+                        const deepFullSeller = {
+                            id: deepSellerData.id, name: deepSellerData.business_name,
+                            email: deepSellerData.email, category: deepSellerData.category,
+                            gender: deepSellerData.gender || null,
+                            location: deepSellerData.location,
+                            bio: deepSellerData.bio || 'Seller on SearchPadi',
+                            isVerified: deepSellerData.is_verified || false,
+                            isTrusted: deepIsTrusted,
+                            whatsappNumber: deepSellerData.whatsapp,
+                            profilePhoto: deepSellerData.profile_photo || DEFAULT_PROFILE_IMAGE,
+                            views: deepSellerData.views || 0,
+                            subscription: deepSellerData.subscription_plan || 'free',
+                            products: (deepProducts || []).map(p => ({
+                                id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                                description: p.description || '',
+                                images: p.images || [],
+                                keywords: p.keywords || [],
+                                likes: p.likes || 0, liked: false
+                            }))
+                        };
+                        setSelectedSeller(deepFullSeller);
+                    }
                 } else {
+                    // No deep link — open own profile as normal
                     setSelectedSeller(sellerData);
                 }
             } catch(e) {
-                handleDeepLinks();
+                // Auth failed — still try deep links as guest
+                const urlParams = new URLSearchParams(window.location.search);
+                if (urlParams.get('seller') || urlParams.get('product')) {
+                    handleDeepLinks();
+                }
             }
         };
 
