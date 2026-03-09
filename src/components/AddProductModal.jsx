@@ -6,16 +6,11 @@ export default function AddProductModal({ onClose, onAdd, isUploading }) {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        images: ['', '', '', '']
+        images: ['']
     });
-    const [previewImages, setPreviewImages] = useState([
-        DEFAULT_PRODUCT_IMAGE,
-        DEFAULT_PRODUCT_IMAGE,
-        DEFAULT_PRODUCT_IMAGE,
-        DEFAULT_PRODUCT_IMAGE
-    ]);
+    const [previewImages, setPreviewImages] = useState([DEFAULT_PRODUCT_IMAGE]);
     const [uploadingIndex, setUploadingIndex] = useState(null);
-    const fileInputRefs = [useRef(null), useRef(null), useRef(null), useRef(null)];
+    const fileInputRefs = [useRef(null)];
 
     const compressImage = (file, maxWidth = 800, quality = 0.7) => {
         return new Promise((resolve, reject) => {
@@ -106,47 +101,40 @@ export default function AddProductModal({ onClose, onAdd, isUploading }) {
 
                     {/* Instruction Banner */}
                     <div className="bg-purple-900/30 border border-purple-700/50 rounded-xl p-4 mb-5">
-                        <p className="text-purple-300 text-sm font-semibold mb-1">📸 How to add products correctly</p>
-                        <p className="text-gray-300 text-xs leading-relaxed">Upload <span className="text-white font-bold">4 photos of the same product</span>. Each form = one product type.</p>
+                        <p className="text-purple-300 text-sm font-semibold mb-1">📸 One product, one photo</p>
+                        <p className="text-gray-300 text-xs leading-relaxed">Add the <span className="text-white font-bold">best picture of that product</span> — a great photo attracts more customers!</p>
                         <div className="mt-2 space-y-1">
-                            <p className="text-green-400 text-xs">✅ 4 photos of Round Neck Sweaters → one form</p>
-                            <p className="text-green-400 text-xs">✅ 4 photos of Joggers → a separate form</p>
+                            <p className="text-green-400 text-xs">✅ Round Neck Sweaters → one form, one photo</p>
+                            <p className="text-green-400 text-xs">✅ Joggers → a separate form, one photo</p>
                             <p className="text-red-400 text-xs">❌ Don't mix different products in one form</p>
                         </div>
                     </div>
 
                     <form onSubmit={handleSubmit} className="space-y-4">
                         <div>
-                            <label className="block text-sm font-medium text-gray-300 mb-2">Product Images (4 images) *</label>
-                            <p className="text-xs text-gray-400 mb-2">Upload real product photos (Max 5MB each, auto-compressed)</p>
-                            <div className="grid grid-cols-2 gap-2">
-                                {[0, 1, 2, 3].map((index) => (
-                                    <div key={index} className="relative">
-                                        <img 
-                                            src={previewImages[index]} 
-                                            alt={`Preview ${index + 1}`}
-                                            className="w-full h-32 object-cover rounded-lg border-2 border-purple-600"
-                                        />
-                                        <input
-                                            type="file"
-                                            ref={fileInputRefs[index]}
-                                            onChange={(e) => handleImageUpload(index, e)}
-                                            accept="image/*"
-                                            className="hidden"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => fileInputRefs[index].current.click()}
-                                            disabled={uploadingIndex === index}
-                                            className="absolute bottom-2 right-2 bg-purple-600 text-white px-2 py-1 rounded text-xs hover:bg-purple-700 disabled:bg-gray-600"
-                                        >
-                                            {uploadingIndex === index ? '...' : (previewImages[index] === DEFAULT_PRODUCT_IMAGE ? 'Upload' : 'Change')}
-                                        </button>
-                                        <div className="absolute top-2 left-2 bg-black/70 text-white px-2 py-1 rounded text-xs">
-                                            {index + 1}
-                                        </div>
-                                    </div>
-                                ))}
+                            <label className="block text-sm font-medium text-gray-300 mb-2">Product Image *</label>
+                            <p className="text-xs text-gray-400 mb-2">Upload your best photo (Max 5MB, auto-compressed)</p>
+                            <div className="relative w-full">
+                                <img 
+                                    src={previewImages[0]} 
+                                    alt="Preview"
+                                    className="w-full h-48 object-cover rounded-lg border-2 border-purple-600"
+                                />
+                                <input
+                                    type="file"
+                                    ref={fileInputRefs[0]}
+                                    onChange={(e) => handleImageUpload(0, e)}
+                                    accept="image/*"
+                                    className="hidden"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => fileInputRefs[0].current.click()}
+                                    disabled={uploadingIndex === 0}
+                                    className="absolute bottom-3 right-3 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-purple-700 disabled:bg-gray-600"
+                                >
+                                    {uploadingIndex === 0 ? 'Uploading...' : (previewImages[0] === DEFAULT_PRODUCT_IMAGE ? '📷 Upload Photo' : '🔄 Change Photo')}
+                                </button>
                             </div>
                         </div>
 
