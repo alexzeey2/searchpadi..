@@ -151,6 +151,12 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                     `Your next free slot opens in ${getRemainingDays()} days.`,
                     `Want to run a paid campaign in the meantime? Which product shall we promote?`,
                 ], 800);
+            } else if (remaining <= 0) {
+                // All free slots taken — skip free campaign pitch
+                await say([
+                    `All free campaign slots for this month are taken.`,
+                    `But you can still run a paid campaign — which product would you like me to promote?`,
+                ], 800);
             } else if (sellerProducts.length < PER) {
                 await say([
                     `You need at least ${PER} products posted to qualify for a free campaign.`,
@@ -174,17 +180,21 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         addMsg(product.name, 'user');
         await new Promise(r => setTimeout(r, 350));
 
-        if (freeSlotAvailable) {
-            // Free campaign — lock in 6 people, no payment needed
+        // Re-check slots fresh right now — don't rely on stale state from mount
+        const { qualifies: stillQualifies } = await checkFreeSlots();
+
+        if (stillQualifies) {
+            // Free campaign — lock in, no payment needed
             setIsFreeOrder(true);
             setPendingCount(PER);
             await say([
                 `Great choice! "${product.name}" 🔥`,
-                `Your free campaign will send 6 people straight to your WhatsApp. No payment needed — it's on us! 🎁`,
+                `Your free campaign will send ${PER} people straight to your WhatsApp. No payment needed — it's on us! 🎁`,
                 `Here's a summary of what you're getting 👇`,
             ], 800);
             setSheet('price');
         } else {
+            // Slots gone or no longer qualifies — go straight to paid
             setIsFreeOrder(false);
             await say([
                 `Great choice! "${product.name}" 🔥`,
