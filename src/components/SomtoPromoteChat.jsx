@@ -54,20 +54,35 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         try {
             const monthYear = getMonthYear();
             const sellerId = currentUser?.data?.id;
-            const { data: slotData } = await supabaseClient
-                .from('free_campaign_slots')
-                .select('seller_id')
-                .eq('month_year', monthYear);
-            const takenCount = slotData?.length || 0;
-            const remaining = MAX_FREE_SLOTS - takenCount;
-            const alreadyClaimed = slotData?.some(s => s.seller_id === sellerId) || false;
+
+            // Check both tables — some claims may only exist in pending_payments
+            const [{ data: slotData }, { data: paymentData }] = await Promise.all([
+                supabaseClient
+                    .from('free_campaign_slots')
+                    .select('seller_id')
+                    .eq('month_year', monthYear),
+                supabaseClient
+                    .from('pending_payments')
+                    .select('seller_id')
+                    .eq('plan_type', 'free_campaign')
+                    .in('status', ['pending', 'running', 'approved', 'completed'])
+                    .gte('payment_timestamp', `${monthYear}-01T00:00:00.000Z`)
+            ]);
+
+            // Combine unique seller IDs from both tables
+            const slotSellerIds = new Set((slotData || []).map(s => s.seller_id));
+            const paymentSellerIds = new Set((paymentData || []).map(s => s.seller_id));
+            const allClaimedIds = new Set([...slotSellerIds, ...paymentSellerIds]);
+
+            const takenCount = allClaimedIds.size;
+            const remaining = Math.max(0, MAX_FREE_SLOTS - takenCount);
+            const alreadyClaimed = allClaimedIds.has(sellerId) || false;
             const qualifies = sellerProducts.length >= PER && remaining > 0 && !alreadyClaimed;
-            // Update state for any UI that depends on it
+
             setSlotsLeft(remaining);
             setSellerAlreadyClaimed(alreadyClaimed);
             setFreeSlotAvailable(qualifies);
             setSlotCheckDone(true);
-            // Return directly so init() doesnt read stale state
             return { qualifies, alreadyClaimed, remaining };
         } catch (err) {
             console.error('Free slot check failed:', err);
