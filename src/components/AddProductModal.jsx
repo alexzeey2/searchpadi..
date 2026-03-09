@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabaseClient } from '../supabase'
+import { DEFAULT_PRODUCT_IMAGE } from '../helpers'
 
 export default function AddProductModal({ onClose, onAdd, isUploading }) {
     const [formData, setFormData] = useState({
