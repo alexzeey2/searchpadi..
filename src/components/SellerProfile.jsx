@@ -29,9 +29,16 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             const link = `${window.location.origin}/seller.html?id=${seller.id}`;
                             try {
                                 const short = await shortenLink(link);
-                                if (navigator.share) { navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short }); }
-                                else { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
-                            } catch(e) { await navigator.clipboard.writeText(link).catch(() => prompt('Copy this link:', link)); alert('🔗 Profile link copied!'); }
+                                if (navigator.share) {
+                                    await navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short });
+                                } else {
+                                    try { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
+                                    catch(e) { prompt('Copy this link:', short); }
+                                }
+                            } catch(e) {
+                                // Share cancelled or failed — show prompt as reliable fallback
+                                prompt('Copy this link:', link);
+                            }
                         }}
                         className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
                         title="Share profile"
@@ -171,9 +178,16 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                                         const link = `${window.location.origin}/product.html?id=${product.id}`;
                                                         try {
                                                             const short = await shortenLink(link);
-                                                            if (navigator.share) { navigator.share({ title: product.name, text: `Check out ${product.name} on SearchPadi!`, url: short }); }
-                                                            else { await navigator.clipboard.writeText(short); alert('🔗 Product link copied!'); }
-                                                        } catch(err) { await navigator.clipboard.writeText(link).catch(() => prompt('Copy this link:', link)); alert('🔗 Product link copied!'); }
+                                                            if (navigator.share) {
+                                                                await navigator.share({ title: product.name, text: `Check out ${product.name} on SearchPadi!`, url: short });
+                                                            } else {
+                                                                try { await navigator.clipboard.writeText(short); alert('🔗 Product link copied!'); }
+                                                                catch(e) { prompt('Copy this link:', short); }
+                                                            }
+                                                        } catch(err) {
+                                                            // Share cancelled or failed — show prompt as reliable fallback
+                                                            prompt('Copy this link:', link);
+                                                        }
                                                     }}
                                                     className="w-6 h-6 bg-purple-600 rounded-full flex items-center justify-center text-white"
                                                     title="Share product"
