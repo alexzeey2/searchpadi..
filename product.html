@@ -272,7 +272,7 @@ function render(p, seller) {
     // About Product
     if (p.description) {
         document.getElementById('aboutBtn').style.display = 'flex';
-        document.getElementById('descText').textContent = p.description;
+        document.getElementById('descText').innerHTML = p.description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
     }
 
     document.getElementById('skeleton').style.display = 'none';
