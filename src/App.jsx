@@ -1205,10 +1205,10 @@ export default function App() {
         }
     };
 
-    const handleCopyProfileLink = async () => {
-        if (!currentUser?.data) return;
-        const sellerId = currentUser.data.id;
-        const fullUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${sellerId}`;
+    const handleCopyProfileLink = async (sellerId) => {
+        const id = sellerId || currentUser?.data?.id;
+        if (!id) return;
+        const fullUrl = `https://searchpadi-phi.vercel.app/seller.html?id=${id}`;
         const url = await shortenLink(fullUrl);
         try {
             await navigator.clipboard.writeText(url);
