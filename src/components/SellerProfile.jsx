@@ -25,7 +25,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     )}
                     <button
                         onClick={async () => {
-                            if (onCopyProfileLink) { onCopyProfileLink(); return; }
+                            if (onCopyProfileLink) { onCopyProfileLink(seller.id); return; }
                             const link = `${window.location.origin}/seller.html?id=${seller.id}`;
                             try {
                                 const short = await shortenLink(link);
