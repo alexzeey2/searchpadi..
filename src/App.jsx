@@ -126,7 +126,15 @@ export default function App() {
                 };
 
                 setCurrentUser({ type: 'seller', data: sellerData });
-                setSelectedSeller(sellerData);
+
+                // If URL has a deep link param, handle that instead of auto-opening own profile
+                const urlParams = new URLSearchParams(window.location.search);
+                const hasDeepLink = urlParams.get('seller') || urlParams.get('product');
+                if (hasDeepLink) {
+                    handleDeepLinks();
+                } else {
+                    setSelectedSeller(sellerData);
+                }
             } catch(e) {
                 handleDeepLinks();
             }
