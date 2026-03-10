@@ -86,7 +86,7 @@
 
         useEffect(() => {
             if (!checkingAuth && !loggedIn) {
-                addSomtoMessage("Hi there! 👋 I'm *Somto*, your SearchPadi assistant.\n\nI'm here to get your business listed so buyers can find you. It only takes a few minutes!\n\nLet's start — *what's your business name?*");
+                addSomtoMessage("Hi! 👋 I'm *Somto*. Let's get your business on SearchPadi.\n\n*What's your business name?*");
                 setStep('business_name');
             }
         }, [checkingAuth, loggedIn]);
@@ -122,32 +122,32 @@
             if (currentStep === 'business_name') {
                 if (!value.trim()) { setError('Please enter your business name'); return; }
                 setFormData(p => ({ ...p, businessName: value.trim() }));
-                await addSomtoMessage(`Great name, *${value.trim()}*! 🎉\n\nNow, what category best describes what you sell?`, CATEGORIES);
+                await addSomtoMessage(`*${value.trim()}* 🔥 What category best describes what you sell?`, CATEGORIES);
                 setStep('category');
 
             } else if (currentStep === 'category') {
                 const cat = CATEGORIES.find(c => c.value === value);
                 setFormData(p => ({ ...p, category: value }));
-                await addSomtoMessage(`Perfect! Now, *where is your business located?*\n\nJust the city or area — for example: *Lagos Island*, *Abuja*, *Port Harcourt*`);
+                await addSomtoMessage(`Got it! *Where is your business located?* (e.g. Lagos Island, Abuja)`);
                 setStep('location');
 
             } else if (currentStep === 'location') {
                 if (!value.trim()) { setError('Please enter your location'); return; }
                 setFormData(p => ({ ...p, location: value.trim() }));
-                await addSomtoMessage(`Got it — *${value.trim()}*! 📍\n\nNow we need customers to understand what your business is about.\n\nPlease give me a short write-up to display on your *Bio* — what makes your business special?`);
+                await addSomtoMessage(`📍 *${value.trim()}*. Now write a short *bio* — what do you sell and what makes you different?`);
                 setStep('bio');
 
             } else if (currentStep === 'bio') {
                 if (!value.trim()) { setError('Please write a short bio'); return; }
                 setFormData(p => ({ ...p, bio: value.trim() }));
-                await addSomtoMessage(`That's a great bio! ✍️\n\nWhat's your *WhatsApp number*? This is how buyers will contact you directly.\n\n(e.g. 08012345678)`);
+                await addSomtoMessage(`Nice! *What's your WhatsApp number?* Buyers will contact you here.`);
                 setStep('whatsapp');
 
             } else if (currentStep === 'whatsapp') {
                 const digits = value.replace(/\D/g, '');
                 if (digits.length < 10) { setError('Please enter a valid WhatsApp number'); return; }
                 setFormData(p => ({ ...p, whatsappNumber: value.trim() }));
-                await addSomtoMessage(`Perfect! 📱\n\nNow enter your *email address* — this will be used to log in to your account.`);
+                await addSomtoMessage(`*What's your email address?* You'll use it to log in.`);
                 setStep('email');
 
             } else if (currentStep === 'email') {
@@ -156,7 +156,7 @@
                 const { data: existing } = await db.from('profiles').select('id').eq('email', value.trim().toLowerCase()).maybeSingle();
                 if (existing) { setError('This email is already registered. Try a different one.'); return; }
                 setFormData(p => ({ ...p, email: value.trim().toLowerCase() }));
-                await addSomtoMessage(`Almost there! 🎯\n\nUp next — add a *profile photo* for your business. This is what buyers will see first.\n\nTap the button below to upload your photo.`, [{ text: '📷 Upload Photo', value: '__upload__' }, { text: 'Skip for now', value: '__skip_photo__' }]);
+                await addSomtoMessage(`Almost done! 🎯 Add a *profile photo* — buyers will see this first.`, [{ text: '📷 Upload Photo', value: '__upload__' }, { text: 'Skip for now', value: '__skip_photo__' }]);
                 setStep('photo');
 
             } else if (currentStep === 'photo') {
@@ -166,7 +166,7 @@
                 }
                 if (value === '__skip_photo__') {
                     setFormData(p => ({ ...p, profilePhoto: null }));
-                    await addSomtoMessage(`No worries, you can add it later! 😊\n\nLast step — create a *password* for your account.\n\n(At least 6 characters)`);
+                    await addSomtoMessage(`No worries! *Create a password* for your account. (Min 6 characters)`);
                     setStep('password');
                 }
 
@@ -193,7 +193,7 @@
                         updated[updated.length - 1] = { ...updated[updated.length - 1], text: '📷 Photo uploaded!' };
                         return updated;
                     });
-                    await addSomtoMessage(`Looking great! 🔥\n\nLast step — create a *password* for your account.\n\n(At least 6 characters)`);
+                    await addSomtoMessage(`Looking good! 🔥 *Create a password* for your account. (Min 6 characters)`);
                     setStep('password');
                 };
                 reader.readAsDataURL(file);
@@ -252,7 +252,7 @@
                 setMessages(prev => [...prev, {
                     id: Date.now(),
                     from: 'somto',
-                    text: `🎉 Welcome to SearchPadi, *${data.businessName}*!\n\nYour business is now live and buyers can find you.\n\nHere's what to do next:\n• Add your products on the app\n• Run a campaign to get your first customers\n• Keep your WhatsApp active for buyer messages\n\nTap below to go to your profile!`,
+                    text: `🎉 You're live on SearchPadi, *${data.businessName}*!\n\nAdd your products and start getting customers.`,
                     buttons: [{ text: '🚀 Open SearchPadi', value: '__open_app__' }]
                 }]);
 
