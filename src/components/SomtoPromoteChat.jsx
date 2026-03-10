@@ -139,49 +139,28 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         setOpts(btns);
     };
 
+    const startFlow = async () => {
+        setMessages([]);
+        setOpts([]);
+        setShowNum(false);
+        setNumVal('');
+        setCurrentProduct(null);
+        setPendingCount(0);
+        setIsFreeOrder(false);
+
+        if (sellerProducts.length === 0) {
+            await say([`Hey ${sellerName}! 👋 Add at least one product to your store first, then come back to run a campaign.`], 800);
+            return;
+        }
+        await say([`Hey ${sellerName}! 👋 How many customers do you want?`], 800);
+        setShowNum(true);
+        setTimeout(() => numRef.current?.focus(), 150);
+    };
+
     useEffect(() => {
         const init = async () => {
             await new Promise(r => setTimeout(r, 300));
-            await say([
-                `Hey ${sellerName}! 👋 I'm Somto.`,
-                `My job is to convince people to message you on WhatsApp and ask about your product.`,
-            ], 800);
-            if (sellerProducts.length === 0) {
-                await say([`But first, you need to add at least one product to your store. Add a product and come back! 🙂`], 900);
-                return;
-            }
-
-            // Check free slots — use returned values directly, not state (state is async)
-            const { qualifies, alreadyClaimed, remaining } = await checkFreeSlots();
-
-            if (qualifies) {
-                await say([
-                    `🎉 Good news! You qualify for a FREE campaign this month.`,
-                    `We're running ${MAX_FREE_SLOTS} free campaigns every month for active sellers — and there's ${remaining > 0 ? remaining : 1} slot${remaining !== 1 ? 's' : ''} left.`,
-                    `Your first ${PER} customers are on us. Which product would you like me to promote?`,
-                ], 800);
-            } else if (alreadyClaimed) {
-                await say([
-                    `You've already used your free campaign this month! 🙌`,
-                    `Your next free slot opens in ${getRemainingDays()} days.`,
-                    `Want to run a paid campaign in the meantime? Which product shall we promote?`,
-                ], 800);
-            } else if (remaining <= 0) {
-                // All free slots taken — skip free campaign pitch
-                await say([
-                    `All free campaign slots for this month are taken.`,
-                    `But you can still run a paid campaign — which product would you like me to promote?`,
-                ], 800);
-            } else if (sellerProducts.length < PER) {
-                await say([
-                    `You need at least ${PER} products posted to qualify for a free campaign.`,
-                    `You currently have ${sellerProducts.length}. Add ${PER - sellerProducts.length} more and a free slot could be yours! 🚀`,
-                    `For now, which product would you like to promote?`,
-                ], 800);
-            } else {
-                await say([`Which product would you like me to promote?`], 700);
-            }
-            showProductButtons();
+            await startFlow();
         };
         init();
     }, []);
@@ -195,40 +174,27 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         addMsg(product.name, 'user');
         await new Promise(r => setTimeout(r, 350));
 
-        // Re-check slots fresh right now — don't rely on stale state from mount
+        // Check free slots fresh
         const { qualifies: stillQualifies } = await checkFreeSlots();
-
-        if (stillQualifies) {
-            // Free campaign — lock in, no payment needed
+        if (stillQualifies && pendingCount <= PER) {
             setIsFreeOrder(true);
             setPendingCount(PER);
-            await say([
-                `Great choice! "${product.name}" 🔥`,
-                `Your free campaign will send ${PER} people straight to your WhatsApp. No payment needed — it's on us! 🎁`,
-                `Here's a summary of what you're getting 👇`,
-            ], 800);
-            setSheet('price');
         } else {
-            // Slots gone or no longer qualifies — go straight to paid
             setIsFreeOrder(false);
-            await say([
-                `Great choice! "${product.name}" 🔥`,
-                `So how many customers would you like to ask about it?`,
-                `Every ${PER} people = ${fmt(RATE)}. Minimum is ${PER}.`,
-            ], 800);
-            setShowNum(true);
-            setTimeout(() => numRef.current?.focus(), 150);
         }
+        setSheet('price');
     };
 
     const submitNumber = async () => {
         const num = parseInt(numVal);
-        if (!num || num < PER) { numRef.current?.focus(); return; }
+        if (!num || num < 1) { numRef.current?.focus(); return; }
         setPendingCount(num);
         setShowNum(false);
         setOpts([]);
-        // Go straight to price sheet — no chat message, keeps chat clean
-        setSheet('price');
+        addMsg(`${num} customers`, 'user');
+        await new Promise(r => setTimeout(r, 350));
+        await say([`Which product do you want me to promote?`], 700);
+        setSheet('select');
     };
 
     const handlePay = async () => {
@@ -444,7 +410,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
 
             {/* SELECT PRODUCT SHEET */}
             {sheet === 'select' && (
-                <div style={sheetOverlay} onClick={e => e.target === e.currentTarget && setSheet(null)}>
+                <div style={sheetOverlay} onClick={e => e.target === e.currentTarget && startFlow()}>
                     <div style={sheetBody} onClick={e => e.stopPropagation()}>
                         <div style={pill}/>
                         <p style={{ fontWeight: 700, fontSize: 16, color: '#eeeef5', marginBottom: 4 }}>Select a Product</p>
@@ -470,7 +436,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
 
             {/* PRICE SHEET */}
             {sheet === 'price' && currentProduct && (
-                <div style={sheetOverlay} onClick={e => e.target === e.currentTarget && setSheet(null)}>
+                <div style={sheetOverlay} onClick={e => e.target === e.currentTarget && startFlow()}>
                     <div style={sheetBody} onClick={e => e.stopPropagation()}>
                         <div style={pill}/>
                         <p style={{ fontWeight: 700, fontSize: 16, color: '#eeeef5', marginBottom: 18 }}>{isFreeOrder ? '🎁 Your Free Campaign' : "Here's what you're paying for"}</p>
@@ -499,14 +465,14 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                             </div>
                         </div>
                         <button style={{...shBtn, opacity: submitting ? 0.7 : 1}} onClick={handlePay} disabled={submitting}>{submitting ? 'Submitting...' : isFreeOrder ? '🎁 Claim Free Campaign' : 'Proceed to Payment'}</button>
-                        {!isFreeOrder && <span style={shCancel} onClick={() => { setSheet(null); setShowNum(true); setTimeout(() => numRef.current?.focus(), 150); }}>Change number</span>}
+                        {!isFreeOrder && <span style={shCancel} onClick={() => startFlow()}>Change number</span>}
                     </div>
                 </div>
             )}
 
             {/* PAYMENT SHEET */}
             {sheet === 'payment' && (
-                <div style={sheetOverlay} onClick={e => e.target === e.currentTarget && setSheet(null)}>
+                <div style={sheetOverlay} onClick={e => e.target === e.currentTarget && startFlow()}>
                     <div style={{ ...sheetBody, maxHeight: '80vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
                         <div style={pill}/>
                         <p style={{ fontWeight: 700, fontSize: 16, color: '#eeeef5', marginBottom: 4 }}>Make Payment</p>
@@ -556,7 +522,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                         <button style={screenshotPreview && !submitting ? shBtn : shBtnDisabled} disabled={!screenshotPreview || submitting} onClick={handleSubmit}>
                             {submitting ? 'Submitting...' : 'Submit Payment'}
                         </button>
-                        <span style={shCancel} onClick={() => setSheet(null)}>Cancel</span>
+                        <span style={shCancel} onClick={() => startFlow()}>Cancel</span>
                     </div>
                 </div>
             )}
