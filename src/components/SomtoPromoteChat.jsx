@@ -4,8 +4,8 @@ import { WHATSAPP_NUMBER } from '../helpers'
 
 export default function SomtoPromoteChat({ onClose, currentUser }) {
     const SOMTO_AVATAR = "https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg";
-    const RATE = 4000;
-    const PER = 5;
+    const RATE = 800;
+    const PER = 3;
     const MAX_FREE_SLOTS = 3;
     const BANK = { bank: 'Opay', account: '9058150220', name: 'AlexanderBede Somtochukwu Ugwu' };
 
@@ -38,7 +38,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
 
     // pricing helpers — free order costs ₦0, paid is normal rate
     const rounded = (n) => n;
-    const cost = (n) => isFreeOrder ? 0 : Math.round(n / PER * RATE);
+    const cost = (n) => isFreeOrder ? 0 : n * RATE;
     const fee = (n) => 0;
     const grand = (n) => cost(n);
     const fmt = (n) => `₦${Math.round(n).toLocaleString('en-NG')}`;
@@ -191,7 +191,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
 
     const submitNumber = async () => {
         const num = parseInt(numVal);
-        if (!num || num < 1) { numRef.current?.focus(); return; }
+        if (!num || num < 3) { numRef.current?.focus(); return; }
         setPendingCount(num);
         setShowNum(false);
         setOpts([]);
@@ -396,7 +396,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                             <input
                                 ref={numRef}
                                 type="number"
-                                placeholder={`e.g. 12 (min ${PER})`}
+                                placeholder={`e.g. 5 (min ${PER})`}
                                 min={PER}
                                 value={numVal}
                                 onChange={e => setNumVal(e.target.value)}
