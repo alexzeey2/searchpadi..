@@ -140,6 +140,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
     };
 
     const startFlow = async () => {
+        setSheet(null);
         setMessages([]);
         setOpts([]);
         setShowNum(false);
@@ -147,6 +148,9 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         setCurrentProduct(null);
         setPendingCount(0);
         setIsFreeOrder(false);
+        setScreenshot(null);
+        setScreenshotPreview(null);
+        await new Promise(r => setTimeout(r, 150));
 
         if (sellerProducts.length === 0) {
             await say([`Hey ${sellerName}! 👋 Add at least one product to your store first, then come back to run a campaign.`], 800);
@@ -194,7 +198,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
         addMsg(`${num} customers`, 'user');
         await new Promise(r => setTimeout(r, 350));
         await say([`Which product do you want me to promote?`], 700);
-        setSheet('select');
+        setOpts([{ label: '🛍️ Select Product', primary: true, fn: () => { setOpts([]); setSheet('select'); } }]);
     };
 
     const handlePay = async () => {
