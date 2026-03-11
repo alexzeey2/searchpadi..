@@ -18,8 +18,6 @@ export default function App() {
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [showSubscription, setShowSubscription] = useState(false);
     const [showSomtoPromote, setShowSomtoPromote] = useState(false);
-    const [showCampaignNudge, setShowCampaignNudge] = useState(false);
-    const campaignNudgeShown = useRef(false);
     const [headerFreeSlots, setHeaderFreeSlots] = useState(null); // null = not loaded yet
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showAttractCustomers, setShowAttractCustomers] = useState(false);
@@ -1205,13 +1203,7 @@ export default function App() {
             }));
 
             setShowAddProduct(false);
-
-            // Show campaign nudge after 2nd product (only once)
-            const updatedCount = (currentUser?.data?.products?.length || 0) + 1;
-            if (updatedCount >= 2 && !campaignNudgeShown.current) {
-                campaignNudgeShown.current = true;
-                setTimeout(() => setShowCampaignNudge(true), 800);
-            }
+            alert('✅ Product added successfully!');
         } catch (error) {
             console.error('Error adding product:', error);
             alert('❌ Failed to add product. Please try again.');
@@ -1400,22 +1392,32 @@ export default function App() {
             ? { ...currentUser.data, ...sellers.find(s => s.id === selectedSeller.id), products: currentUser.data.products?.length ? currentUser.data.products : (sellers.find(s => s.id === selectedSeller.id)?.products || []) }
             : sellers.find(s => s.id === selectedSeller.id) || selectedSeller)
         : null;
-    // Show bubble message on login and every 20 minutes (only if seller has 20+ views)
+    // Show bubble message on login and every 20 minutes
+    // Hidden for 7 days after a campaign runs
     useEffect(() => {
         if (currentUser?.type !== 'seller') return;
-        const sellerData = sellers.find(s => s.id === currentUser.data.id);
-        const views = sellerData?.views || currentUser.data.views || 0;
-        if (views < 20) return;
-        // Show immediately on login
-        setShowBubbleMessage(true);
-        const timer = setTimeout(() => setShowBubbleMessage(false), 30000);
-        // Then every 20 minutes
-        const interval = setInterval(() => {
+
+        const checkAndShow = async () => {
+            try {
+                // Check if seller has a campaign in last 7 days
+                const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+                const { data: recentCampaigns } = await supabaseClient
+                    .from('pending_payments')
+                    .select('id')
+                    .eq('seller_id', currentUser.data.id)
+                    .in('status', ['pending', 'running', 'approved'])
+                    .gte('payment_timestamp', sevenDaysAgo)
+                    .limit(1);
+                if (recentCampaigns?.length > 0) return; // suppress for 7 days
+            } catch (e) {}
             setShowBubbleMessage(true);
             setTimeout(() => setShowBubbleMessage(false), 30000);
-        }, 20 * 60 * 1000);
-        return () => { clearTimeout(timer); clearInterval(interval); };
-    }, [currentUser?.type, sellers]);
+        };
+
+        checkAndShow();
+        const interval = setInterval(checkAndShow, 20 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, [currentUser?.type]);
 
     // Check free slots for header badge
     useEffect(() => {
@@ -1971,7 +1973,7 @@ export default function App() {
                                 >✕</button>
                                 <p style={{ color: '#9ca3af', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', marginRight: '16px' }}>Somto</p>
                                 <p style={{ color: '#e5e7eb', fontSize: '12px', lineHeight: '1.5', marginRight: '12px' }}>
-                                    You have <span style={{ color: '#a78bfa', fontWeight: 'bold' }}>{seller.views || 0} view{(seller.views || 0) !== 1 ? 's' : ''}</span> — people are starting to notice you. Would you like me to convince people to ask about your product?
+                                    Your store is getting attention! 🔥 For ₦2,400 I'll start sending buyers to your WhatsApp today.
                                 </p>
                                 <button
                                     onClick={() => { setShowBubbleMessage(false); setShowSomtoPromote(true); }}
@@ -2029,32 +2031,6 @@ export default function App() {
 
             {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
             {showSomtoPromote && <SomtoPromoteChat onClose={() => setShowSomtoPromote(false)} currentUser={currentUser} />}
-
-            {/* Campaign nudge after 2nd product */}
-            {showCampaignNudge && (
-                <div className="fixed inset-0 bg-black/60 z-[140] flex items-end" onClick={() => setShowCampaignNudge(false)}>
-                    <div className="bg-[#1a1a1a] rounded-t-2xl w-full p-5 pb-8 border-t border-gray-800" onClick={e => e.stopPropagation()}>
-                        <div className="w-9 h-1 bg-gray-700 rounded-full mx-auto mb-4"/>
-                        <div className="flex items-center gap-3 mb-3">
-                            <img src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg" className="w-10 h-10 rounded-full object-cover border-2 border-purple-500" alt="Somto"/>
-                            <div>
-                                <p className="text-white font-bold text-sm">Somto</p>
-                                <p className="text-green-400 text-xs">● Online now</p>
-                            </div>
-                        </div>
-                        <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none px-4 py-3 mb-4">
-                            <p className="text-white text-sm leading-relaxed">🔥 Your products are live! For just <span className="text-purple-400 font-bold">₦2,400</span> I can start sending customers to your WhatsApp today.</p>
-                        </div>
-                        <button
-                            onClick={() => { setShowCampaignNudge(false); setShowSomtoPromote(true); }}
-                            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold text-sm mb-2"
-                        >
-                            Get Customers Now
-                        </button>
-                        <button onClick={() => setShowCampaignNudge(false)} className="w-full text-gray-500 text-sm">Maybe later</button>
-                    </div>
-                </div>
-            )}
             {/* SubscriptionModal removed — Somto chat flow is the only upgrade path */}
             {showAttractCustomers && currentUser?.type === 'seller' && (
                 <AttractCustomersModal
