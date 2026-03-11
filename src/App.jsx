@@ -1414,9 +1414,9 @@ export default function App() {
             setTimeout(() => setShowBubbleMessage(false), 30000);
         };
 
-        const initialTimer = setTimeout(checkAndShow, 1500);
+        checkAndShow();
         const interval = setInterval(checkAndShow, 20 * 60 * 1000);
-        return () => { clearTimeout(initialTimer); clearInterval(interval); };
+        return () => clearInterval(interval);
     }, [currentUser?.data?.id]);
 
     // Check free slots for header badge
