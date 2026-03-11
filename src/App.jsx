@@ -1426,14 +1426,24 @@ export default function App() {
             try {
                 const now = new Date();
                 const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                const { data, error } = await supabaseClient
-                    .from('free_campaign_slots')
-                    .select('seller_id')
-                    .eq('month_year', monthYear);
-                if (error) { setHeaderFreeSlots(0); return; }
-                const taken = data?.length || 0;
-                const remaining = 3 - taken;
-                const alreadyClaimed = data?.some(s => s.seller_id === currentUser.data.id) || false;
+                const sellerId = currentUser.data.id;
+
+                // Check both tables — same logic as SomtoPromoteChat
+                const [{ data: slotData }, { data: paymentData }] = await Promise.all([
+                    supabaseClient.from('free_campaign_slots').select('seller_id').eq('month_year', monthYear),
+                    supabaseClient.from('pending_payments').select('seller_id')
+                        .eq('plan_type', 'free_campaign')
+                        .in('status', ['pending', 'running', 'approved', 'completed'])
+                        .gte('created_at', `${monthYear}-01T00:00:00.000Z`)
+                ]);
+
+                const allClaimedIds = new Set([
+                    ...(slotData || []).map(s => s.seller_id),
+                    ...(paymentData || []).map(s => s.seller_id)
+                ]);
+                const taken = allClaimedIds.size;
+                const remaining = Math.max(0, 3 - taken);
+                const alreadyClaimed = allClaimedIds.has(sellerId);
                 setHeaderFreeSlots(remaining > 0 && !alreadyClaimed ? remaining : 0);
             } catch (e) { setHeaderFreeSlots(0); }
         };
