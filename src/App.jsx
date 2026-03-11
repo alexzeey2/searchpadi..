@@ -1395,7 +1395,7 @@ export default function App() {
     // Show bubble message on login and every 20 minutes
     // Hidden for 7 days after a campaign runs
     useEffect(() => {
-        if (currentUser?.type !== 'seller') return;
+        if (currentUser?.type !== 'seller' || !currentUser?.data?.id) return;
 
         const checkAndShow = async () => {
             try {
@@ -1417,7 +1417,7 @@ export default function App() {
         checkAndShow();
         const interval = setInterval(checkAndShow, 20 * 60 * 1000);
         return () => clearInterval(interval);
-    }, [currentUser?.type]);
+    }, [currentUser?.data?.id]);
 
     // Check free slots for header badge
     useEffect(() => {
