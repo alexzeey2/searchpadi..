@@ -1406,7 +1406,7 @@ export default function App() {
                     .select('id')
                     .eq('seller_id', currentUser.data.id)
                     .in('status', ['pending', 'running', 'approved'])
-                    .gte('payment_timestamp', sevenDaysAgo)
+                    .gte('created_at', sevenDaysAgo)
                     .limit(1);
                 if (recentCampaigns?.length > 0) return; // suppress for 7 days
             } catch (e) {}
