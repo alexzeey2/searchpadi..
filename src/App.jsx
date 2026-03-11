@@ -18,6 +18,8 @@ export default function App() {
     const [showAddProduct, setShowAddProduct] = useState(false);
     const [showSubscription, setShowSubscription] = useState(false);
     const [showSomtoPromote, setShowSomtoPromote] = useState(false);
+    const [showCampaignNudge, setShowCampaignNudge] = useState(false);
+    const campaignNudgeShown = useRef(false);
     const [headerFreeSlots, setHeaderFreeSlots] = useState(null); // null = not loaded yet
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showAttractCustomers, setShowAttractCustomers] = useState(false);
@@ -1203,7 +1205,13 @@ export default function App() {
             }));
 
             setShowAddProduct(false);
-            alert('✅ Product added successfully!');
+
+            // Show campaign nudge after 2nd product (only once)
+            const updatedCount = (currentUser?.data?.products?.length || 0) + 1;
+            if (updatedCount >= 2 && !campaignNudgeShown.current) {
+                campaignNudgeShown.current = true;
+                setTimeout(() => setShowCampaignNudge(true), 800);
+            }
         } catch (error) {
             console.error('Error adding product:', error);
             alert('❌ Failed to add product. Please try again.');
@@ -2021,6 +2029,32 @@ export default function App() {
 
             {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
             {showSomtoPromote && <SomtoPromoteChat onClose={() => setShowSomtoPromote(false)} currentUser={currentUser} />}
+
+            {/* Campaign nudge after 2nd product */}
+            {showCampaignNudge && (
+                <div className="fixed inset-0 bg-black/60 z-[140] flex items-end" onClick={() => setShowCampaignNudge(false)}>
+                    <div className="bg-[#1a1a1a] rounded-t-2xl w-full p-5 pb-8 border-t border-gray-800" onClick={e => e.stopPropagation()}>
+                        <div className="w-9 h-1 bg-gray-700 rounded-full mx-auto mb-4"/>
+                        <div className="flex items-center gap-3 mb-3">
+                            <img src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg" className="w-10 h-10 rounded-full object-cover border-2 border-purple-500" alt="Somto"/>
+                            <div>
+                                <p className="text-white font-bold text-sm">Somto</p>
+                                <p className="text-green-400 text-xs">● Online now</p>
+                            </div>
+                        </div>
+                        <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none px-4 py-3 mb-4">
+                            <p className="text-white text-sm leading-relaxed">🔥 Your products are live! For just <span className="text-purple-400 font-bold">₦2,400</span> I can start sending customers to your WhatsApp today.</p>
+                        </div>
+                        <button
+                            onClick={() => { setShowCampaignNudge(false); setShowSomtoPromote(true); }}
+                            className="w-full bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-xl font-bold text-sm mb-2"
+                        >
+                            Get Customers Now
+                        </button>
+                        <button onClick={() => setShowCampaignNudge(false)} className="w-full text-gray-500 text-sm">Maybe later</button>
+                    </div>
+                </div>
+            )}
             {/* SubscriptionModal removed — Somto chat flow is the only upgrade path */}
             {showAttractCustomers && currentUser?.type === 'seller' && (
                 <AttractCustomersModal
