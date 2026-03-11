@@ -1415,8 +1415,7 @@ export default function App() {
         };
 
         checkAndShow();
-        const interval = setInterval(checkAndShow, 20 * 60 * 1000);
-        return () => clearInterval(interval);
+        return () => {};
     }, [currentUser?.data?.id]);
 
     // Check free slots for header badge
