@@ -1408,28 +1408,29 @@ export default function App() {
                     .in('status', ['pending', 'running', 'approved'])
                     .gte('created_at', sevenDaysAgo)
                     .limit(1);
-                if (recentCampaigns?.length > 0) return; // suppress for 7 days
+                if (!error && recentCampaigns?.length > 0) return; // suppress for 7 days
             } catch (e) {}
             setShowBubbleMessage(true);
             setTimeout(() => setShowBubbleMessage(false), 30000);
         };
 
-        checkAndShow();
+        const initialTimer = setTimeout(checkAndShow, 1500);
         const interval = setInterval(checkAndShow, 20 * 60 * 1000);
-        return () => clearInterval(interval);
+        return () => { clearTimeout(initialTimer); clearInterval(interval); };
     }, [currentUser?.data?.id]);
 
     // Check free slots for header badge
     useEffect(() => {
-        if (currentUser?.type !== 'seller') return;
+        if (currentUser?.type !== 'seller' || !currentUser?.data?.id) return;
         const checkSlots = async () => {
             try {
                 const now = new Date();
                 const monthYear = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-                const { data } = await supabaseClient
+                const { data, error } = await supabaseClient
                     .from('free_campaign_slots')
                     .select('seller_id')
                     .eq('month_year', monthYear);
+                if (error) { setHeaderFreeSlots(0); return; }
                 const taken = data?.length || 0;
                 const remaining = 3 - taken;
                 const alreadyClaimed = data?.some(s => s.seller_id === currentUser.data.id) || false;
@@ -1437,7 +1438,7 @@ export default function App() {
             } catch (e) { setHeaderFreeSlots(0); }
         };
         checkSlots();
-    }, [currentUser?.type]);
+    }, [currentUser?.data?.id]);
 
     const updatedCurrentUser = currentUser?.type === 'seller' 
         ? (sellers.find(s => s.id === currentUser.data.id) || currentUser.data)
