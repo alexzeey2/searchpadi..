@@ -3,12 +3,15 @@ import { supabaseClient } from '../supabase'
 import { shortenLink } from '../helpers'
 import CampaignStatusWidget from './CampaignStatusWidget'
 
-export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers }) {
+export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers, buyerLeads = [] }) {
     const isTempVerified = seller.tempVerifiedUntil && new Date(seller.tempVerifiedUntil) > new Date();
     const tempDaysLeft = seller.tempVerifiedUntil ? Math.ceil((new Date(seller.tempVerifiedUntil) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
     const isVerifiedDisplay = seller.isVerified || isTempVerified;
 
     const [showVerifySheet, setShowVerifySheet] = useState(false);
+    const [showLeadsChat, setShowLeadsChat] = useState(false);
+    const [activeLead, setActiveLead] = useState(null);
+    const [replyText, setReplyText] = useState('');
     const [verifyPhoto, setVerifyPhoto] = useState(null);
     const [verifyPreview, setVerifyPreview] = useState(null);
     const [verifySubmitting, setVerifySubmitting] = useState(false);
@@ -41,6 +44,15 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
         }
     };
 
+    const sendSellerReply = () => {
+        if (!replyText.trim() || !activeLead) return;
+        const phone = (activeLead.buyer_whatsapp || '').replace(/\D/g, '');
+        if (!phone) { alert('No buyer number available for this lead.'); return; }
+        const msg = encodeURIComponent(replyText.trim());
+        window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+        setReplyText('');
+    };
+
     return (
         <div className="fixed inset-0 bg-[#1a1a1a] z-50 flex flex-col overflow-hidden">
             <div className="bg-[#1a1a1a] p-4 border-b border-gray-800 flex justify-between items-center">
@@ -54,6 +66,22 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
                         >
                             ✎ Edit
+                        </button>
+                    )}
+                    {isOwnProfile && (
+                        <button
+                            onClick={() => { setShowLeadsChat(true); setActiveLead(null); }}
+                            className="relative w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
+                            title="Buyer messages"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
+                            </svg>
+                            {buyerLeads.length > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
+                                    {buyerLeads.length > 9 ? '9+' : buyerLeads.length}
+                                </span>
+                            )}
                         </button>
                     )}
                     <button
@@ -268,6 +296,154 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     <span className="text-xl font-bold">+</span>
                     Add Product
                 </button>
+            )}
+
+            {/* BUYER LEADS CHAT */}
+            {showLeadsChat && (
+                <div className="fixed inset-0 z-[150] flex flex-col" style={{background:'#0b141a'}}>
+                    {/* Header */}
+                    <div style={{background:'#1f2c34'}} className="p-3 flex items-center gap-3">
+                        <button onClick={() => { if (activeLead) { setActiveLead(null); } else { setShowLeadsChat(false); } }} className="text-gray-400 p-1">
+                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7"/>
+                            </svg>
+                        </button>
+                        {activeLead ? (
+                            <>
+                                <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold flex-shrink-0 text-sm">
+                                    {(activeLead.buyer_whatsapp || 'B')[0]}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="text-white font-semibold text-sm">{activeLead.buyer_whatsapp || 'Buyer'}</div>
+                                    <div className="text-xs text-gray-400 truncate">{activeLead.product_name}</div>
+                                </div>
+                                {/* WhatsApp direct button */}
+                                <button
+                                    onClick={() => {
+                                        const phone = (activeLead.buyer_whatsapp || '').replace(/\D/g, '');
+                                        if (phone) window.open(`https://wa.me/${phone}`, '_blank');
+                                    }}
+                                    className="flex items-center gap-1.5 bg-green-600 text-white text-xs font-bold px-3 py-1.5 rounded-full"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                                    Open
+                                </button>
+                            </>
+                        ) : (
+                            <>
+                                <img src={seller.profilePhoto} alt={seller.name} className="w-10 h-10 rounded-full object-cover flex-shrink-0"/>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center gap-1.5">
+                                        <span className="text-white font-semibold text-sm">{seller.name}</span>
+                                        {isVerifiedDisplay && (
+                                            <svg className="w-3.5 h-3.5 text-blue-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <div className="text-xs text-gray-400">Buyer Messages ({buyerLeads.length})</div>
+                                </div>
+                            </>
+                        )}
+                    </div>
+
+                    {!activeLead ? (
+                        /* Lead list */
+                        <div className="flex-1 overflow-y-auto">
+                            {buyerLeads.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-gray-500">
+                                    <svg className="w-12 h-12 mb-3 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
+                                    </svg>
+                                    <p className="text-sm">No buyer messages yet</p>
+                                </div>
+                            ) : (
+                                buyerLeads.map((lead) => (
+                                    <div
+                                        key={lead.id}
+                                        onClick={() => { setActiveLead(lead); setReplyText(''); }}
+                                        className="flex items-center gap-3 p-4 border-b border-gray-800 cursor-pointer hover:bg-white/5"
+                                    >
+                                        <div className="w-10 h-10 rounded-full bg-purple-700 flex items-center justify-center text-white font-bold flex-shrink-0">
+                                            {(lead.buyer_whatsapp || 'B')[0]}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <div className="text-white text-sm font-semibold">{lead.buyer_whatsapp || 'Buyer'}</div>
+                                            <div className="text-gray-400 text-xs truncate">{lead.message || 'Interested in your product'}</div>
+                                        </div>
+                                        <div className="text-gray-500 text-xs flex-shrink-0">
+                                            {new Date(lead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    ) : (
+                        /* Single lead chat view */
+                        <>
+                            <div className="flex-1 overflow-y-auto p-4" style={{backgroundImage:"url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"}}>
+                                {/* Buyer opening message */}
+                                <div className="flex justify-start mb-2">
+                                    <div className="max-w-[75%] rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34'}}>
+                                        {activeLead.message || `Hi, I'm interested in "${activeLead.product_name}". Is it still available?`}
+                                        <div className="text-[10px] text-gray-500 mt-1">
+                                            {new Date(activeLead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                        </div>
+                                    </div>
+                                </div>
+                                {/* Auto replies */}
+                                <div className="flex justify-end mb-2">
+                                    <div className="max-w-[75%] rounded-lg rounded-tr-none p-3 text-sm text-gray-100" style={{background:'#005c4b'}}>
+                                        Yes, it's still available! 😊
+                                        <div className="text-[10px] text-gray-400 mt-1 text-right">✓✓</div>
+                                    </div>
+                                </div>
+                                <div className="flex justify-end mb-2">
+                                    <div className="max-w-[75%] rounded-lg rounded-tr-none p-3 text-sm text-gray-100" style={{background:'#005c4b'}}>
+                                        Please drop your WhatsApp number so I can reach you directly.
+                                        <div className="text-[10px] text-gray-400 mt-1 text-right">✓✓</div>
+                                    </div>
+                                </div>
+                                {/* Buyer's number */}
+                                {activeLead.buyer_whatsapp && (
+                                    <div className="flex justify-start mb-2">
+                                        <div className="max-w-[75%] rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34'}}>
+                                            {activeLead.buyer_whatsapp}
+                                            <div className="text-[10px] text-gray-500 mt-1">
+                                                {new Date(activeLead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="text-center text-xs text-gray-600 my-3">
+                                    Tap Send to reply on WhatsApp
+                                </div>
+                            </div>
+                            {/* Reply bar */}
+                            <div className="flex items-end gap-2 p-3" style={{background:'#1f2c34'}}>
+                                <textarea
+                                    value={replyText}
+                                    onChange={e => setReplyText(e.target.value)}
+                                    onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSellerReply(); }}}
+                                    placeholder={`Reply to ${activeLead.buyer_whatsapp || 'buyer'}...`}
+                                    rows={1}
+                                    className="flex-1 rounded-2xl px-4 py-2.5 text-sm text-white outline-none resize-none"
+                                    style={{background:'#2a3942', border:'none', maxHeight:'100px', lineHeight:'1.4', fontFamily:'inherit'}}
+                                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
+                                />
+                                <button
+                                    onClick={sendSellerReply}
+                                    className="w-11 h-11 rounded-full flex items-center justify-center flex-shrink-0"
+                                    style={{background:'#00a884'}}
+                                >
+                                    <svg className="w-5 h-5 text-white" fill="white" viewBox="0 0 24 24">
+                                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </>
+                    )}
+                </div>
             )}
 
             {/* VERIFICATION SHEET */}
