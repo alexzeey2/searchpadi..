@@ -597,28 +597,29 @@ async function sendChatMessage() {
         input.disabled = true;
         await trackAdClick();
 
-        // First typing indicator
-        showTyping();
+        // First reply sequence
         setTimeout(() => {
-            hideTyping();
-            addBubble(`Yes, it's still available! 😊`, 'received');
-
-            // Second typing indicator
+            showTyping();
             setTimeout(() => {
-                showTyping();
+                hideTyping();
+                addBubble(`Yes, it's still available! 😊`, 'received');
+
+                // Second reply sequence
                 setTimeout(() => {
-                    hideTyping();
-                    addBubble(`Please drop your WhatsApp number so I can reach you directly.`, 'received');
-                    chatStep = 'awaiting_number';
-                    input.disabled = false;
-                    input.value = '';
-                    input.placeholder = 'Enter your WhatsApp number...';
-                    input.setAttribute('inputmode', 'numeric');
-                    input.setAttribute('pattern', '[0-9]*');
-                    autoResize(input);
-                    input.focus();
+                    showTyping();
+                    setTimeout(() => {
+                        hideTyping();
+                        addBubble(`Please drop your WhatsApp number so I can reach you directly.`, 'received');
+                        chatStep = 'awaiting_number';
+                        input.disabled = false;
+                        input.value = '';
+                        input.placeholder = 'Enter your WhatsApp number...';
+                        input.setAttribute('inputmode', 'numeric');
+                        input.setAttribute('pattern', '[0-9]*');
+                        autoResize(input);
+                        input.focus();
+                    }, 3500);
                 }, 2000);
-            }, 2000);
 
         }, 2000);
 
@@ -640,14 +641,16 @@ async function sendChatMessage() {
         const formattedPhone = formatNigerianNumber(cleaned);
         await saveLead(formattedPhone);
 
-        showTyping();
         setTimeout(() => {
-            hideTyping();
-            addBubble(`Great! I'll message you on WhatsApp shortly 🎉`, 'received');
-            chatStep = 'done';
-            input.placeholder = 'Message sent...';
-            document.getElementById('chatSendBtn').style.opacity = '0.4';
-            document.getElementById('chatSendBtn').style.pointerEvents = 'none';
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                addBubble(`Great! I'll message you on WhatsApp shortly 🎉`, 'received');
+                chatStep = 'done';
+                input.placeholder = 'Message sent...';
+                document.getElementById('chatSendBtn').style.opacity = '0.4';
+                document.getElementById('chatSendBtn').style.pointerEvents = 'none';
+            }, 3500);
         }, 2000);
     }
 }
