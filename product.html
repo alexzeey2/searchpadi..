@@ -153,20 +153,26 @@
         .chat-bubble.sent { background: #005c4b; color: #e9edef; border-radius: 8px 0 8px 8px; }
         .chat-bubble.received { background: #1f2c34; color: #e9edef; border-radius: 0 8px 8px 8px; }
         .chat-time { font-size: 10px; color: #8696a0; margin-top: 3px; text-align: right; }
+        .chat-icon-btn {
+            background: none; border: none; color: #aebac1; cursor: pointer;
+            padding: 4px; display: flex; align-items: center; justify-content: center;
+        }
         .chat-input-bar {
-            background: #1f2c34; padding: 8px 12px;
-            display: flex; align-items: center; gap: 8px;
+            background: #1f2c34; padding: 8px 10px;
+            display: flex; align-items: flex-end; gap: 6px;
             padding-bottom: calc(8px + env(safe-area-inset-bottom));
         }
         .chat-input {
-            flex: 1; background: #2a3942; border: none; border-radius: 24px;
+            flex: 1; background: #2a3942; border: none; border-radius: 20px;
             padding: 10px 16px; color: #e9edef; font-size: 15px; outline: none;
+            resize: none; max-height: 120px; line-height: 1.4; font-family: inherit;
+            overflow-y: auto;
         }
         .chat-input::placeholder { color: #8696a0; }
         .chat-send-btn {
             width: 44px; height: 44px; border-radius: 50%;
             background: #00a884; border: none; cursor: pointer;
-            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
         }
         .chat-disclaimer {
             text-align: center; font-size: 11px; color: #8696a0;
@@ -251,21 +257,50 @@
 
 <!-- WhatsApp-style Chat Screen -->
 <div class="chat-screen" id="chatScreen" style="display:none;">
+    <!-- Header -->
     <div class="chat-header">
         <button class="chat-back" onclick="closeChatScreen()">
             <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
         </button>
-        <img class="chat-avatar" id="chatAvatar" src="" alt="Seller" />
+        <img class="chat-avatar" id="chatAvatar" src="" alt="Seller" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
         <div class="chat-header-info">
-            <div class="chat-header-name" id="chatSellerName"></div>
+            <div style="display:flex;align-items:center;gap:5px;">
+                <div class="chat-header-name" id="chatSellerName"></div>
+                <span id="chatVerifiedBadge" style="display:none;color:#60a5fa;">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </span>
+            </div>
             <div class="chat-header-sub">SearchPadi Verified Seller</div>
+        </div>
+        <!-- Header icons -->
+        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
+            <!-- Video call → opens WhatsApp -->
+            <button class="chat-icon-btn" id="chatVideoBtn" title="Video call on WhatsApp">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+                </svg>
+            </button>
+            <!-- Phone call → opens WhatsApp call -->
+            <button class="chat-icon-btn" id="chatCallBtn" title="Call on WhatsApp">
+                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+                </svg>
+            </button>
+            <!-- Three dots → decorative -->
+            <button class="chat-icon-btn" style="opacity:0.4;cursor:default;" title="">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+            </button>
         </div>
     </div>
 
+    <!-- Messages -->
     <div class="chat-messages" id="chatMessages">
-        <!-- Safety card shown like WhatsApp encryption notice -->
         <div class="safety-card">
             <div class="safety-card-icon">🔒</div>
             <div class="safety-card-title">Stay Safe While Shopping</div>
@@ -293,10 +328,30 @@
         </div>
     </div>
 
+    <!-- Input bar -->
     <div class="chat-input-bar">
-        <input class="chat-input" id="chatInput" type="text" placeholder="Type a message..." />
-        <button class="chat-send-btn" onclick="sendChatMessage()">
-            <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+        <!-- Emoji icon — decorative -->
+        <button class="chat-icon-btn" style="opacity:0.4;cursor:default;flex-shrink:0;">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3" stroke-linecap="round"/><line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <textarea class="chat-input" id="chatInput" placeholder="Type a message..." rows="1" oninput="autoResize(this)"></textarea>
+        <!-- Attachment — decorative -->
+        <button class="chat-icon-btn" style="opacity:0.4;cursor:default;flex-shrink:0;">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+        </button>
+        <!-- Camera — decorative -->
+        <button class="chat-icon-btn" style="opacity:0.4;cursor:default;flex-shrink:0;">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/>
+            </svg>
+        </button>
+        <!-- Send / Mic -->
+        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()" style="flex-shrink:0;">
+            <svg id="sendIcon" width="20" height="20" fill="white" viewBox="0 0 24 24">
                 <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
             </svg>
         </button>
@@ -438,54 +493,160 @@ function openLeadModal() {
 }
 
 // ── Chat Screen ──────────────────────────────────────────
+let chatStep = 'initial'; // 'initial' | 'awaiting_number' | 'done'
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
 function openChatScreen() {
+    chatStep = 'initial';
     const screen = document.getElementById('chatScreen');
     screen.style.display = 'flex';
     document.getElementById('chatAvatar').src = currentSeller?.profile_photo || 'https://via.placeholder.com/80/6366f1/fff?text=S';
     document.getElementById('chatSellerName').textContent = currentSeller?.business_name || 'Seller';
-    // Pre-fill input with message
+    if (currentSeller?.is_verified) {
+        document.getElementById('chatVerifiedBadge').style.display = 'inline-flex';
+    }
+    // Wire up header call/video buttons
+    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+    document.getElementById('chatCallBtn').onclick = () => {
+        if (wa) window.location.href = `https://wa.me/${wa}`;
+    };
+    document.getElementById('chatVideoBtn').onclick = () => {
+        if (wa) window.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${currentSeller?.business_name || 'there'}, I want to do a video call about your "${productName}" on SearchPadi.`)}`;
+    };
+    // Pre-fill textarea
     const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`;
     const input = document.getElementById('chatInput');
     input.value = preMsg;
+    autoResize(input);
     input.focus();
-    // Select all text so buyer can edit or just hit send
-    input.setSelectionRange(preMsg.length, preMsg.length);
 }
 
 function closeChatScreen() {
     document.getElementById('chatScreen').style.display = 'none';
+    chatStep = 'initial';
+    document.getElementById('chatMessages').innerHTML = `
+        <div class="safety-card">
+            <div class="safety-card-icon">🔒</div>
+            <div class="safety-card-title">Stay Safe While Shopping</div>
+            <div class="safety-tip"><div class="safety-tip-icon">🚫</div><div><div class="safety-tip-title">No Upfront Payment</div><div class="safety-tip-text">Never pay for delivery or an item until you have seen it or used a trusted escrow service.</div></div></div>
+            <div class="safety-tip"><div class="safety-tip-icon">🎥</div><div><div class="safety-tip-title">Demand a Live Video</div><div class="safety-tip-text">Ask the seller to send a live video of the product to prove they have it in hand.</div></div></div>
+            <div class="safety-tip"><div class="safety-tip-icon">📍</div><div><div class="safety-tip-title">Public Meetup Only</div><div class="safety-tip-text">If meeting physically, choose a busy public place like a mall or bank entrance.</div></div></div>
+        </div>`;
+}
+
+function addBubble(text, type) {
+    const msgs = document.getElementById('chatMessages');
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const div = document.createElement('div');
+    div.className = `chat-bubble-wrap ${type}`;
+    div.innerHTML = `<div class="chat-bubble ${type}">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}${type==='sent'?' ✓✓':''}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function botReply(text) {
+    setTimeout(() => {
+        addBubble(text, 'received');
+    }, 800);
 }
 
 async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
-    // Track ad click if seller has active campaign
-    if (currentSeller) {
-        try {
-            const campaigns = await get('pending_payments', `seller_id=eq.${currentSeller.id}&status=eq.running&select=id,ad_clicks,click_quota`);
-            if (campaigns?.length) {
-                const c = campaigns[0];
-                const newClicks = (c.ad_clicks || 0) + 1;
-                const newStatus = newClicks >= (c.click_quota || 3) ? 'completed' : 'running';
-                await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?id=eq.${c.id}`, {
-                    method: 'PATCH',
-                    headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                    body: JSON.stringify({ ad_clicks: newClicks, status: newStatus })
-                });
-            }
-        } catch(e) {}
-    }
-    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
-    if (wa) {
-        window.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(text)}`;
+
+    if (chatStep === 'initial') {
+        // Show buyer's message
+        addBubble(text, 'sent');
+        input.value = '';
+        autoResize(input);
+        // Track ad click
+        await trackAdClick();
+        // Bot replies
+        botReply(`Yes, it's still available! 😊`);
+        setTimeout(() => {
+            botReply(`Please drop your WhatsApp number so I can reach you directly.`);
+            chatStep = 'awaiting_number';
+            // Update placeholder
+            input.placeholder = 'Enter your WhatsApp number...';
+            input.value = '';
+            autoResize(input);
+            input.focus();
+        }, 1800);
+
+    } else if (chatStep === 'awaiting_number') {
+        const cleaned = text.replace(/\D/g, '');
+        if (cleaned.length < 10) {
+            botReply(`Please enter a valid WhatsApp number so I can reach you 🙏`);
+            return;
+        }
+        addBubble(text, 'sent');
+        input.value = '';
+        autoResize(input);
+        // Save lead to Supabase
+        await saveLead(cleaned);
+        // Confirmation
+        botReply(`Got it! I'll reach out to you on WhatsApp shortly 🎉`);
+        chatStep = 'done';
+        input.placeholder = 'Message sent...';
+        input.disabled = true;
+        document.getElementById('chatSendBtn').style.opacity = '0.4';
+        document.getElementById('chatSendBtn').style.pointerEvents = 'none';
     }
 }
 
-// Allow Enter key to send
+async function trackAdClick() {
+    if (!currentSeller) return;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=eq.running&select=id,ad_clicks,click_quota`, { headers: H });
+        const campaigns = await res.json();
+        if (campaigns?.length) {
+            const c = campaigns[0];
+            const newClicks = (c.ad_clicks || 0) + 1;
+            const newStatus = newClicks >= (c.click_quota || 3) ? 'completed' : 'running';
+            await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?id=eq.${c.id}`, {
+                method: 'PATCH',
+                headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ ad_clicks: newClicks, status: newStatus })
+            });
+        }
+    } catch(e) {}
+}
+
+async function saveLead(phone) {
+    try {
+        await fetch(`${SUPABASE_URL}/rest/v1/buyer_leads`, {
+            method: 'POST',
+            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+                product_id: productId,
+                seller_id: currentSeller?.id || null,
+                product_name: productName,
+                buyer_whatsapp: phone,
+                message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`
+            })
+        });
+        // Notify seller via push
+        fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                seller_id: currentSeller?.id,
+                title: '💬 New buyer lead!',
+                body: `Someone is interested in "${productName}" — check your messages`
+            })
+        }).catch(() => {});
+    } catch(e) {}
+}
+
+// Enter to send
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('chatInput')?.addEventListener('keydown', e => {
-        if (e.key === 'Enter') sendChatMessage();
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
     });
 });
 
