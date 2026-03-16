@@ -152,6 +152,22 @@
         }
         .chat-bubble.sent { background: #005c4b; color: #e9edef; border-radius: 8px 0 8px 8px; }
         .chat-bubble.received { background: #1f2c34; color: #e9edef; border-radius: 0 8px 8px 8px; }
+        /* Typing indicator */
+        .typing-wrap { display: flex; margin-bottom: 4px; }
+        .typing-bubble {
+            background: #1f2c34; border-radius: 0 8px 8px 8px;
+            padding: 10px 14px; display: flex; align-items: center; gap: 4px;
+        }
+        .typing-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: #8696a0;
+            animation: typingBounce 1.2s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-5px); opacity: 1; }
+        }
         .chat-time { font-size: 10px; color: #8696a0; margin-top: 3px; text-align: right; }
         .chat-icon-btn {
             background: none; border: none; color: #aebac1; cursor: pointer;
@@ -274,7 +290,7 @@
                     </svg>
                 </span>
             </div>
-            <div class="chat-header-sub">SearchPadi Verified Seller</div>
+            <div class="chat-header-sub" id="chatHeaderSub">SearchPadi Verified Seller</div>
         </div>
         <!-- Header icons -->
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
@@ -548,10 +564,25 @@ function addBubble(text, type) {
     msgs.scrollTop = msgs.scrollHeight;
 }
 
-function botReply(text) {
-    setTimeout(() => {
-        addBubble(text, 'received');
-    }, 800);
+function showTyping() {
+    document.getElementById('chatHeaderSub').textContent = 'Typing...';
+    document.getElementById('chatHeaderSub').style.color = '#00a884';
+}
+
+function hideTyping() {
+    document.getElementById('chatHeaderSub').textContent = 'SearchPadi Verified Seller';
+    document.getElementById('chatHeaderSub').style.color = '#8696a0';
+}
+
+function formatNigerianNumber(raw) {
+    const digits = raw.replace(/\D/g, '');
+    // Already has country code
+    if (digits.startsWith('234') && digits.length >= 13) return digits;
+    // Starts with 0 — replace with 234
+    if (digits.startsWith('0') && digits.length === 11) return '234' + digits.slice(1);
+    // Already 10 digits without leading 0
+    if (digits.length === 10) return '234' + digits;
+    return digits;
 }
 
 async function sendChatMessage() {
@@ -560,42 +591,64 @@ async function sendChatMessage() {
     if (!text) return;
 
     if (chatStep === 'initial') {
-        // Show buyer's message
         addBubble(text, 'sent');
         input.value = '';
         autoResize(input);
-        // Track ad click
+        input.disabled = true;
         await trackAdClick();
-        // Bot replies
-        botReply(`Yes, it's still available! 😊`);
+
+        // First typing indicator
+        showTyping();
         setTimeout(() => {
-            botReply(`Please drop your WhatsApp number so I can reach you directly.`);
-            chatStep = 'awaiting_number';
-            // Update placeholder
-            input.placeholder = 'Enter your WhatsApp number...';
-            input.value = '';
-            autoResize(input);
-            input.focus();
-        }, 1800);
+            hideTyping();
+            addBubble(`Yes, it's still available! 😊`, 'received');
+
+            // Second typing indicator
+            setTimeout(() => {
+                showTyping();
+                setTimeout(() => {
+                    hideTyping();
+                    addBubble(`Please drop your WhatsApp number so I can reach you directly.`, 'received');
+                    chatStep = 'awaiting_number';
+                    input.disabled = false;
+                    input.value = '';
+                    input.placeholder = 'Enter your WhatsApp number...';
+                    input.setAttribute('inputmode', 'numeric');
+                    input.setAttribute('pattern', '[0-9]*');
+                    autoResize(input);
+                    input.focus();
+                }, 2000);
+            }, 2000);
+
+        }, 2000);
 
     } else if (chatStep === 'awaiting_number') {
         const cleaned = text.replace(/\D/g, '');
         if (cleaned.length < 10) {
-            botReply(`Please enter a valid WhatsApp number so I can reach you 🙏`);
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                addBubble(`Please enter a valid WhatsApp number so I can reach you 🙏`, 'received');
+            }, 1000);
             return;
         }
         addBubble(text, 'sent');
         input.value = '';
-        autoResize(input);
-        // Save lead to Supabase
-        await saveLead(cleaned);
-        // Confirmation
-        botReply(`Got it! I'll reach out to you on WhatsApp shortly 🎉`);
-        chatStep = 'done';
-        input.placeholder = 'Message sent...';
         input.disabled = true;
-        document.getElementById('chatSendBtn').style.opacity = '0.4';
-        document.getElementById('chatSendBtn').style.pointerEvents = 'none';
+        autoResize(input);
+
+        const formattedPhone = formatNigerianNumber(cleaned);
+        await saveLead(formattedPhone);
+
+        showTyping();
+        setTimeout(() => {
+            hideTyping();
+            addBubble(`Great! I'll message you on WhatsApp shortly 🎉`, 'received');
+            chatStep = 'done';
+            input.placeholder = 'Message sent...';
+            document.getElementById('chatSendBtn').style.opacity = '0.4';
+            document.getElementById('chatSendBtn').style.pointerEvents = 'none';
+        }, 2000);
     }
 }
 
