@@ -105,48 +105,75 @@
         .error-box p { color:#9ca3af;font-size:14px;margin-bottom:20px; }
         .error-box a { color:#a78bfa;text-decoration:none;font-weight:600;font-size:15px; }
 
-        /* Safety Modal */
-        .modal-backdrop {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 50;
-            display: flex; align-items: flex-end; animation: fadeIn 0.2s ease;
+        /* Safety Card in Chat */
+        .safety-card {
+            background: #1f2c34; border-radius: 16px;
+            padding: 20px 18px; margin: 20px 16px;
+            text-align: center;
         }
-        .modal-sheet {
-            background: #1a1a1a; border-radius: 20px 20px 0 0;
-            padding: 24px 20px 40px; width: 100%;
-            animation: slideUp 0.3s ease;
+        .safety-card-icon { font-size: 36px; margin-bottom: 10px; }
+        .safety-card-title { font-size: 15px; font-weight: 700; color: #e9edef; margin-bottom: 14px; }
+        .safety-tip {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: #2a3942; border-radius: 12px; padding: 12px;
+            margin-bottom: 8px; text-align: left;
         }
-        .modal-handle { width: 36px; height: 4px; background: #444; border-radius: 2px; margin: 0 auto 20px; }
-        .modal-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 4px; }
-        .modal-sub { font-size: 13px; color: #6b7280; margin-bottom: 20px; text-transform: uppercase; letter-spacing: 0.05em; }
-        .safety-item {
-            display: flex; align-items: flex-start; gap: 14px;
-            background: #2a2a2a; border-radius: 14px; padding: 14px; margin-bottom: 10px;
+        .safety-tip-icon { font-size: 18px; flex-shrink: 0; }
+        .safety-tip-title { font-size: 13px; font-weight: 700; color: #e9edef; margin-bottom: 2px; }
+        .safety-tip-text { font-size: 12px; color: #8696a0; line-height: 1.45; }
+
+        /* WhatsApp Chat Screen */
+        .chat-screen {
+            position: fixed; inset: 0; z-index: 60;
+            display: flex; flex-direction: column;
+            background: #0b141a;
         }
-        .safety-icon { font-size: 22px; flex-shrink: 0; margin-top: 1px; }
-        .safety-item-title { font-size: 14px; font-weight: 700; color: white; margin-bottom: 3px; }
-        .safety-item-text { font-size: 12px; color: #9ca3af; line-height: 1.5; }
-        .buyers-bar {
-            background: #2d1f4e; border-radius: 12px; padding: 12px 16px;
-            text-align: center; margin: 14px 0;
-            font-size: 14px; color: #c4b5fd;
+        .chat-header {
+            background: #1f2c34; padding: 10px 16px;
+            display: flex; align-items: center; gap: 12px;
+            padding-top: calc(10px + env(safe-area-inset-top));
         }
-        .buyers-bar strong { color: white; }
-        .agree-row { display: flex; align-items: center; gap: 10px; margin: 16px 0 18px; cursor: pointer; }
-        .agree-check {
-            width: 22px; height: 22px; border-radius: 6px;
-            border: 2px solid #6b7280; flex-shrink: 0;
-            display: flex; align-items: center; justify-content: center;
-            transition: all 0.2s;
+        .chat-back { background: none; border: none; color: #aebac1; cursor: pointer; padding: 4px; }
+        .chat-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+        .chat-header-info { flex: 1; }
+        .chat-header-name { font-size: 16px; font-weight: 600; color: #e9edef; }
+        .chat-header-sub { font-size: 12px; color: #8696a0; }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px 12px;
+            background: #0b141a;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
         }
-        .agree-check.checked { background: #7c3aed; border-color: #7c3aed; }
-        .agree-text { font-size: 13px; color: #d1d5db; line-height: 1.4; }
-        .btn-continue {
-            width: 100%; background: #16a34a; color: white; border: none;
-            border-radius: 14px; padding: 16px; font-size: 16px; font-weight: 700;
-            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
-            opacity: 0.4; pointer-events: none; transition: opacity 0.2s;
+        .chat-bubble-wrap { display: flex; margin-bottom: 4px; }
+        .chat-bubble-wrap.sent { justify-content: flex-end; }
+        .chat-bubble {
+            max-width: 75%; padding: 8px 12px 6px;
+            border-radius: 8px; font-size: 14px; line-height: 1.4;
+            position: relative;
         }
-        .btn-continue.active { opacity: 1; pointer-events: all; }
+        .chat-bubble.sent { background: #005c4b; color: #e9edef; border-radius: 8px 0 8px 8px; }
+        .chat-bubble.received { background: #1f2c34; color: #e9edef; border-radius: 0 8px 8px 8px; }
+        .chat-time { font-size: 10px; color: #8696a0; margin-top: 3px; text-align: right; }
+        .chat-input-bar {
+            background: #1f2c34; padding: 8px 12px;
+            display: flex; align-items: center; gap: 8px;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+        }
+        .chat-input {
+            flex: 1; background: #2a3942; border: none; border-radius: 24px;
+            padding: 10px 16px; color: #e9edef; font-size: 15px; outline: none;
+        }
+        .chat-input::placeholder { color: #8696a0; }
+        .chat-send-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: #00a884; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .chat-disclaimer {
+            text-align: center; font-size: 11px; color: #8696a0;
+            padding: 6px 16px; background: #0b141a;
+        }
+
+
     </style>
 </head>
 <body>
@@ -199,7 +226,7 @@
         </button>
         <div class="product-title" id="productTitle"></div>
         <div class="action-row">
-            <button class="btn-wa" onclick="openSafetyModal()">
+            <button class="btn-wa" onclick="openLeadModal()">
                 <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                 </svg>
@@ -222,47 +249,56 @@
     </div>
 </div>
 
-<!-- Safety Modal -->
-<div class="modal-backdrop" id="safetyModal" style="display:none;" onclick="closeSafetyModal()">
-    <div class="modal-sheet" onclick="event.stopPropagation()">
-        <div class="modal-handle"></div>
-        <div class="modal-title">Contact Seller</div>
-        <div class="modal-sub">Safety Checklist</div>
-
-        <div class="safety-item">
-            <div class="safety-icon">🚫</div>
-            <div>
-                <div class="safety-item-title">No Upfront Payment</div>
-                <div class="safety-item-text">Never pay for delivery or an item until you have seen it or used a trusted escrow service.</div>
-            </div>
-        </div>
-        <div class="safety-item">
-            <div class="safety-icon">📍</div>
-            <div>
-                <div class="safety-item-title">Public Meetup Only</div>
-                <div class="safety-item-text">If meeting physically, choose a well-lit, busy public place like a mall or bank entrance.</div>
-            </div>
-        </div>
-        <div class="safety-item">
-            <div class="safety-icon">🎥</div>
-            <div>
-                <div class="safety-item-title">Demand a Live Video</div>
-                <div class="safety-item-text">On WhatsApp, ask the seller to send a live video of the product to prove they have it in hand.</div>
-            </div>
-        </div>
-
-        <div class="buyers-bar" id="buyersBar"></div>
-
-        <div class="agree-row" onclick="toggleAgree()">
-            <div class="agree-check" id="agreeCheck"></div>
-            <div class="agree-text">I have read and understood the safety guidelines above.</div>
-        </div>
-
-        <button class="btn-continue" id="continueBtn" onclick="proceedToWhatsApp()">
-            <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+<!-- WhatsApp-style Chat Screen -->
+<div class="chat-screen" id="chatScreen" style="display:none;">
+    <div class="chat-header">
+        <button class="chat-back" onclick="closeChatScreen()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
             </svg>
-            Continue to WhatsApp
+        </button>
+        <img class="chat-avatar" id="chatAvatar" src="" alt="Seller" />
+        <div class="chat-header-info">
+            <div class="chat-header-name" id="chatSellerName"></div>
+            <div class="chat-header-sub">SearchPadi Verified Seller</div>
+        </div>
+    </div>
+
+    <div class="chat-messages" id="chatMessages">
+        <!-- Safety card shown like WhatsApp encryption notice -->
+        <div class="safety-card">
+            <div class="safety-card-icon">🔒</div>
+            <div class="safety-card-title">Stay Safe While Shopping</div>
+            <div class="safety-tip">
+                <div class="safety-tip-icon">🚫</div>
+                <div>
+                    <div class="safety-tip-title">No Upfront Payment</div>
+                    <div class="safety-tip-text">Never pay for delivery or an item until you have seen it or used a trusted escrow service.</div>
+                </div>
+            </div>
+            <div class="safety-tip">
+                <div class="safety-tip-icon">🎥</div>
+                <div>
+                    <div class="safety-tip-title">Demand a Live Video</div>
+                    <div class="safety-tip-text">Ask the seller to send a live video of the product to prove they have it in hand.</div>
+                </div>
+            </div>
+            <div class="safety-tip">
+                <div class="safety-tip-icon">📍</div>
+                <div>
+                    <div class="safety-tip-title">Public Meetup Only</div>
+                    <div class="safety-tip-text">If meeting physically, choose a busy public place like a mall or bank entrance.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="chat-input-bar">
+        <input class="chat-input" id="chatInput" type="text" placeholder="Type a message..." />
+        <button class="chat-send-btn" onclick="sendChatMessage()">
+            <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
         </button>
     </div>
 </div>
@@ -283,7 +319,7 @@ async function get(table, params) {
     return res.json();
 }
 
-let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '', waUrl = '#', agreed = false;
+let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '', waUrl = '#';
 
 async function load() {
     const id = new URLSearchParams(window.location.search).get('id');
@@ -354,13 +390,7 @@ function render(p, seller) {
 
         const sellerDisplayName = seller.business_name || seller.full_name || 'there';
         const wa = (seller.whatsapp || '').replace(/\D/g, '');
-        const msg = encodeURIComponent(`Hi ${sellerDisplayName}, I saw your "${p.name}" on SearchPadi. Is it still available?`);
-        waUrl = wa ? `https://wa.me/${wa}?text=${msg}` : '#';
-
-        // Buyers bar
-        const views = seller.views || 0;
-        const buyersCount = Math.max(1, Math.floor(views * 0.6));
-        document.getElementById('buyersBar').innerHTML = `<strong>${buyersCount} buyers</strong> have already reached out to this seller on SearchPadi.`;
+        waUrl = wa ? `https://wa.me/${wa}` : '#';
     }
 
     // About Product
@@ -403,20 +433,33 @@ async function toggleLike() {
 function showDesc() { document.getElementById('descBackdrop').style.display = 'flex'; }
 function hideDesc() { document.getElementById('descBackdrop').style.display = 'none'; }
 
-function openSafetyModal() {
-    agreed = false;
-    document.getElementById('agreeCheck').classList.remove('checked');
-    document.getElementById('continueBtn').classList.remove('active');
-    document.getElementById('safetyModal').style.display = 'flex';
+function openLeadModal() {
+    openChatScreen();
 }
-function closeSafetyModal() { document.getElementById('safetyModal').style.display = 'none'; }
-function toggleAgree() {
-    agreed = !agreed;
-    document.getElementById('agreeCheck').classList.toggle('checked', agreed);
-    document.getElementById('continueBtn').classList.toggle('active', agreed);
+
+// ── Chat Screen ──────────────────────────────────────────
+function openChatScreen() {
+    const screen = document.getElementById('chatScreen');
+    screen.style.display = 'flex';
+    document.getElementById('chatAvatar').src = currentSeller?.profile_photo || 'https://via.placeholder.com/80/6366f1/fff?text=S';
+    document.getElementById('chatSellerName').textContent = currentSeller?.business_name || 'Seller';
+    // Pre-fill input with message
+    const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`;
+    const input = document.getElementById('chatInput');
+    input.value = preMsg;
+    input.focus();
+    // Select all text so buyer can edit or just hit send
+    input.setSelectionRange(preMsg.length, preMsg.length);
 }
-async function proceedToWhatsApp() {
-    if (!agreed) return;
+
+function closeChatScreen() {
+    document.getElementById('chatScreen').style.display = 'none';
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
     // Track ad click if seller has active campaign
     if (currentSeller) {
         try {
@@ -424,7 +467,7 @@ async function proceedToWhatsApp() {
             if (campaigns?.length) {
                 const c = campaigns[0];
                 const newClicks = (c.ad_clicks || 0) + 1;
-                const newStatus = newClicks >= (c.click_quota || 5) ? 'completed' : 'running';
+                const newStatus = newClicks >= (c.click_quota || 3) ? 'completed' : 'running';
                 await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?id=eq.${c.id}`, {
                     method: 'PATCH',
                     headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
@@ -433,15 +476,18 @@ async function proceedToWhatsApp() {
             }
         } catch(e) {}
     }
-    closeSafetyModal();
-    window.open(waUrl, '_blank');
+    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+    if (wa) {
+        window.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(text)}`;
+    }
 }
 
-function showError(msg) {
-    document.getElementById('skeleton').style.display = 'none';
-    document.getElementById('errorMsg').textContent = msg;
-    document.getElementById('errorBox').style.display = 'flex';
-}
+// Allow Enter key to send
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('chatInput')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter') sendChatMessage();
+    });
+});
 
 load();
 </script>
