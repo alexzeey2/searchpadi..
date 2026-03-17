@@ -77,9 +77,9 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
                         </svg>
-                        {isOwnProfile && buyerLeads.length > 0 && (
+                        {(isOwnProfile ? buyerLeads.length : (seller.leadsCount || 0)) > 0 && (
                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
-                                {buyerLeads.length > 9 ? '9+' : buyerLeads.length}
+                                {(isOwnProfile ? buyerLeads.length : (seller.leadsCount || 0)) > 9 ? '9+' : (isOwnProfile ? buyerLeads.length : (seller.leadsCount || 0))}
                             </span>
                         )}
                     </button>
