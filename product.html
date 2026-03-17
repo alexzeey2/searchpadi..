@@ -549,10 +549,8 @@ function openChatScreen() {
     tagName.textContent = productName;
     productTag.style.display = 'flex';
     // Pre-fill textarea with product name + description + message
-    const descSnippet = productDesc ? `${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
-    const preMsg = descSnippet
-        ? `📦 *${productName}*\n${descSnippet}\n\nHi ${currentSeller?.business_name || 'there'}, is it still available?`
-        : `📦 *${productName}*\n\nHi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available?`;
+    const descSnippet = productDesc ? `\n${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
+    const preMsg = `📦 *${productName}*${descSnippet}\n\nHi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available?`;
     const input = document.getElementById('chatInput');
     input.value = preMsg;
     autoResize(input);
@@ -678,10 +676,8 @@ async function sendChatMessage() {
                         // Re-enable input with pre-filled WhatsApp message
                         const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
                         input.disabled = false;
-                        const descSnippet2 = productDesc ? `${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
-                        input.value = descSnippet2
-                            ? `📦 *${productName}*\n${descSnippet2}\n\nHi ${currentSeller?.business_name || 'there'}, I'm interested! Is it still available?`
-                            : `📦 *${productName}*\n\nHi ${currentSeller?.business_name || 'there'}, I'm interested! Is it still available?`;
+                        const descSnippet2 = productDesc ? `\n${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
+                        input.value = `📦 *${productName}*${descSnippet2}\n\nHi ${currentSeller?.business_name || 'there'}, I'm interested! Is it still available?`;
                         input.setAttribute('inputmode', 'text');
                         input.removeAttribute('pattern');
                         autoResize(input);
