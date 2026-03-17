@@ -19,6 +19,7 @@ export default function App() {
     const [showSubscription, setShowSubscription] = useState(false);
     const [showSomtoPromote, setShowSomtoPromote] = useState(false);
     const [headerFreeSlots, setHeaderFreeSlots] = useState(null); // null = not loaded yet
+    const [buyerLeads, setBuyerLeads] = useState([]);
     const [showEditProfile, setShowEditProfile] = useState(false);
     const [showAttractCustomers, setShowAttractCustomers] = useState(false);
     const [showBubbleMessage, setShowBubbleMessage] = useState(false);
@@ -73,28 +74,33 @@ export default function App() {
     // Load sellers and products from database on mount
     useEffect(() => {
         setTimeout(() => setShowSplash(false), 6000);
-        loadSellersFromDatabase();
         trackVisit();
 
-        // Check session first — if logged in, go straight to profile
+        // Check session first — decide what to load based on auth state
         const initAuth = async () => {
             try {
                 const { data } = await supabaseClient.auth.getSession();
                 const userId = data.session?.user?.id;
 
                 if (!userId) {
-                    // No session — handle deep links as buyer
+                    // No session — load sellers for buyers and handle deep links
+                    loadSellersFromDatabase();
                     handleDeepLinks();
                     return;
                 }
 
-                // Logged in — fetch full profile + all products at once
+                // Logged in — only load their profile, skip loadSellersFromDatabase
                 const [profileResult, productsResult] = await Promise.all([
                     supabaseClient.from('profiles').select('*').eq('id', userId).single(),
                     supabaseClient.from('products').select('*').eq('seller_id', userId)
                 ]);
 
-                if (!profileResult.data) { handleDeepLinks(); return; }
+                if (!profileResult.data) {
+                    // Profile missing — fall back to buyer view
+                    loadSellersFromDatabase();
+                    handleDeepLinks();
+                    return;
+                }
 
                 const profileData = profileResult.data;
                 const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
@@ -188,9 +194,12 @@ export default function App() {
                 } else {
                     // No deep link — open own profile as normal
                     setSelectedSeller(sellerData);
+                    fetchBuyerLeads(profileData.id);
+                    setShowSplash(false); // skip remaining splash time for logged-in sellers
                 }
             } catch(e) {
-                // Auth failed — still try deep links as guest
+                // Auth failed — fall back to buyer view
+                loadSellersFromDatabase();
                 const urlParams = new URLSearchParams(window.location.search);
                 if (urlParams.get('seller') || urlParams.get('product')) {
                     handleDeepLinks();
@@ -361,65 +370,6 @@ export default function App() {
             setSellers(mappedSellers);
             console.log('✅ Loaded', mappedSellers.length, 'sellers with products');
 
-            // Fetch logged-in seller's own products separately — never rely on 20-item global limit
-            try {
-                const { data: session } = await supabaseClient.auth.getSession();
-                const loggedInId = session?.session?.user?.id;
-                if (loggedInId) {
-                    const { data: myProducts } = await supabaseClient
-                        .from('products').select('*').eq('seller_id', loggedInId);
-                    if (myProducts && myProducts.length > 0) {
-                        const mapped = myProducts.map(p => ({
-                            id: p.id, name: p.name,
-                            price: p.price || 'Ask for Price',
-                            description: p.description || '',
-                            images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                            keywords: p.keywords || [],
-                            likes: p.likes || 0,
-                            liked: false,
-                        }));
-                        // Update sellers array
-                        setSellers(prev => prev.map(s =>
-                            s.id === loggedInId ? { ...s, products: mapped } : s
-                        ));
-                        // Update currentUser.data — this is the source of truth for own profile
-                        setCurrentUser(prev => {
-                            if (prev?.type !== 'seller' || prev.data.id !== loggedInId) return prev;
-                            return { ...prev, data: { ...prev.data, products: mapped } };
-                        });
-                    }
-                }
-            } catch (e) { /* silently fail */ }
-
-            // Always fetch logged-in seller's own products separately
-            // (they may not be in the top-20 limit above)
-            try {
-                const { data: session } = await supabaseClient.auth.getSession();
-                const loggedInId = session?.session?.user?.id;
-                if (loggedInId) {
-                    const { data: myProducts } = await supabaseClient
-                        .from('products').select('*').eq('seller_id', loggedInId);
-                    if (myProducts && myProducts.length > 0) {
-                        const mapped = myProducts.map(p => ({
-                            id: p.id, name: p.name,
-                            price: p.price || 'Ask for Price',
-                            description: p.description || '',
-                            images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                            keywords: p.keywords || [],
-                            likes: p.likes || 0,
-                            liked: false,
-                        }));
-                        setSellers(prev => prev.map(s =>
-                            s.id === loggedInId ? { ...s, products: mapped } : s
-                        ));
-                        setCurrentUser(prev => {
-                            if (prev?.type !== 'seller' || prev.data.id !== loggedInId) return prev;
-                            return { ...prev, data: { ...prev.data, products: mapped } };
-                        });
-                    }
-                }
-            } catch (e) { /* silently fail */ }
-
         } catch (error) {
             console.error('Error loading data from database:', error);
             setSellers([]);
@@ -436,6 +386,17 @@ export default function App() {
             [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
         }
         return shuffled;
+    };
+
+    const fetchBuyerLeads = async (sellerId) => {
+        try {
+            const { data } = await supabaseClient
+                .from('buyer_leads')
+                .select('*')
+                .eq('seller_id', sellerId)
+                .order('created_at', { ascending: false });
+            setBuyerLeads(data || []);
+        } catch(e) { setBuyerLeads([]); }
     };
 
     const scrollToBottom = () => {
@@ -1009,6 +970,9 @@ export default function App() {
     };
 
     const openSellerProfile = (seller) => {
+        if (currentUser?.type === 'seller' && currentUser.data.id === seller.id) {
+            fetchBuyerLeads(seller.id);
+        }
         setSelectedProduct(null);
         handleSellerClick(seller);
     };
@@ -1877,6 +1841,7 @@ export default function App() {
                     onCopyProfileLink={handleCopyProfileLink}
                     onCopyProductLink={handleCopyProductLink}
                     onAttractCustomers={() => setShowAttractCustomers(true)}
+                    buyerLeads={buyerLeads}
                 />
             )}
 
