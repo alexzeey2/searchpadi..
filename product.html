@@ -173,6 +173,14 @@
             background: none; border: none; color: #aebac1; cursor: pointer;
             padding: 4px; display: flex; align-items: center; justify-content: center;
         }
+        .product-quote {
+            border-left: 3px solid #00a884; border-radius: 4px;
+            background: rgba(0,0,0,0.15); padding: 6px 8px; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .product-quote-img { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+        .product-quote-name { font-size: 12px; font-weight: 700; color: #00a884; }
+        .product-quote-sub { font-size: 11px; color: #8696a0; margin-top: 1px; }
         .product-tag {
             display: flex; align-items: center; gap: 10px;
             background: #1f2c34; border-left: 3px solid #00a884;
@@ -550,7 +558,7 @@ function openChatScreen() {
     productTag.style.display = 'flex';
     // Pre-fill textarea with product name + description + message
     const descSnippet = productDesc ? `\n${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
-    const preMsg = `📦 *${productName}*${descSnippet}\n\nHi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available?`;
+    const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available?`;
     const input = document.getElementById('chatInput');
     input.value = preMsg;
     autoResize(input);
@@ -570,6 +578,31 @@ function closeChatScreen() {
             <div class="safety-tip"><div class="safety-tip-icon">📍</div><div><div class="safety-tip-title">Public Meetup Only</div><div class="safety-tip-text">If meeting physically, choose a busy public place like a mall or bank entrance.</div></div></div>
         </div>`;
 }
+
+function addProductBubble(text) {
+    const msgs = document.getElementById('chatMessages');
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const imgSrc = images?.[0] || '';
+    const div = document.createElement('div');
+    div.className = 'chat-bubble-wrap sent';
+    div.innerHTML = `
+        <div class="chat-bubble sent" style="padding:0;overflow:hidden;min-width:200px;">
+            <div class="product-quote">
+                ${imgSrc ? `<img class="product-quote-img" src="${imgSrc}" alt="product"/>` : ''}
+                <div>
+                    <div class="product-quote-name">${productName.replace(/&/g,'&amp;')}</div>
+                    <div class="product-quote-sub">SearchPadi</div>
+                </div>
+            </div>
+            <div style="padding:6px 10px 6px;">
+                ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+                <div class="chat-time">${now} ✓✓</div>
+            </div>
+        </div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
 
 function addBubble(text, type) {
     const msgs = document.getElementById('chatMessages');
@@ -608,7 +641,9 @@ async function sendChatMessage() {
     if (!text) return;
 
     if (chatStep === 'initial') {
-        addBubble(text, 'sent');
+        // Use product bubble for first message
+        const simpleMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available?`;
+        addProductBubble(simpleMsg);
         input.value = '';
         autoResize(input);
         input.disabled = true;
