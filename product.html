@@ -770,6 +770,7 @@ async function saveLead(phone) {
                 product_id: productId,
                 seller_id: currentSeller?.id || null,
                 product_name: productName,
+                product_image: images?.[0] || null,
                 buyer_whatsapp: phone,
                 message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`
             })
