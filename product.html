@@ -401,7 +401,7 @@ async function get(table, params) {
     return res.json();
 }
 
-let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '', waUrl = '#';
+let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '', productDesc = '', waUrl = '#';
 
 async function load() {
     const id = new URLSearchParams(window.location.search).get('id');
@@ -448,6 +448,7 @@ function render(p, seller) {
     likesCount = p.likes || 0;
     currentSeller = seller;
     productName = p.name;
+    productDesc = p.description || '';
     document.title = p.name + ' - SearchPadi';
 
     document.getElementById('productTitle').textContent = p.name;
@@ -547,8 +548,11 @@ function openChatScreen() {
     if (images?.length) tagImg.src = images[0];
     tagName.textContent = productName;
     productTag.style.display = 'flex';
-    // Pre-fill textarea
-    const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`;
+    // Pre-fill textarea with product name + description + message
+    const descSnippet = productDesc ? `${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
+    const preMsg = descSnippet
+        ? `📦 *${productName}*\n${descSnippet}\n\nHi ${currentSeller?.business_name || 'there'}, is it still available?`
+        : `📦 *${productName}*\n\nHi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available?`;
     const input = document.getElementById('chatInput');
     input.value = preMsg;
     autoResize(input);
@@ -674,7 +678,10 @@ async function sendChatMessage() {
                         // Re-enable input with pre-filled WhatsApp message
                         const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
                         input.disabled = false;
-                        input.value = `Hi ${currentSeller?.business_name || 'there'}, I'm interested in your "${productName}". Is it still available?`;
+                        const descSnippet2 = productDesc ? `${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
+                        input.value = descSnippet2
+                            ? `📦 *${productName}*\n${descSnippet2}\n\nHi ${currentSeller?.business_name || 'there'}, I'm interested! Is it still available?`
+                            : `📦 *${productName}*\n\nHi ${currentSeller?.business_name || 'there'}, I'm interested! Is it still available?`;
                         input.setAttribute('inputmode', 'text');
                         input.removeAttribute('pattern');
                         autoResize(input);
