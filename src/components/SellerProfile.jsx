@@ -3,7 +3,7 @@ import { supabaseClient } from '../supabase'
 import { shortenLink } from '../helpers'
 import CampaignStatusWidget from './CampaignStatusWidget'
 
-export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers, buyerLeads = [] }) {
+export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers, onOpenLeads, buyerLeads = [] }) {
     const isTempVerified = seller.tempVerifiedUntil && new Date(seller.tempVerifiedUntil) > new Date();
     const tempDaysLeft = seller.tempVerifiedUntil ? Math.ceil((new Date(seller.tempVerifiedUntil) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
     const isVerifiedDisplay = seller.isVerified || isTempVerified;
@@ -70,7 +70,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     )}
                     {isOwnProfile && (
                         <button
-                            onClick={() => { setShowLeadsChat(true); setActiveLead(null); }}
+                            onClick={() => { setShowLeadsChat(true); setActiveLead(null); if (onOpenLeads) onOpenLeads(); }}
                             className="relative w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
                             title="Buyer messages"
                         >
