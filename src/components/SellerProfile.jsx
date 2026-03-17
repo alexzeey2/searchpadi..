@@ -387,12 +387,24 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                         /* Single lead chat view */
                         <>
                             <div className="flex-1 overflow-y-auto p-4" style={{backgroundImage:"url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"}}>
-                                {/* Buyer opening message */}
+                                {/* Buyer opening message with product card */}
                                 <div className="flex justify-start mb-2">
-                                    <div className="rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34', maxWidth:'80%', wordBreak:'break-word', whiteSpace:'pre-wrap'}}>
-                                        {activeLead.message || `Hi, I'm interested in "${activeLead.product_name}". Is it still available?`}
-                                        <div className="text-[10px] text-gray-500 mt-1">
-                                            {new Date(activeLead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                    <div className="rounded-lg rounded-tl-none text-sm text-gray-100 overflow-hidden" style={{background:'#1f2c34', maxWidth:'80%'}}>
+                                        {/* Product quote card */}
+                                        <div style={{borderLeft:'3px solid #00a884', display:'flex', alignItems:'center', gap:'8px', padding:'8px 10px', background:'rgba(0,0,0,0.15)'}}>
+                                            {activeLead.product_image && (
+                                                <img src={activeLead.product_image} alt="product" style={{width:'36px', height:'36px', borderRadius:'4px', objectFit:'cover', flexShrink:0}}/>
+                                            )}
+                                            <div>
+                                                <div style={{fontSize:'12px', fontWeight:'700', color:'#00a884'}}>{activeLead.product_name}</div>
+                                                <div style={{fontSize:'11px', color:'#8696a0', marginTop:'1px'}}>SearchPadi</div>
+                                            </div>
+                                        </div>
+                                        <div style={{padding:'6px 10px 6px'}}>
+                                            {activeLead.message || `Hi, I'm interested in "${activeLead.product_name}". Is it still available?`}
+                                            <div className="text-[10px] text-gray-500 mt-1">
+                                                {new Date(activeLead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
