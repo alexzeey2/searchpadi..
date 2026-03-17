@@ -309,11 +309,17 @@
             <div class="chat-header-sub" id="chatHeaderSub">SearchPadi Verified Seller</div>
         </div>
         <!-- Header icons -->
-        <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
-            <!-- Shop icon → opens seller's SearchPadi profile -->
+        <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+            <!-- Store icon — exact WhatsApp catalog style -->
             <button class="chat-icon-btn" id="chatShopBtn" title="View seller store">
-                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-6h15L21 9M3 9h18M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M9 21V12h6v9"/>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.6 3H5.4C4.08 3 3 4.08 3 5.4v13.2C3 19.92 4.08 21 5.4 21h13.2c1.32 0 2.4-1.08 2.4-2.4V5.4C21 4.08 19.92 3 18.6 3zm-6.6 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-.6c0-2 4-3.1 6-3.1s6 1.1 6 3.1V18z"/>
+                </svg>
+            </button>
+            <!-- Phone icon — exact WhatsApp style -->
+            <button class="chat-icon-btn" id="chatCallBtn" title="Call seller">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
                 </svg>
             </button>
             <!-- Three dots → decorative -->
@@ -548,6 +554,11 @@ function openChatScreen() {
     // Wire up shop icon → opens seller profile page
     document.getElementById('chatShopBtn').onclick = () => {
         if (currentSeller?.id) window.open(`/seller.html?id=${currentSeller.id}`, '_blank');
+    };
+    // Wire up call icon → dials seller
+    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+    document.getElementById('chatCallBtn').onclick = () => {
+        if (wa) window.location.href = `tel:+${wa}`;
     };
     // Show product tag
     const tagImg = document.getElementById('productTagImg');
