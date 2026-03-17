@@ -687,13 +687,7 @@ async function saveLead(phone) {
                 message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`
             })
         });
-        if (!response.ok) {
-            const errText = await response.text();
-            console.error('saveLead failed:', response.status, errText);
-            alert('Debug: ' + response.status + ' ' + errText);
-        } else {
-            console.log('✅ Lead saved successfully');
-        }
+        if (!response.ok) console.error('saveLead failed:', response.status);
         // Notify seller via push
         fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
             method: 'POST',
@@ -704,10 +698,7 @@ async function saveLead(phone) {
                 body: `Someone is interested in "${productName}" — check your messages`
             })
         }).catch(() => {});
-    } catch(e) {
-        console.error('saveLead exception:', e);
-        alert('Debug exception: ' + e.message);
-    }
+    } catch(e) { console.error('saveLead exception:', e); }
 }
 
 // Enter to send
