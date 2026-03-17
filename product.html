@@ -775,6 +775,15 @@ async function saveLead(phone) {
             })
         });
         if (!response.ok) console.error('saveLead failed:', response.status);
+        // Increment leads_count on seller profile
+        if (currentSeller?.id) {
+            const current = currentSeller.leads_count || 0;
+            fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentSeller.id}`, {
+                method: 'PATCH',
+                headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ leads_count: current + 1 })
+            }).catch(() => {});
+        }
         // Notify seller via push
         fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
             method: 'POST',
