@@ -68,22 +68,21 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             ✎ Edit
                         </button>
                     )}
-                    {isOwnProfile && (
-                        <button
-                            onClick={() => { setShowLeadsChat(true); setActiveLead(null); if (onOpenLeads) onOpenLeads(); }}
-                            className="relative w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
-                            title="Buyer messages"
-                        >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
-                            </svg>
-                            {buyerLeads.length > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
-                                    {buyerLeads.length > 9 ? '9+' : buyerLeads.length}
-                                </span>
-                            )}
-                        </button>
-                    )}
+                    {/* Message icon — visible to all, functional only for owner */}
+                    <button
+                        onClick={isOwnProfile ? () => { setShowLeadsChat(true); setActiveLead(null); if (onOpenLeads) onOpenLeads(); } : undefined}
+                        className={`relative w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white transition-colors ${isOwnProfile ? 'hover:bg-gray-700 cursor-pointer' : 'cursor-default opacity-60'}`}
+                        title={isOwnProfile ? "Buyer messages" : ""}
+                    >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
+                        </svg>
+                        {buyerLeads.length > 0 && (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
+                                {buyerLeads.length > 9 ? '9+' : buyerLeads.length}
+                            </span>
+                        )}
+                    </button>
                     <button
                         onClick={async () => {
                             if (onCopyProfileLink) { onCopyProfileLink(seller.id); return; }
@@ -287,8 +286,8 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                 </div>
             </div>
 
-            {/* Floating Add Product Button */}
-            {isOwnProfile && (
+            {/* Floating Add Product Button — hide when leads chat is open */}
+            {isOwnProfile && !showLeadsChat && (
                 <button
                     onClick={onAddProduct}
                     className="floating-add-button bg-gradient-to-r from-purple-600 to-purple-700 text-white px-6 py-3 rounded-full font-semibold hover:from-purple-700 hover:to-purple-800 transition-all flex items-center gap-2"
@@ -390,7 +389,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             <div className="flex-1 overflow-y-auto p-4" style={{backgroundImage:"url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")"}}>
                                 {/* Buyer opening message */}
                                 <div className="flex justify-start mb-2">
-                                    <div className="max-w-[75%] rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34'}}>
+                                    <div className="rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34', maxWidth:'80%', wordBreak:'break-word', whiteSpace:'pre-wrap'}}>
                                         {activeLead.message || `Hi, I'm interested in "${activeLead.product_name}". Is it still available?`}
                                         <div className="text-[10px] text-gray-500 mt-1">
                                             {new Date(activeLead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
@@ -399,13 +398,13 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                 </div>
                                 {/* Auto replies */}
                                 <div className="flex justify-end mb-2">
-                                    <div className="max-w-[75%] rounded-lg rounded-tr-none p-3 text-sm text-gray-100" style={{background:'#005c4b'}}>
+                                    <div className="rounded-lg rounded-tr-none p-3 text-sm text-gray-100" style={{background:'#005c4b', maxWidth:'80%', wordBreak:'break-word'}}>
                                         Yes, it's still available! 😊
                                         <div className="text-[10px] text-gray-400 mt-1 text-right">✓✓</div>
                                     </div>
                                 </div>
                                 <div className="flex justify-end mb-2">
-                                    <div className="max-w-[75%] rounded-lg rounded-tr-none p-3 text-sm text-gray-100" style={{background:'#005c4b'}}>
+                                    <div className="rounded-lg rounded-tr-none p-3 text-sm text-gray-100" style={{background:'#005c4b', maxWidth:'80%', wordBreak:'break-word'}}>
                                         Please drop your WhatsApp number so I can reach you directly.
                                         <div className="text-[10px] text-gray-400 mt-1 text-right">✓✓</div>
                                     </div>
@@ -413,7 +412,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                 {/* Buyer's number */}
                                 {activeLead.buyer_whatsapp && (
                                     <div className="flex justify-start mb-2">
-                                        <div className="max-w-[75%] rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34'}}>
+                                        <div className="rounded-lg rounded-tl-none p-3 text-sm text-gray-100" style={{background:'#1f2c34', maxWidth:'80%', wordBreak:'break-word'}}>
                                             {activeLead.buyer_whatsapp}
                                             <div className="text-[10px] text-gray-500 mt-1">
                                                 {new Date(activeLead.created_at).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}
@@ -432,10 +431,9 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                     onChange={e => setReplyText(e.target.value)}
                                     onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendSellerReply(); }}}
                                     placeholder={`Reply to ${activeLead.buyer_whatsapp || 'buyer'}...`}
-                                    rows={1}
-                                    className="flex-1 rounded-2xl px-4 py-2.5 text-sm text-white outline-none resize-none"
-                                    style={{background:'#2a3942', border:'none', maxHeight:'100px', lineHeight:'1.4', fontFamily:'inherit'}}
-                                    onInput={e => { e.target.style.height = 'auto'; e.target.style.height = Math.min(e.target.scrollHeight, 100) + 'px'; }}
+                                    rows={3}
+                                    className="flex-1 rounded-2xl px-4 py-3 text-sm text-white outline-none"
+                                    style={{background:'#2a3942', border:'none', minHeight:'80px', maxHeight:'160px', lineHeight:'1.5', fontFamily:'inherit', resize:'none', overflowY:'auto'}}
                                 />
                                 <button
                                     onClick={sendSellerReply}
