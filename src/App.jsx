@@ -312,7 +312,7 @@ export default function App() {
 
             // Fetch only needed columns, limit initial load for speed
             const [sellersResult, campaignsResult, productsResult] = await Promise.all([
-                supabaseClient.from('profiles').select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until').order('created_at', { ascending: false }).limit(20),
+                supabaseClient.from('profiles').select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until,leads_count').order('created_at', { ascending: false }).limit(20),
                 supabaseClient.from('pending_payments').select('product_id,seller_id').eq('status', 'running'),
                 supabaseClient.from('products').select('id,seller_id,name,price,images,keywords,likes,description').order('created_at', { ascending: false }).limit(20)
             ]);
@@ -352,6 +352,7 @@ export default function App() {
                     views: seller.views || 0,
                     subscription: seller.subscription_plan || 'free',
                     shareCount: seller.share_count || 0,
+                    leadsCount: seller.leads_count || 0,
                     tempVerifiedUntil: seller.temp_verified_until || null,
                     products: (productsData || [])
                         .filter(p => p.seller_id === seller.id)
@@ -858,7 +859,7 @@ export default function App() {
             // Fetch more sellers from Supabase
             let query = supabaseClient
                 .from('profiles')
-                .select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until')
+                .select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until,leads_count')
                 .order('created_at', { ascending: false })
                 .range(sellers.length, sellers.length + SELLERS_PER_PAGE - 1);
 
@@ -891,6 +892,7 @@ export default function App() {
                         views: seller.views || 0,
                         subscription: seller.subscription_plan || 'free',
                         shareCount: seller.share_count || 0,
+                    leadsCount: seller.leads_count || 0,
                         tempVerifiedUntil: seller.temp_verified_until || null,
                         products: []
                     };
