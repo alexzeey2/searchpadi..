@@ -196,6 +196,8 @@ export default function App() {
                     setSelectedSeller(sellerData);
                     fetchBuyerLeads(profileData.id);
                     setShowSplash(false); // skip remaining splash time for logged-in sellers
+                    // Start realtime subscription for new leads
+                    subscribeToLeads(profileData.id);
                 }
             } catch(e) {
                 // Auth failed — fall back to buyer view
@@ -409,14 +411,23 @@ export default function App() {
 
 
 
-    // Auto-refresh buyer leads every 30 seconds when seller is viewing their own profile
-    useEffect(() => {
-        if (!currentUser?.data?.id || !selectedSeller || currentUser.data.id !== selectedSeller.id) return;
-        const interval = setInterval(() => {
-            fetchBuyerLeads(currentUser.data.id);
-        }, 30000);
-        return () => clearInterval(interval);
-    }, [currentUser, selectedSeller]);
+    const subscribeToLeads = (sellerId) => {
+        // Remove any existing subscription first
+        supabaseClient.channel('buyer_leads_channel').unsubscribe();
+        // Subscribe to new inserts on buyer_leads for this seller
+        supabaseClient
+            .channel('buyer_leads_channel')
+            .on('postgres_changes', {
+                event: 'INSERT',
+                schema: 'public',
+                table: 'buyer_leads',
+                filter: `seller_id=eq.${sellerId}`
+            }, (payload) => {
+                // Instantly prepend new lead to state
+                setBuyerLeads(prev => [payload.new, ...prev]);
+            })
+            .subscribe();
+    };
 
     // Load initial recommended products
     useEffect(() => {
@@ -1854,6 +1865,7 @@ export default function App() {
                     onCopyProfileLink={handleCopyProfileLink}
                     onCopyProductLink={handleCopyProductLink}
                     onAttractCustomers={() => setShowAttractCustomers(true)}
+                    onOpenLeads={() => fetchBuyerLeads(currentUser.data.id)}
                     buyerLeads={buyerLeads}
                 />
             )}
