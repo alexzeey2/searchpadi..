@@ -409,6 +409,15 @@ export default function App() {
 
 
 
+    // Auto-refresh buyer leads every 30 seconds when seller is viewing their own profile
+    useEffect(() => {
+        if (!currentUser?.data?.id || !selectedSeller || currentUser.data.id !== selectedSeller.id) return;
+        const interval = setInterval(() => {
+            fetchBuyerLeads(currentUser.data.id);
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [currentUser, selectedSeller]);
+
     // Load initial recommended products
     useEffect(() => {
         if (currentStep === 'recommendations' && displayedProducts.length === 0 && sellers.length > 0 && !isLoadingData) {
@@ -1830,7 +1839,11 @@ export default function App() {
                 <SellerProfile 
                     seller={currentSeller}
                     isOwnProfile={currentUser?.type === 'seller' && currentUser.data.id === currentSeller.id}
-                    onClose={() => setSelectedSeller(null)}
+                    onClose={() => {
+                        setSelectedSeller(null);
+                        // Load sellers lazily if not loaded yet (logged-in sellers skip initial load)
+                        if (sellers.length === 0) loadSellersFromDatabase();
+                    }}
                     onWhatsApp={handleWhatsAppMessage}
                     onShowSubscription={() => setShowSomtoPromote(true)}
                     onAddProduct={() => setShowAddProduct(true)}
