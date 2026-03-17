@@ -173,6 +173,14 @@
             background: none; border: none; color: #aebac1; cursor: pointer;
             padding: 4px; display: flex; align-items: center; justify-content: center;
         }
+        .product-tag {
+            display: flex; align-items: center; gap: 10px;
+            background: #1f2c34; border-left: 3px solid #00a884;
+            border-radius: 8px; padding: 8px 12px; margin: 8px 10px 0;
+        }
+        .product-tag-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+        .product-tag-name { font-size: 13px; color: #e9edef; font-weight: 600; line-height: 1.3; }
+        .product-tag-sub { font-size: 11px; color: #8696a0; margin-top: 2px; }
         .chat-input-bar {
             background: #1f2c34; padding: 8px 10px;
             display: flex; align-items: flex-end; gap: 6px;
@@ -294,16 +302,10 @@
         </div>
         <!-- Header icons -->
         <div style="display:flex;align-items:center;gap:6px;margin-left:auto;">
-            <!-- Video call → opens WhatsApp -->
-            <button class="chat-icon-btn" id="chatVideoBtn" title="Video call on WhatsApp">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.82v6.36a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
-                </svg>
-            </button>
-            <!-- Phone call → opens WhatsApp call -->
-            <button class="chat-icon-btn" id="chatCallBtn" title="Call on WhatsApp">
-                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
+            <!-- Shop icon → opens seller's SearchPadi profile -->
+            <button class="chat-icon-btn" id="chatShopBtn" title="View seller store">
+                <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9l1.5-6h15L21 9M3 9h18M3 9v11a1 1 0 001 1h16a1 1 0 001-1V9M9 21V12h6v9"/>
                 </svg>
             </button>
             <!-- Three dots → decorative -->
@@ -341,6 +343,15 @@
                     <div class="safety-tip-text">If meeting physically, choose a busy public place like a mall or bank entrance.</div>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Product tag shown above input -->
+    <div class="product-tag" id="productTag" style="display:none;">
+        <img class="product-tag-img" id="productTagImg" src="" alt="Product" />
+        <div>
+            <div class="product-tag-name" id="productTagName"></div>
+            <div class="product-tag-sub">SearchPadi</div>
         </div>
     </div>
 
@@ -525,14 +536,17 @@ function openChatScreen() {
     if (currentSeller?.is_verified) {
         document.getElementById('chatVerifiedBadge').style.display = 'inline-flex';
     }
-    // Wire up header call/video buttons
-    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
-    document.getElementById('chatCallBtn').onclick = () => {
-        if (wa) window.location.href = `https://wa.me/${wa}`;
+    // Wire up shop icon → opens seller profile page
+    document.getElementById('chatShopBtn').onclick = () => {
+        if (currentSeller?.id) window.open(`/seller.html?id=${currentSeller.id}`, '_blank');
     };
-    document.getElementById('chatVideoBtn').onclick = () => {
-        if (wa) window.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(`Hi ${currentSeller?.business_name || 'there'}, I want to do a video call about your "${productName}" on SearchPadi.`)}`;
-    };
+    // Show product tag
+    const tagImg = document.getElementById('productTagImg');
+    const tagName = document.getElementById('productTagName');
+    const productTag = document.getElementById('productTag');
+    if (images?.length) tagImg.src = images[0];
+    tagName.textContent = productName;
+    productTag.style.display = 'flex';
     // Pre-fill textarea
     const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`;
     const input = document.getElementById('chatInput');
@@ -543,6 +557,7 @@ function openChatScreen() {
 
 function closeChatScreen() {
     document.getElementById('chatScreen').style.display = 'none';
+    document.getElementById('productTag').style.display = 'none';
     chatStep = 'initial';
     document.getElementById('chatMessages').innerHTML = `
         <div class="safety-card">
@@ -595,6 +610,7 @@ async function sendChatMessage() {
         input.value = '';
         autoResize(input);
         input.disabled = true;
+        document.getElementById('productTag').style.display = 'none';
         await trackAdClick();
 
         // First reply sequence
@@ -647,10 +663,32 @@ async function sendChatMessage() {
             setTimeout(() => {
                 hideTyping();
                 addBubble(`Great! I'll message you on WhatsApp shortly 🎉`, 'received');
-                chatStep = 'done';
-                input.placeholder = 'Message sent...';
-                document.getElementById('chatSendBtn').style.opacity = '0.4';
-                document.getElementById('chatSendBtn').style.pointerEvents = 'none';
+
+                // Second message — invite them to message seller directly
+                setTimeout(() => {
+                    showTyping();
+                    setTimeout(() => {
+                        hideTyping();
+                        addBubble(`You can also message me directly on WhatsApp right now! 👇`, 'received');
+                        chatStep = 'done';
+                        // Re-enable input with pre-filled WhatsApp message
+                        const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+                        input.disabled = false;
+                        input.value = `Hi ${currentSeller?.business_name || 'there'}, I'm interested in your "${productName}". Is it still available?`;
+                        input.setAttribute('inputmode', 'text');
+                        input.removeAttribute('pattern');
+                        autoResize(input);
+                        input.placeholder = 'Tap Send to message on WhatsApp...';
+                        // Send button now goes to WhatsApp
+                        document.getElementById('chatSendBtn').style.opacity = '1';
+                        document.getElementById('chatSendBtn').style.pointerEvents = 'all';
+                        document.getElementById('chatSendBtn').onclick = () => {
+                            const msg = input.value.trim();
+                            if (msg && wa) window.location.href = `https://wa.me/${wa}?text=${encodeURIComponent(msg)}`;
+                        };
+                    }, 3500);
+                }, 2000);
+
             }, 3500);
         }, 2000);
     }
