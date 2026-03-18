@@ -795,16 +795,15 @@ async function sendChatMessage() {
 async function trackAdClick() {
     if (!currentSeller) return;
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=eq.running&select=id,ad_clicks,click_quota`, { headers: H });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=eq.running&select=id,ad_clicks`, { headers: H });
         const campaigns = await res.json();
         if (campaigns?.length) {
             const c = campaigns[0];
             const newClicks = (c.ad_clicks || 0) + 1;
-            const newStatus = newClicks >= (c.click_quota || 3) ? 'completed' : 'running';
             await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?id=eq.${c.id}`, {
                 method: 'PATCH',
                 headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ ad_clicks: newClicks, status: newStatus })
+                body: JSON.stringify({ ad_clicks: newClicks })
             });
         }
     } catch(e) {}
