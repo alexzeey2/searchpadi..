@@ -5,7 +5,7 @@ import { WHATSAPP_NUMBER } from '../helpers'
 export default function SomtoPromoteChat({ onClose, currentUser }) {
     const SOMTO_AVATAR = "https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg";
     const RATE = 800;
-    const PER = 3;
+    const PER = 4;
     const MAX_FREE_SLOTS = 3;
     const BANK = { bank: 'Opay', account: '9058150220', name: 'AlexanderBede Somtochukwu Ugwu' };
 
