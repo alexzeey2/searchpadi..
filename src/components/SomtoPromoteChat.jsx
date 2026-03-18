@@ -191,7 +191,7 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
 
     const submitNumber = async () => {
         const num = parseInt(numVal);
-        if (!num || num < 3) { numRef.current?.focus(); return; }
+        if (!num || num < 4) { numRef.current?.focus(); return; }
         setPendingCount(num);
         setShowNum(false);
         setOpts([]);
@@ -396,14 +396,15 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                             <input
                                 ref={numRef}
                                 type="number"
-                                placeholder={`e.g. 5 (min ${PER})`}
+                                placeholder={`4 minimum`}
                                 min={PER}
+                                onBlur={e => { if (parseInt(e.target.value) < PER) { e.target.value = PER; setCount(PER); } }}
                                 value={numVal}
                                 onChange={e => setNumVal(e.target.value)}
                                 onKeyDown={e => e.key === 'Enter' && submitNumber()}
                                 style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#eeeef5', fontFamily: 'inherit', fontSize: 14, fontWeight: 600 }}
                             />
-                            <span style={{ fontSize: 12, color: '#6b6b88', flexShrink: 0 }}>min. {PER}</span>
+                            <span style={{ fontSize: 12, color: '#6b6b88', flexShrink: 0 }}>4 minimum</span>
                             <button onClick={submitNumber} style={{ width: 34, height: 34, borderRadius: 10, background: '#7c5cfc', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                             </button>
