@@ -58,7 +58,10 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
     const openWhatsApp = (type) => {
         const { phone, msg } = pendingWaMsg;
         if (type === 'business') {
-            window.open(`https://api.whatsapp.com/send?phone=${phone}&text=${msg}`, '_blank');
+            window.location.href = `whatsapp://send?phone=${phone}&text=${msg}`;
+            setTimeout(() => {
+                window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+            }, 1500);
         } else {
             window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
         }
