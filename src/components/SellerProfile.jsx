@@ -60,10 +60,10 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
         if (type === 'business') {
             window.location.href = `whatsapp://send?phone=${phone}&text=${msg}`;
             setTimeout(() => {
-                window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+                window.location.href = `https://wa.me/${phone}?text=${msg}`;
             }, 1500);
         } else {
-            window.open(`https://wa.me/${phone}?text=${msg}`, '_blank');
+            window.location.href = `https://wa.me/${phone}?text=${msg}`;
         }
         setShowWaChoice(false);
         setReplyText('');
