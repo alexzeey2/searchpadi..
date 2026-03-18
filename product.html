@@ -568,7 +568,11 @@ function showWaChoiceSheet(phone, msg) {
 function openWa(type) {
     const encoded = encodeURIComponent(pendingWaMsg);
     if (type === 'business') {
-        window.location.href = `https://api.whatsapp.com/send?phone=${pendingWaPhone}&text=${encoded}`;
+        window.location.href = `whatsapp://send?phone=${pendingWaPhone}&text=${encoded}`;
+        // Fallback after 1.5s if business app not installed
+        setTimeout(() => {
+            window.location.href = `https://wa.me/${pendingWaPhone}?text=${encoded}`;
+        }, 1500);
     } else {
         window.location.href = `https://wa.me/${pendingWaPhone}?text=${encoded}`;
     }
