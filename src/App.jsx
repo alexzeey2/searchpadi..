@@ -1975,7 +1975,7 @@ export default function App() {
                                 >✕</button>
                                 <p style={{ color: '#9ca3af', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '4px', marginRight: '16px' }}>Somto</p>
                                 <p style={{ color: '#e5e7eb', fontSize: '12px', lineHeight: '1.5', marginRight: '12px' }}>
-                                    Your store is getting attention! 🔥 For ₦2,400 I'll start sending buyers to your WhatsApp today.
+                                    Your store is getting attention! 🔥 For ₦3,200 I'll start sending buyers to your WhatsApp today.
                                 </p>
                                 <button
                                     onClick={() => { setShowBubbleMessage(false); setShowSomtoPromote(true); }}
