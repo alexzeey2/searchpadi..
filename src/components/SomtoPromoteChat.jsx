@@ -171,13 +171,37 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
 
     useEffect(() => { scrollDown(); }, [messages, typing, sheet]);
 
+    const [productPrice, setProductPrice] = useState('');
+    const [showPriceInput, setShowPriceInput] = useState(false);
+    const priceRef = useRef(null);
+
     const handleSelectProduct = async (product) => {
         setCurrentProduct(product);
         setSheet(null);
         setOpts([]);
         addMsg(product.name, 'user');
         await new Promise(r => setTimeout(r, 350));
+        // Ask for product price
+        await say([`What's the price of "${product.name}"? (e.g. ₦50,000)`], 700);
+        setShowPriceInput(true);
+        setTimeout(() => priceRef.current?.focus(), 400);
+    };
 
+    const submitProductPrice = async () => {
+        const val = productPrice.trim();
+        if (!val) { priceRef.current?.focus(); return; }
+        setShowPriceInput(false);
+        addMsg(val, 'user');
+        // Save price to product in Supabase
+        try {
+            const numericPrice = parseFloat(val.replace(/[^0-9.]/g, ''));
+            if (numericPrice && currentProduct?.id) {
+                await supabaseClient.from('products')
+                    .update({ price_amount: numericPrice, price: val })
+                    .eq('id', currentProduct.id);
+            }
+        } catch(e) {}
+        await new Promise(r => setTimeout(r, 350));
         // Check free slots fresh
         const { qualifies: stillQualifies } = await checkFreeSlots();
         if (stillQualifies && pendingCount <= PER) {
@@ -406,6 +430,23 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
                             />
                             <span style={{ fontSize: 12, color: '#6b6b88', flexShrink: 0 }}>4 minimum</span>
                             <button onClick={submitNumber} style={{ width: 34, height: 34, borderRadius: 10, background: '#7c5cfc', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                            </button>
+                        </div>
+                    )}
+                    {showPriceInput && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: '#1a1d2a', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 14, padding: '9px 12px' }}>
+                            <span style={{ fontSize: 14, color: '#6b6b88', flexShrink: 0 }}>₦</span>
+                            <input
+                                ref={priceRef}
+                                type="text"
+                                placeholder="e.g. 50,000"
+                                value={productPrice}
+                                onChange={e => setProductPrice(e.target.value)}
+                                onKeyDown={e => e.key === 'Enter' && submitProductPrice()}
+                                style={{ flex: 1, background: 'none', border: 'none', outline: 'none', color: '#eeeef5', fontFamily: 'inherit', fontSize: 14, fontWeight: 600 }}
+                            />
+                            <button onClick={submitProductPrice} style={{ width: 34, height: 34, borderRadius: 10, background: '#7c5cfc', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
                             </button>
                         </div>
