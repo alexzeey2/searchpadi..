@@ -777,7 +777,7 @@ function askForNumber(onComplete) {
         showTyping();
         setTimeout(() => {
             hideTyping();
-            addBubble(`Great! Just drop your WhatsApp number so the store owner can reach you directly`, 'received');
+            addBubble(`Please drop your WhatsApp number so the store owner can reach you directly`, 'received');
             chatStep = 'awaiting_number_final';
             input.disabled = false;
             input.value = '';
