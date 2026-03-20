@@ -900,7 +900,7 @@ async function sendChatMessage() {
                     addBubble(`I understand, but the best I can do is ${formatPrice(originalPrice)}. Let me connect you with the store owner — you can discuss further directly. 😊`, 'received');
                 } else {
                     agreedPrice = finalOffer;
-                    addBubble(`Great, ${formatPrice(finalOffer)} works! Let me connect you now. 🎉`, 'received');
+                    addBubble(`${formatPrice(finalOffer)} works! Let me connect you now. 🎉`, 'received');
                 }
                 askForNumber(() => showContactButtons(agreedPrice));
             }, 3500);
