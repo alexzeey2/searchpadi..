@@ -188,14 +188,25 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
     };
 
     const handleSelectProduct = async (product) => {
-        setCurrentProduct(product);
         setSheet(null);
         setOpts([]);
         addMsg(product.name, 'user');
         await new Promise(r => setTimeout(r, 350));
 
+        // Fetch fresh product from Supabase to get latest price_amount
+        let freshProduct = product;
+        try {
+            const { data } = await supabaseClient
+                .from('products')
+                .select('*')
+                .eq('id', product.id)
+                .single();
+            if (data) freshProduct = data;
+        } catch(e) {}
+        setCurrentProduct(freshProduct);
+
         // If product already has a price saved, skip asking
-        if (product.price_amount && parseFloat(product.price_amount) > 0) {
+        if (freshProduct.price_amount && parseFloat(freshProduct.price_amount) > 0) {
             // Skip price step, go straight to payment summary
             const { qualifies: stillQualifies } = await checkFreeSlots();
             if (stillQualifies && pendingCount <= PER) {
