@@ -1143,6 +1143,7 @@ export default function App() {
                 name: productData.name,
                 description: productData.description || '',
                 price: 'Ask for Price',
+                price_amount: productData.price_amount || null,
                 images: productData.images,
                 keywords: productData.name.toLowerCase().split(' ').filter(w => w.length > 2),
                 likes: 0,
