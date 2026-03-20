@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SearchPadi - Product</title>
+    <meta name="theme-color" content="#000000">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
+
+        #viewer { position: fixed; inset: 0; background: #000; display: flex; align-items: center; justify-content: center; }
+        #mainImg { width: 100%; height: 100%; object-fit: contain; }
+
+        .top-bar {
+            position: fixed; top: 0; left: 0; right: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.85) 0%, transparent 100%);
+            padding: 14px 16px 40px; z-index: 10;
+        }
+        .progress-lines { display: flex; gap: 4px; margin-bottom: 12px; }
+        .progress-line { flex: 1; height: 2px; border-radius: 2px; background: rgba(255,255,255,0.35); }
+        .progress-line.active { background: white; }
+
+        .seller-info-row { display: flex; align-items: center; justify-content: space-between; }
+        .seller-left { display: flex; align-items: center; gap: 10px; text-decoration: none; flex: 1; }
+
+        .avatar-wrap { position: relative; width: 44px; height: 44px; flex-shrink: 0; }
+        .avatar-ring {
+            position: absolute; inset: -3px; border-radius: 50%;
+            border: 2.5px solid transparent;
+            background: linear-gradient(#000, #000) padding-box,
+                        linear-gradient(90deg, #7c3aed, #c4b5fd, #7c3aed) border-box;
+            animation: spin-ring 1.8s linear infinite;
+            box-shadow: 0 0 12px rgba(124,58,237,0.8);
+        }
+        @keyframes spin-ring { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .avatar-img { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; position: relative; z-index: 1; }
+
+        .seller-name { font-size: 14px; font-weight: 600; color: white; }
+        .seller-name-row { display: flex; align-items: center; gap: 5px; }
+        .blue-tick { color: #60a5fa; display: flex; align-items: center; }
+        .seller-location { font-size: 12px; color: rgba(255,255,255,0.75); margin-top: 2px; }
+        .verified-tag {
+            display: inline-flex; align-items: center; gap: 3px;
+            background: #065f46; color: #34d399;
+            font-size: 10px; font-weight: 700;
+            padding: 2px 7px; border-radius: 20px; margin-top: 4px;
+        }
+        .close-btn { background: none; border: none; cursor: pointer; padding: 4px; }
+
+        .nav-left, .nav-right { position: fixed; top: 0; bottom: 0; width: 33%; cursor: pointer; z-index: 5; }
+        .nav-left { left: 0; }
+        .nav-right { right: 0; }
+
+        .bottom-bar {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            background: linear-gradient(to top, rgba(0,0,0,1) 65%, transparent 100%);
+            padding: 16px 16px 30px; z-index: 10;
+        }
+        .about-btn {
+            width: 100%; background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+            border: none; color: white; padding: 12px; border-radius: 10px;
+            font-size: 14px; font-weight: 500; cursor: pointer; margin-bottom: 10px;
+            display: flex; align-items: center; justify-content: center; gap: 8px;
+        }
+        .product-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 12px; }
+
+        .action-row { display: flex; gap: 10px; align-items: center; }
+        .btn-wa {
+            flex: 1; background: #16a34a; color: white; border: none;
+            border-radius: 12px; padding: 14px; font-size: 15px; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
+            text-decoration: none;
+        }
+        .btn-like {
+            width: 50px; height: 50px; border-radius: 12px;
+            background: rgba(255,255,255,0.12); backdrop-filter: blur(8px);
+            border: none; cursor: pointer; flex-shrink: 0;
+            display: flex; align-items: center; justify-content: center;
+            transition: transform 0.15s;
+        }
+        .btn-like:active { transform: scale(0.9); }
+
+        .desc-backdrop {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 30;
+            display: flex; align-items: flex-end; animation: fadeIn 0.2s ease;
+        }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .desc-sheet {
+            background: #1c1c1e; border-radius: 20px 20px 0 0;
+            padding: 20px 20px 36px; width: 100%;
+            max-height: 70vh; overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        .desc-handle { width: 36px; height: 4px; background: #444; border-radius: 2px; margin: 0 auto 16px; }
+        .desc-label { font-size: 11px; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 10px; }
+        .desc-text { font-size: 15px; color: #d1d5db; line-height: 1.65; }
+
+        .skeleton { background: linear-gradient(90deg,#111 25%,#222 50%,#111 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+        @keyframes shimmer { 0%{background-position:200% 0} 100%{background-position:-200% 0} }
+
+        .error-box { position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center; }
+        .error-box h2 { color:#ef4444;font-size:22px;margin-bottom:8px; }
+        .error-box p { color:#9ca3af;font-size:14px;margin-bottom:20px; }
+        .error-box a { color:#a78bfa;text-decoration:none;font-weight:600;font-size:15px; }
+
+        /* Safety Card in Chat */
+        .safety-card {
+            background: #1f2c34; border-radius: 16px;
+            padding: 20px 18px; margin: 20px 16px;
+            text-align: center;
+        }
+        .safety-card-icon { font-size: 36px; margin-bottom: 10px; }
+        .safety-card-title { font-size: 15px; font-weight: 700; color: #e9edef; margin-bottom: 14px; }
+        .safety-tip {
+            display: flex; align-items: flex-start; gap: 10px;
+            background: #2a3942; border-radius: 12px; padding: 12px;
+            margin-bottom: 8px; text-align: left;
+        }
+        .safety-tip-icon { font-size: 18px; flex-shrink: 0; }
+        .safety-tip-title { font-size: 13px; font-weight: 700; color: #e9edef; margin-bottom: 2px; }
+        .safety-tip-text { font-size: 12px; color: #8696a0; line-height: 1.45; }
+
+        /* WhatsApp Chat Screen */
+        .chat-screen {
+            position: fixed; inset: 0; z-index: 60;
+            display: flex; flex-direction: column;
+            background: #0b141a;
+        }
+        .chat-header {
+            background: #1f2c34; padding: 8px 12px;
+            display: flex; align-items: center; gap: 10px;
+            padding-top: calc(8px + env(safe-area-inset-top));
+        }
+        .chat-back { background: none; border: none; color: #aebac1; cursor: pointer; padding: 4px; }
+        .chat-avatar { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+        .chat-header-info { flex: 1; min-width: 0; overflow: hidden; }
+        .chat-header-name { font-size: 14px; font-weight: 600; color: #e9edef; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .chat-header-sub { font-size: 11px; color: #8696a0; white-space: nowrap; }
+        .chat-messages {
+            flex: 1; overflow-y: auto; padding: 16px 12px;
+            background: #0b141a;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        }
+        .chat-bubble-wrap { display: flex; margin-bottom: 4px; }
+        .chat-bubble-wrap.sent { justify-content: flex-end; }
+        .chat-bubble {
+            max-width: 75%; padding: 8px 12px 6px;
+            border-radius: 8px; font-size: 14px; line-height: 1.4;
+            position: relative;
+        }
+        .chat-bubble.sent { background: #005c4b; color: #e9edef; border-radius: 8px 0 8px 8px; }
+        .chat-bubble.received { background: #1f2c34; color: #e9edef; border-radius: 0 8px 8px 8px; }
+        /* Typing indicator */
+        .typing-wrap { display: flex; margin-bottom: 4px; }
+        .typing-bubble {
+            background: #1f2c34; border-radius: 0 8px 8px 8px;
+            padding: 10px 14px; display: flex; align-items: center; gap: 4px;
+        }
+        .typing-dot {
+            width: 7px; height: 7px; border-radius: 50%; background: #8696a0;
+            animation: typingBounce 1.2s infinite ease-in-out;
+        }
+        .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+        .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typingBounce {
+            0%, 60%, 100% { transform: translateY(0); opacity: 0.4; }
+            30% { transform: translateY(-5px); opacity: 1; }
+        }
+        .chat-time { font-size: 10px; color: #8696a0; margin-top: 3px; text-align: right; }
+        .chat-icon-btn {
+            background: none; border: none; color: #aebac1; cursor: pointer;
+            padding: 4px; display: flex; align-items: center; justify-content: center;
+        }
+        .product-quote {
+            border-left: 3px solid #00a884; border-radius: 4px;
+            background: rgba(0,0,0,0.15); padding: 6px 8px; margin-bottom: 6px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .product-quote-img { width: 36px; height: 36px; border-radius: 4px; object-fit: cover; flex-shrink: 0; }
+        .product-quote-name { font-size: 12px; font-weight: 700; color: #00a884; }
+        .product-quote-sub { font-size: 11px; color: #8696a0; margin-top: 1px; }
+        .product-tag {
+            display: flex; align-items: center; gap: 10px;
+            background: #1f2c34; border-left: 3px solid #00a884;
+            border-radius: 8px; padding: 8px 12px; margin: 8px 10px 0;
+        }
+        .product-tag-img { width: 40px; height: 40px; border-radius: 6px; object-fit: cover; flex-shrink: 0; }
+        .product-tag-name { font-size: 13px; color: #e9edef; font-weight: 600; line-height: 1.3; }
+        .product-tag-sub { font-size: 11px; color: #8696a0; margin-top: 2px; }
+        .chat-input-bar {
+            background: #1f2c34; padding: 8px 10px;
+            display: flex; align-items: flex-end; gap: 6px;
+            padding-bottom: calc(8px + env(safe-area-inset-bottom));
+        }
+        .chat-input {
+            flex: 1; background: #2a3942; border: none; border-radius: 20px;
+            padding: 10px 16px; color: #e9edef; font-size: 15px; outline: none;
+            resize: none; max-height: 120px; line-height: 1.4; font-family: inherit;
+            overflow-y: auto;
+        }
+        .chat-input::placeholder { color: #8696a0; }
+        .chat-send-btn {
+            width: 44px; height: 44px; border-radius: 50%;
+            background: #00a884; border: none; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .chat-disclaimer {
+            text-align: center; font-size: 11px; color: #8696a0;
+            padding: 6px 16px; background: #0b141a;
+        }
+
+
+    </style>
+</head>
+<body>
+
+<div id="skeleton" style="position:fixed;inset:0;background:#111;">
+    <div class="skeleton" style="width:100%;height:100%;"></div>
+</div>
+
+<div id="viewer" style="display:none;">
+    <img id="mainImg" alt="Product" onerror="this.src='https://via.placeholder.com/400x600/6366f1/fff?text=Product'" />
+
+    <div class="nav-left" onclick="changeImg(-1)"></div>
+    <div class="nav-right" onclick="changeImg(1)"></div>
+
+    <div class="top-bar">
+        <div class="progress-lines" id="progressLines"></div>
+        <div class="seller-info-row">
+            <a class="seller-left" id="sellerLink" href="#">
+                <div class="avatar-wrap">
+                    <div class="avatar-ring"></div>
+                    <img class="avatar-img" id="sellerAvatar" src="" alt="Seller" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
+                </div>
+                <div>
+                    <div class="seller-name-row">
+                        <span class="seller-name" id="sellerName"></span>
+                        <span class="blue-tick" id="blueTick" style="display:none;">
+                            <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                        </span>
+                    </div>
+                    <div class="seller-location" id="sellerLocation"></div>
+                    <div class="verified-tag" id="verifiedTag" style="display:none;">✓ Verified Seller</div>
+                </div>
+            </a>
+            <button class="close-btn" onclick="history.back()">
+                <svg width="28" height="28" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <button class="about-btn" id="aboutBtn" onclick="showDesc()" style="display:none;">
+            <svg width="18" height="18" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+            </svg>
+            About Product
+        </button>
+        <div class="product-title" id="productTitle"></div>
+        <div class="action-row">
+            <button class="btn-wa" onclick="openLeadModal()">
+                <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+                Ask for Price
+            </button>
+            <button class="btn-like" onclick="toggleLike()">
+                <svg id="likeIcon" width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="desc-backdrop" id="descBackdrop" style="display:none;" onclick="hideDesc()">
+    <div class="desc-sheet" onclick="event.stopPropagation()">
+        <div class="desc-handle"></div>
+        <div class="desc-label">About Product</div>
+        <div class="desc-text" id="descText"></div>
+    </div>
+</div>
+
+<!-- WhatsApp-style Chat Screen -->
+<div class="chat-screen" id="chatScreen" style="display:none;">
+    <!-- Header -->
+    <div class="chat-header">
+        <button class="chat-back" onclick="closeChatScreen()">
+            <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </button>
+        <img class="chat-avatar" id="chatAvatar" src="" alt="Seller" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
+        <div class="chat-header-info">
+            <div style="display:flex;align-items:center;gap:5px;">
+                <div class="chat-header-name" id="chatSellerName"></div>
+                <span id="chatVerifiedBadge" style="display:none;color:#60a5fa;">
+                    <svg width="14" height="14" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                </span>
+            </div>
+            <div class="chat-header-sub" id="chatHeaderSub">SearchPadi Verified Seller</div>
+        </div>
+        <!-- Header icons -->
+        <div style="display:flex;align-items:center;gap:4px;margin-left:auto;">
+            <!-- Store icon — exact WhatsApp catalog style -->
+            <button class="chat-icon-btn" id="chatShopBtn" title="View seller store">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M18.6 3H5.4C4.08 3 3 4.08 3 5.4v13.2C3 19.92 4.08 21 5.4 21h13.2c1.32 0 2.4-1.08 2.4-2.4V5.4C21 4.08 19.92 3 18.6 3zm-6.6 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm6 12H6v-.6c0-2 4-3.1 6-3.1s6 1.1 6 3.1V18z"/>
+                </svg>
+            </button>
+            <!-- Phone icon — exact WhatsApp style -->
+            <button class="chat-icon-btn" id="chatCallBtn" title="Call seller">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/>
+                </svg>
+            </button>
+            <!-- Three dots → decorative -->
+            <button class="chat-icon-btn" style="opacity:0.4;cursor:default;" title="">
+                <svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24">
+                    <circle cx="12" cy="5" r="1.5"/><circle cx="12" cy="12" r="1.5"/><circle cx="12" cy="19" r="1.5"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <!-- Messages -->
+    <div class="chat-messages" id="chatMessages">
+        <div class="safety-card">
+            <div class="safety-card-icon">🔒</div>
+            <div class="safety-card-title">Stay Safe While Shopping</div>
+            <div class="safety-tip">
+                <div class="safety-tip-icon">🚫</div>
+                <div>
+                    <div class="safety-tip-title">No Upfront Payment</div>
+                    <div class="safety-tip-text">Never pay for delivery or an item until you have seen it or used a trusted escrow service.</div>
+                </div>
+            </div>
+            <div class="safety-tip">
+                <div class="safety-tip-icon">🎥</div>
+                <div>
+                    <div class="safety-tip-title">Demand a Live Video</div>
+                    <div class="safety-tip-text">Ask the seller to send a live video of the product to prove they have it in hand.</div>
+                </div>
+            </div>
+            <div class="safety-tip">
+                <div class="safety-tip-icon">📍</div>
+                <div>
+                    <div class="safety-tip-title">Public Meetup Only</div>
+                    <div class="safety-tip-text">If meeting physically, choose a busy public place like a mall or bank entrance.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Product tag shown above input -->
+    <div class="product-tag" id="productTag" style="display:none;">
+        <img class="product-tag-img" id="productTagImg" src="" alt="Product" />
+        <div>
+            <div class="product-tag-name" id="productTagName"></div>
+            <div class="product-tag-sub">SearchPadi</div>
+        </div>
+    </div>
+
+    <!-- Input bar -->
+    <div class="chat-input-bar">
+        <!-- Emoji icon — decorative -->
+        <button class="chat-icon-btn" style="opacity:0.4;cursor:default;flex-shrink:0;">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="10"/><path stroke-linecap="round" d="M8 13s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9" stroke-width="3" stroke-linecap="round"/><line x1="15" y1="9" x2="15.01" y2="9" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+        </button>
+        <textarea class="chat-input" id="chatInput" placeholder="Type a message..." rows="1" oninput="autoResize(this)"></textarea>
+        <!-- Attachment — decorative -->
+        <button class="chat-icon-btn" style="opacity:0.4;cursor:default;flex-shrink:0;">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>
+            </svg>
+        </button>
+        <!-- Camera — decorative -->
+        <button class="chat-icon-btn" style="opacity:0.4;cursor:default;flex-shrink:0;">
+            <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/><circle cx="12" cy="13" r="3"/>
+            </svg>
+        </button>
+        <!-- Send / Mic -->
+        <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()" style="flex-shrink:0;">
+            <svg id="sendIcon" width="20" height="20" fill="white" viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+            </svg>
+        </button>
+    </div>
+</div>
+
+<!-- WhatsApp Choice Sheet -->
+<div id="waChoiceSheet" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:flex-end;">
+    <div style="background:#1f2c34;border-radius:20px 20px 0 0;padding:20px 20px 36px;width:100%;">
+        <div style="width:36px;height:4px;background:#444;border-radius:2px;margin:0 auto 20px;"></div>
+        <p style="color:white;font-weight:600;font-size:16px;text-align:center;margin-bottom:16px;">Open with</p>
+        <button onclick="openWa('normal')" style="width:100%;display:flex;align-items:center;gap:14px;background:#2a3942;border:none;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </div>
+            <div style="text-align:left;">
+                <div style="color:white;font-weight:600;font-size:14px;">WhatsApp</div>
+                <div style="color:#8696a0;font-size:12px;">Personal WhatsApp</div>
+            </div>
+        </button>
+        <button onclick="openWa('business')" style="width:100%;display:flex;align-items:center;gap:14px;background:#2a3942;border:none;border-radius:14px;padding:14px;margin-bottom:10px;cursor:pointer;">
+            <div style="width:42px;height:42px;border-radius:50%;background:#25d366;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <svg width="24" height="24" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+            </div>
+            <div style="text-align:left;">
+                <div style="color:white;font-weight:600;font-size:14px;">WhatsApp Business</div>
+                <div style="color:#8696a0;font-size:12px;">Business WhatsApp</div>
+            </div>
+        </button>
+        <button onclick="document.getElementById('waChoiceSheet').style.display='none'" style="width:100%;background:none;border:none;color:#8696a0;font-size:14px;padding:10px;cursor:pointer;">Cancel</button>
+    </div>
+</div>
+
+<div id="errorBox" style="display:none;" class="error-box">
+    <h2>Oops!</h2>
+    <p id="errorMsg">Something went wrong.</p>
+    <a href="https://searchpadi-phi.vercel.app">Back to SearchPadi</a>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://fxjnbqymkdvuqfeagpur.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImZ4am5icXlta2R2dXFmZWFncHVyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzEwMTE0NTUsImV4cCI6MjA4NjU4NzQ1NX0.qcQPStoxVPdJfAEDJ-f0xiu_EQkRnZd2c2uDIhMMAdg';
+const H = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
+
+async function get(table, params) {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
+    return res.json();
+}
+
+let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '', productDesc = '', productPriceAmount = 0, waUrl = '#';
+
+async function load() {
+    const id = new URLSearchParams(window.location.search).get('id');
+    if (!id) return showError('No product specified.');
+    productId = id;
+    try {
+        const products = await get('products', `id=eq.${encodeURIComponent(id)}&select=*`);
+        if (!products?.length) return showError('Product not found.');
+        const p = products[0];
+        const sellers = await get('profiles', `id=eq.${encodeURIComponent(p.seller_id)}&select=*`);
+        const seller = sellers?.[0];
+        render(p, seller);
+        if (seller) incrementViews(seller);
+    } catch(e) {
+        showError('Failed to load. Check your connection.');
+    }
+}
+
+async function incrementViews(seller) {
+    try {
+        const currentViews = seller.views || 0;
+        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${seller.id}`, {
+            method: 'PATCH',
+            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ views: currentViews + 1 })
+        });
+        // Fire push notification like the main app does
+        try {
+            fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    seller_id: seller.id,
+                    title: '👀 Someone viewed your product!',
+                    body: `Your listing just got a view from a shared link!`
+                })
+            });
+        } catch(e) {}
+    } catch(e) {}
+}
+
+function render(p, seller) {
+    images = (p.images && p.images.length) ? p.images : ['https://via.placeholder.com/400x600/6366f1/fff?text=Product'];
+    likesCount = p.likes || 0;
+    currentSeller = seller;
+    productName = p.name;
+    productDesc = p.description || '';
+    productPriceAmount = p.price_amount || 0;
+    document.title = p.name + ' - SearchPadi';
+
+    document.getElementById('productTitle').textContent = p.name;
+
+    // Progress lines
+    const lines = document.getElementById('progressLines');
+    lines.innerHTML = images.map((_, i) => `<div class="progress-line${i===0?' active':''}"></div>`).join('');
+
+    document.getElementById('mainImg').src = images[0];
+
+    // Seller
+    if (seller) {
+        document.getElementById('sellerAvatar').src = seller.profile_photo || 'https://via.placeholder.com/80/6366f1/fff?text=S';
+        document.getElementById('sellerName').textContent = seller.business_name || seller.full_name || 'Seller';
+        document.getElementById('sellerLocation').textContent = '📍 ' + (seller.location || 'Nigeria');
+        document.getElementById('sellerLink').href = '/seller.html?id=' + seller.id;
+
+        if (seller.is_verified) {
+            document.getElementById('blueTick').style.display = 'inline-flex';
+            document.getElementById('verifiedTag').style.display = 'inline-flex';
+        }
+
+        const sellerDisplayName = seller.business_name || seller.full_name || 'there';
+        const wa = (seller.whatsapp || '').replace(/\D/g, '');
+        waUrl = wa ? `https://wa.me/${wa}` : '#';
+    }
+
+    // About Product
+    if (p.description) {
+        document.getElementById('aboutBtn').style.display = 'flex';
+        document.getElementById('descText').innerHTML = p.description.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+    }
+
+    document.getElementById('skeleton').style.display = 'none';
+    document.getElementById('viewer').style.display = 'block';
+}
+
+function changeImg(dir) {
+    goTo((currentImg + dir + images.length) % images.length);
+}
+
+function goTo(i) {
+    currentImg = i;
+    document.getElementById('mainImg').src = images[i];
+    document.querySelectorAll('.progress-line').forEach((l, j) => l.classList.toggle('active', j === i));
+}
+
+async function toggleLike() {
+    liked = !liked;
+    likesCount = liked ? likesCount + 1 : Math.max(0, likesCount - 1);
+    const icon = document.getElementById('likeIcon');
+    icon.setAttribute('fill', liked ? '#ef4444' : 'none');
+    icon.setAttribute('stroke', liked ? '#ef4444' : 'white');
+    if (productId) {
+        try {
+            await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${productId}`, {
+                method: 'PATCH',
+                headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ likes: likesCount })
+            });
+        } catch(e) {}
+    }
+}
+
+function showDesc() { document.getElementById('descBackdrop').style.display = 'flex'; }
+function hideDesc() { document.getElementById('descBackdrop').style.display = 'none'; }
+
+let pendingWaPhone = '', pendingWaMsg = '';
+
+function showWaChoiceSheet(phone, msg) {
+    pendingWaPhone = phone;
+    pendingWaMsg = msg;
+    document.getElementById('waChoiceSheet').style.display = 'flex';
+}
+
+function openWa(type) {
+    const encoded = encodeURIComponent(pendingWaMsg);
+    if (type === 'business') {
+        window.location.href = `whatsapp://send?phone=${pendingWaPhone}&text=${encoded}`;
+        // Fallback after 1.5s if business app not installed
+        setTimeout(() => {
+            window.location.href = `https://wa.me/${pendingWaPhone}?text=${encoded}`;
+        }, 1500);
+    } else {
+        window.location.href = `https://wa.me/${pendingWaPhone}?text=${encoded}`;
+    }
+    document.getElementById('waChoiceSheet').style.display = 'none';
+}
+
+function openLeadModal() {
+    openChatScreen();
+}
+
+// ── Chat Screen ──────────────────────────────────────────
+let chatStep = 'initial'; // 'initial' | 'awaiting_offer' | 'awaiting_choice' | 'awaiting_final_offer' | 'awaiting_number_final' | 'done'
+
+function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+}
+
+function openChatScreen() {
+    chatStep = 'initial';
+    const screen = document.getElementById('chatScreen');
+    screen.style.display = 'flex';
+    document.getElementById('chatAvatar').src = currentSeller?.profile_photo || 'https://via.placeholder.com/80/6366f1/fff?text=S';
+    document.getElementById('chatSellerName').textContent = currentSeller?.business_name || 'Seller';
+    if (currentSeller?.is_verified) {
+        document.getElementById('chatVerifiedBadge').style.display = 'inline-flex';
+    }
+    // Wire up shop icon → opens seller profile page
+    document.getElementById('chatShopBtn').onclick = () => {
+        if (currentSeller?.id) window.open(`/seller.html?id=${currentSeller.id}`, '_blank');
+    };
+    // Wire up call icon → dials seller
+    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+    document.getElementById('chatCallBtn').onclick = () => {
+        if (wa) window.location.href = `tel:+${wa}`;
+    };
+    // Show product tag
+    const tagImg = document.getElementById('productTagImg');
+    const tagName = document.getElementById('productTagName');
+    const productTag = document.getElementById('productTag');
+    if (images?.length) tagImg.src = images[0];
+    tagName.textContent = productName;
+    productTag.style.display = 'flex';
+    // Pre-fill textarea with product name + description + message
+    const descSnippet = productDesc ? `\n${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
+    const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available? What's the price?`;
+    const input = document.getElementById('chatInput');
+    input.value = preMsg;
+    autoResize(input);
+    input.focus();
+}
+
+function closeChatScreen() {
+    document.getElementById('chatScreen').style.display = 'none';
+    document.getElementById('productTag').style.display = 'none';
+    chatStep = 'initial';
+    document.getElementById('chatMessages').innerHTML = `
+        <div class="safety-card">
+            <div class="safety-card-icon">🔒</div>
+            <div class="safety-card-title">Stay Safe While Shopping</div>
+            <div class="safety-tip"><div class="safety-tip-icon">🚫</div><div><div class="safety-tip-title">No Upfront Payment</div><div class="safety-tip-text">Never pay for delivery or an item until you have seen it or used a trusted escrow service.</div></div></div>
+            <div class="safety-tip"><div class="safety-tip-icon">🎥</div><div><div class="safety-tip-title">Demand a Live Video</div><div class="safety-tip-text">Ask the seller to send a live video of the product to prove they have it in hand.</div></div></div>
+            <div class="safety-tip"><div class="safety-tip-icon">📍</div><div><div class="safety-tip-title">Public Meetup Only</div><div class="safety-tip-text">If meeting physically, choose a busy public place like a mall or bank entrance.</div></div></div>
+        </div>`;
+}
+
+function addProductBubble(text) {
+    const msgs = document.getElementById('chatMessages');
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const imgSrc = images?.[0] || '';
+    const div = document.createElement('div');
+    div.className = 'chat-bubble-wrap sent';
+    div.innerHTML = `
+        <div class="chat-bubble sent" style="padding:0;overflow:hidden;min-width:200px;">
+            <div class="product-quote">
+                ${imgSrc ? `<img class="product-quote-img" src="${imgSrc}" alt="product"/>` : ''}
+                <div>
+                    <div class="product-quote-name">${productName.replace(/&/g,'&amp;')}</div>
+                    <div class="product-quote-sub">SearchPadi</div>
+                </div>
+            </div>
+            <div style="padding:6px 10px 6px;">
+                ${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}
+                <div class="chat-time">${now} ✓✓</div>
+            </div>
+        </div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+
+function addBubble(text, type) {
+    const msgs = document.getElementById('chatMessages');
+    const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+    const div = document.createElement('div');
+    div.className = `chat-bubble-wrap ${type}`;
+    div.innerHTML = `<div class="chat-bubble ${type}">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}${type==='sent'?' ✓✓':''}</div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+}
+
+function showTyping() {
+    document.getElementById('chatHeaderSub').textContent = 'Typing...';
+    document.getElementById('chatHeaderSub').style.color = '#00a884';
+}
+
+function hideTyping() {
+    document.getElementById('chatHeaderSub').textContent = 'SearchPadi Verified Seller';
+    document.getElementById('chatHeaderSub').style.color = '#8696a0';
+}
+
+function formatNigerianNumber(raw) {
+    const digits = raw.replace(/\D/g, '');
+    // Already has country code
+    if (digits.startsWith('234') && digits.length >= 13) return digits;
+    // Starts with 0 — replace with 234
+    if (digits.startsWith('0') && digits.length === 11) return '234' + digits.slice(1);
+    // Already 10 digits without leading 0
+    if (digits.length === 10) return '234' + digits;
+    return digits;
+}
+
+// ── Negotiation state ──
+let agreedPrice = 0;
+
+function formatPrice(amount) {
+    return '\u20a6' + Math.round(amount).toLocaleString('en-NG');
+}
+
+function showContactButtons(agreedAmt) {
+    const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+    const msgs = document.getElementById('chatMessages');
+    const input = document.getElementById('chatInput');
+    const sendBtn = document.getElementById('chatSendBtn');
+    input.disabled = true;
+    input.value = '';
+    input.placeholder = '';
+    sendBtn.style.opacity = '0.3';
+    sendBtn.style.pointerEvents = 'none';
+
+    // Show assistant message first with typing delay
+    setTimeout(() => {
+        showTyping();
+        setTimeout(() => {
+            hideTyping();
+            addBubble(`You can contact the store owner immediately if you need to talk to them right now 👇`, 'received');
+
+            // Then show buttons after a short pause
+            setTimeout(() => {
+                const div = document.createElement('div');
+                div.style.cssText = 'padding:8px 16px 12px;';
+                div.innerHTML = `
+                    <div style="display:flex;gap:10px;">
+                        <button onclick="contactSeller('whatsapp','${wa}',${agreedAmt})" style="flex:1;background:#25d366;border:none;border-radius:12px;padding:13px;color:white;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <svg width="18" height="18" fill="white" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                            WhatsApp
+                        </button>
+                        <button onclick="contactSeller('call','${wa}',${agreedAmt})" style="flex:1;background:#1f2c34;border:1px solid #3a4a54;border-radius:12px;padding:13px;color:#e9edef;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+                            <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                            Call
+                        </button>
+                    </div>`;
+                msgs.appendChild(div);
+                msgs.scrollTop = msgs.scrollHeight;
+                chatStep = 'done';
+            }, 800);
+
+        }, 3500);
+    }, 2000);
+}
+
+function contactSeller(type, wa, agreedAmt) {
+    const priceText = agreedAmt > 0 ? formatPrice(agreedAmt) : 'to be confirmed';
+    const msg = `Hi ${currentSeller?.business_name || 'there'}, your SearchPadi assistant said the ${productName} price is ${priceText}. I would like to buy it.`;
+    if (type === 'whatsapp') {
+        showWaChoiceSheet(wa, msg);
+    } else {
+        window.location.href = `tel:+${wa}`;
+    }
+}
+
+function showYesNoButtons(onYes, onNo) {
+    const msgs = document.getElementById('chatMessages');
+    const input = document.getElementById('chatInput');
+    input.disabled = true;
+    chatStep = 'awaiting_choice';
+    const div = document.createElement('div');
+    div.id = 'yesNoBtns';
+    div.style.cssText = 'display:flex;gap:10px;padding:8px 16px;';
+    div.innerHTML = `
+        <button id="btnYes" style="flex:1;background:#005c4b;border:none;border-radius:12px;padding:12px;color:#e9edef;font-weight:700;font-size:14px;cursor:pointer;">Yes, that works</button>
+        <button id="btnNo" style="flex:1;background:#1f2c34;border:1px solid #3a4a54;border-radius:12px;padding:12px;color:#e9edef;font-weight:700;font-size:14px;cursor:pointer;">Price is high</button>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById('btnYes').onclick = () => { div.remove(); onYes(); };
+    document.getElementById('btnNo').onclick = () => { div.remove(); onNo(); };
+}
+
+function askForNumber(onComplete) {
+    const input = document.getElementById('chatInput');
+    setTimeout(() => {
+        showTyping();
+        setTimeout(() => {
+            hideTyping();
+            addBubble(`Please drop your WhatsApp number so the store owner can reach you directly`, 'received');
+            chatStep = 'awaiting_number_final';
+            input.disabled = false;
+            input.value = '';
+            input.placeholder = 'Enter your WhatsApp number...';
+            input.setAttribute('inputmode', 'numeric');
+            input.setAttribute('pattern', '[0-9]*');
+            autoResize(input);
+            input.focus();
+            window._onNumberComplete = onComplete;
+        }, 3500);
+    }, 2000);
+}
+
+async function sendChatMessage() {
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text) return;
+    if (chatStep === 'awaiting_choice' || chatStep === 'done') return;
+
+    const inflatedPrice = productPriceAmount > 0 ? Math.round(productPriceAmount * 1.3) : 0;
+    const counterPrice = productPriceAmount > 0 ? Math.round(inflatedPrice * 0.9) : 0;
+    const originalPrice = productPriceAmount;
+    const sellerName = currentSeller?.business_name || 'the seller';
+
+    if (chatStep === 'initial') {
+        addProductBubble(text);
+        input.value = '';
+        autoResize(input);
+        input.disabled = true;
+        document.getElementById('productTag').style.display = 'none';
+        await trackAdClick();
+
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                if (inflatedPrice > 0) {
+                    addBubble(`Hello! I am ${sellerName}'s assistant. Yes, the ${productName} is still available!\n\nThe price is ${formatPrice(inflatedPrice)}. Do you have a specific price in mind?`, 'received');
+                    chatStep = 'awaiting_offer';
+                    input.disabled = false;
+                    input.value = '';
+                    input.placeholder = 'Enter your offer...';
+                    input.setAttribute('inputmode', 'numeric');
+                    autoResize(input);
+                    input.focus();
+                } else {
+                    addBubble(`Hello! I am ${sellerName}'s assistant. Yes, the ${productName} is still available! 😊`, 'received');
+                    setTimeout(() => {
+                        showTyping();
+                        setTimeout(() => {
+                            hideTyping();
+                            addBubble(`Please drop your WhatsApp number so the store owner can reach you directly`, 'received');
+                            chatStep = 'awaiting_number_final';
+                            input.disabled = false;
+                            input.value = '';
+                            input.placeholder = 'Enter your WhatsApp number...';
+                            input.setAttribute('inputmode', 'numeric');
+                            input.setAttribute('pattern', '[0-9]*');
+                            autoResize(input);
+                            input.focus();
+                            window._onNumberComplete = () => showContactButtons(0);
+                        }, 3500);
+                    }, 2000);
+                }
+            }, 3500);
+        }, 2000);
+
+    } else if (chatStep === 'awaiting_offer') {
+        const offerNum = parseFloat(text.replace(/[^0-9.]/g, ''));
+        addBubble(text, 'sent');
+        input.value = '';
+        input.disabled = true;
+        autoResize(input);
+
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                if (!offerNum || offerNum < originalPrice) {
+                    addBubble(`Hmm, that is a bit low. But I can do ${formatPrice(counterPrice)} — does that sound fair?`, 'received');
+                    showYesNoButtons(
+                        () => { agreedPrice = counterPrice; askForNumber(() => showContactButtons(agreedPrice)); },
+                        () => {
+                            setTimeout(() => {
+                                showTyping();
+                                setTimeout(() => {
+                                    hideTyping();
+                                    addBubble(`So what price works for you?`, 'received');
+                                    chatStep = 'awaiting_final_offer';
+                                    input.disabled = false;
+                                    input.value = '';
+                                    input.placeholder = 'Enter your price...';
+                                    input.setAttribute('inputmode', 'numeric');
+                                    autoResize(input);
+                                    input.focus();
+                                }, 3500);
+                            }, 2000);
+                        }
+                    );
+                } else {
+                    agreedPrice = offerNum;
+                    addBubble(`That works! Let me connect you with the store owner. 🎉`, 'received');
+                    askForNumber(() => showContactButtons(agreedPrice));
+                }
+            }, 3500);
+        }, 2000);
+
+    } else if (chatStep === 'awaiting_final_offer') {
+        const finalOffer = parseFloat(text.replace(/[^0-9.]/g, ''));
+        addBubble(text, 'sent');
+        input.value = '';
+        input.disabled = true;
+        autoResize(input);
+
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                if (!finalOffer || finalOffer < originalPrice) {
+                    agreedPrice = originalPrice;
+                    addBubble(`I understand, but the best I can do is ${formatPrice(originalPrice)}. Let me connect you with the store owner — you can discuss further directly. 😊`, 'received');
+                } else {
+                    agreedPrice = finalOffer;
+                    addBubble(`${formatPrice(finalOffer)} works! Let me connect you now. 🎉`, 'received');
+                }
+                askForNumber(() => showContactButtons(agreedPrice));
+            }, 3500);
+        }, 2000);
+
+    } else if (chatStep === 'awaiting_number_final') {
+        const cleaned = text.replace(/\D/g, '');
+        // Check if it looks like a valid number — mostly digits, right length
+        const isValidNumber = cleaned.length >= 10 && cleaned.length <= 14 && (text.replace(/\D/g, '').length / text.length) > 0.6;
+        
+        if (!isValidNumber) {
+            // Looks like random text — end chat with buttons
+            addBubble(text, 'sent');
+            input.value = '';
+            input.disabled = true;
+            autoResize(input);
+            setTimeout(() => {
+                showTyping();
+                setTimeout(() => {
+                    hideTyping();
+                    addBubble(`Are you sure you really want to buy this product? 🤔`, 'received');
+                    showContactButtons(agreedPrice);
+                }, 3500);
+            }, 2000);
+            return;
+        }
+
+        addBubble(text, 'sent');
+        input.value = '';
+        input.disabled = true;
+        autoResize(input);
+        const formattedPhone = formatNigerianNumber(cleaned);
+        await saveLead(formattedPhone);
+        if (window._onNumberComplete) window._onNumberComplete();
+    }
+}
+
+async function trackAdClick() {
+    if (!currentSeller) return;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=eq.running&select=id,ad_clicks`, { headers: H });
+        const campaigns = await res.json();
+        if (campaigns?.length) {
+            const c = campaigns[0];
+            const newClicks = (c.ad_clicks || 0) + 1;
+            await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?id=eq.${c.id}`, {
+                method: 'PATCH',
+                headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ ad_clicks: newClicks })
+            });
+        }
+    } catch(e) {}
+}
+
+async function saveLead(phone) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/buyer_leads`, {
+            method: 'POST',
+            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({
+                product_id: productId,
+                seller_id: currentSeller?.id || null,
+                product_name: productName,
+                product_image: images?.[0] || null,
+                buyer_whatsapp: phone,
+                message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`
+            })
+        });
+        if (!response.ok) console.error('saveLead failed:', response.status);
+        // Increment leads_count on seller profile
+        if (currentSeller?.id) {
+            const current = currentSeller.leads_count || 0;
+            fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${currentSeller.id}`, {
+                method: 'PATCH',
+                headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+                body: JSON.stringify({ leads_count: current + 1 })
+            }).catch(() => {});
+        }
+        // Notify seller via push
+        fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                seller_id: currentSeller?.id,
+                title: '💬 New buyer lead!',
+                body: `Someone is interested in "${productName}" — check your messages`
+            })
+        }).catch(() => {});
+    } catch(e) { console.error('saveLead exception:', e); }
+}
+
+// Enter to send
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('chatInput')?.addEventListener('keydown', e => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+    });
+});
+
+load();
+</script>
+</body>
+</html>
