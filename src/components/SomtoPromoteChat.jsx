@@ -175,14 +175,41 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
     const [showPriceInput, setShowPriceInput] = useState(false);
     const priceRef = useRef(null);
 
+    const isValidPrice = (val) => {
+        const cleaned = val.trim().replace(/[₦,\s]/g, '');
+        if (!cleaned) return false;
+        if (/[a-zA-Z]/.test(cleaned)) return false;
+        const num = parseFloat(cleaned);
+        return !isNaN(num) && num > 0;
+    };
+
+    const extractNumericPrice = (val) => {
+        return parseFloat(val.trim().replace(/[₦,\s]/g, ''));
+    };
+
     const handleSelectProduct = async (product) => {
         setCurrentProduct(product);
         setSheet(null);
         setOpts([]);
         addMsg(product.name, 'user');
         await new Promise(r => setTimeout(r, 350));
+
+        // If product already has a price saved, skip asking
+        if (product.price_amount && parseFloat(product.price_amount) > 0) {
+            // Skip price step, go straight to payment summary
+            const { qualifies: stillQualifies } = await checkFreeSlots();
+            if (stillQualifies && pendingCount <= PER) {
+                setIsFreeOrder(true);
+                setPendingCount(PER);
+            } else {
+                setIsFreeOrder(false);
+            }
+            setSheet('price');
+            return;
+        }
+
         // Ask for product price
-        await say([`What's the price of "${product.name}"? (e.g. ₦50,000)`], 700);
+        await say([`What's the price of "${product.name}"?`, `Enter numbers only — e.g. 5000 or 15000`], 700);
         setShowPriceInput(true);
         setTimeout(() => priceRef.current?.focus(), 400);
     };
@@ -190,11 +217,24 @@ export default function SomtoPromoteChat({ onClose, currentUser }) {
     const submitProductPrice = async () => {
         const val = productPrice.trim();
         if (!val) { priceRef.current?.focus(); return; }
+
+        if (!isValidPrice(val)) {
+            addMsg(val, 'user');
+            setProductPrice('');
+            await say([
+                `That doesn't look like a valid price 🙈`,
+                `Please enter numbers only. Example: 5000 or 150000`,
+                `What's the price of "${currentProduct?.name}"?`
+            ], 700);
+            setTimeout(() => priceRef.current?.focus(), 400);
+            return;
+        }
+
         setShowPriceInput(false);
         addMsg(val, 'user');
         // Save price to product in Supabase
         try {
-            const numericPrice = parseFloat(val.replace(/[^0-9.]/g, ''));
+            const numericPrice = extractNumericPrice(val);
             if (numericPrice && currentProduct?.id) {
                 await supabaseClient.from('products')
                     .update({ price_amount: numericPrice, price: val })

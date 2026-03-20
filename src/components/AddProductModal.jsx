@@ -6,8 +6,10 @@ export default function AddProductModal({ onClose, onAdd, isUploading }) {
     const [formData, setFormData] = useState({
         name: '',
         description: '',
-        images: ['']
+        images: [''],
+        price_amount: ''
     });
+    const [priceError, setPriceError] = useState('');
     const [previewImages, setPreviewImages] = useState([DEFAULT_PRODUCT_IMAGE]);
     const [uploadingIndex, setUploadingIndex] = useState(null);
     const fileInputRefs = [useRef(null)];
@@ -44,16 +46,49 @@ export default function AddProductModal({ onClose, onAdd, isUploading }) {
         });
     };
 
+    const validatePrice = (val) => {
+        const cleaned = val.trim();
+        if (!cleaned) return null; // price is optional
+        const numeric = parseFloat(cleaned.replace(/[₦,\s]/g, ''));
+        if (isNaN(numeric) || numeric <= 0 || /[a-zA-Z]/.test(cleaned.replace(/[₦,\s]/g, ''))) return false;
+        return numeric;
+    };
+
+    const handlePriceChange = (e) => {
+        const val = e.target.value;
+        setFormData({ ...formData, price_amount: val });
+        if (val.trim()) {
+            const result = validatePrice(val);
+            if (result === false) {
+                setPriceError('Enter numbers only. Example: 5000 or 15000');
+            } else {
+                setPriceError('');
+            }
+        } else {
+            setPriceError('');
+        }
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!formData.name) {
             alert('Please fill in all required fields');
             return;
         }
+
+        if (formData.price_amount.trim()) {
+            const numeric = validatePrice(formData.price_amount);
+            if (numeric === false) {
+                setPriceError('Enter numbers only. Example: 5000 or 15000');
+                return;
+            }
+        }
         
+        const numeric = validatePrice(formData.price_amount);
         onAdd({ 
             ...formData, 
-            price: 'Ask for Price', 
+            price: 'Ask for Price',
+            price_amount: numeric || null,
             images: previewImages,
             description: formData.description 
         });
@@ -152,6 +187,28 @@ export default function AddProductModal({ onClose, onAdd, isUploading }) {
                                 placeholder="Describe your product: features, condition, specifications, etc."
                             />
                             <p className="text-xs text-gray-400 mt-1">This will be shown in "About Product" section</p>
+                        </div>
+
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-1">
+                                Product Price <span className="text-gray-500">(Optional — hidden from buyers)</span>
+                            </label>
+                            <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm font-semibold">₦</span>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formData.price_amount}
+                                    onChange={handlePriceChange}
+                                    className={`w-full pl-8 pr-4 py-2 bg-[#2a2a2a] border ${priceError ? 'border-red-500' : 'border-gray-700'} text-white rounded-lg focus:outline-none focus:border-purple-500`}
+                                    placeholder="e.g. 5000 or 15000"
+                                />
+                            </div>
+                            {priceError ? (
+                                <p className="text-xs text-red-400 mt-1">⚠️ {priceError}</p>
+                            ) : (
+                                <p className="text-xs text-gray-500 mt-1">Only you can see this. Helps our AI negotiate better with buyers.</p>
+                            )}
                         </div>
 
                         <button
