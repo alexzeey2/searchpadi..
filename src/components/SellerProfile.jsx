@@ -421,16 +421,16 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                 {/* Real transcript or fallback */}
                                 {activeLead.chat_transcript && activeLead.chat_transcript.length > 0 ? (
                                     activeLead.chat_transcript.map((msg, i) => (
-                                        <div key={i} className={`flex mb-2 ${msg.role === 'buyer' ? 'justify-end' : 'justify-start'}`}>
+                                        <div key={i} className={`flex mb-2 ${msg.role === 'buyer' ? 'justify-start' : 'justify-end'}`}>
                                             <div className="rounded-lg text-sm text-gray-100 px-3 py-2" style={{
-                                                background: msg.role === 'buyer' ? '#005c4b' : '#1f2c34',
+                                                background: msg.role === 'buyer' ? '#1f2c34' : '#005c4b',
                                                 maxWidth: '80%',
                                                 wordBreak: 'break-word',
-                                                borderRadius: msg.role === 'buyer' ? '8px 0 8px 8px' : '0 8px 8px 8px'
+                                                borderRadius: msg.role === 'buyer' ? '0 8px 8px 8px' : '8px 0 8px 8px'
                                             }}>
                                                 {msg.text}
                                                 <div className="text-[10px] text-gray-400 mt-1 text-right">
-                                                    {msg.time}{msg.role === 'buyer' ? ' ✓✓' : ''}
+                                                    {msg.time}{msg.role === 'ai' ? ' ✓✓' : ''}
                                                 </div>
                                             </div>
                                         </div>
