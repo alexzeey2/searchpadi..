@@ -118,7 +118,7 @@ export default function App() {
                     isVerified: profileData.is_verified || false,
                     isTrusted,
                     whatsappNumber: profileData.whatsapp,
-                    profilePhoto: profileData.profile_photo,
+                    profilePhoto: profileData.profile_photo || DEFAULT_PROFILE_IMAGE,
                     views: profileData.views || 0,
                     subscription: profileData.subscription_plan || 'free',
                     products: (productsResult.data || []).map(p => ({
