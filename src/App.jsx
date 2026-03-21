@@ -7,6 +7,7 @@ import SellerProfile from './components/SellerProfile'
 import ProductDetail from './components/ProductDetail'
 import LoginModal from './components/LoginModal'
 import AddProductModal from './components/AddProductModal'
+import EditProductModal from './components/EditProductModal'
 import SubscriptionModal from './components/SubscriptionModal'
 import SomtoPromoteChat from './components/SomtoPromoteChat'
 import WhatsAppModal from './components/WhatsAppModal'
@@ -16,6 +17,7 @@ export default function App() {
     const [showRegistration, setShowRegistration] = useState(false);
     const [showLogin, setShowLogin] = useState(false);
     const [showAddProduct, setShowAddProduct] = useState(false);
+    const [editingProduct, setEditingProduct] = useState(null);
     const [showSubscription, setShowSubscription] = useState(false);
     const [showSomtoPromote, setShowSomtoPromote] = useState(false);
     const [headerFreeSlots, setHeaderFreeSlots] = useState(null); // null = not loaded yet
@@ -1869,6 +1871,7 @@ export default function App() {
                     onCopyProductLink={handleCopyProductLink}
                     onAttractCustomers={() => setShowAttractCustomers(true)}
                     onOpenLeads={() => fetchBuyerLeads(currentUser.data.id)}
+                    onEditProduct={(product) => setEditingProduct(product)}
                     buyerLeads={buyerLeads}
                 />
             )}
@@ -2033,6 +2036,30 @@ export default function App() {
             }} />}
 
             {showAddProduct && <AddProductModal onClose={() => setShowAddProduct(false)} onAdd={handleAddProduct} isUploading={isUploadingProduct} />}
+            {editingProduct && (
+                <EditProductModal
+                    product={editingProduct}
+                    onClose={() => setEditingProduct(null)}
+                    onSave={(updatedProduct) => {
+                        setCurrentUser(prev => ({
+                            ...prev,
+                            data: {
+                                ...prev.data,
+                                products: prev.data.products.map(p =>
+                                    p.id === updatedProduct.id ? updatedProduct : p
+                                )
+                            }
+                        }));
+                        setSelectedSeller(prev => prev ? {
+                            ...prev,
+                            products: prev.products.map(p =>
+                                p.id === updatedProduct.id ? updatedProduct : p
+                            )
+                        } : prev);
+                        setEditingProduct(null);
+                    }}
+                />
+            )}
             {showSomtoPromote && <SomtoPromoteChat onClose={() => setShowSomtoPromote(false)} currentUser={currentUser} />}
             {/* SubscriptionModal removed — Somto chat flow is the only upgrade path */}
             {showAttractCustomers && currentUser?.type === 'seller' && (
