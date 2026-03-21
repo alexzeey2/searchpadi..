@@ -690,6 +690,7 @@ function addBubble(text, type) {
     if (type === 'sent') {
         div.innerHTML = `<div class="chat-bubble sent">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}<span class="chat-tick">${tickDouble}</span></div></div>`;
     } else {
+        // AI reply — show message
         div.innerHTML = `<div class="chat-bubble received">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}</div></div>`;
     }
     msgs.appendChild(div);
@@ -699,6 +700,8 @@ function addBubble(text, type) {
 }
 
 function showTyping() {
+    // Ticks turn blue (seen) right as typing starts
+    makeTicksBlue();
     document.getElementById('chatHeaderSub').textContent = 'Typing...';
     document.getElementById('chatHeaderSub').style.color = '#00a884';
 }
