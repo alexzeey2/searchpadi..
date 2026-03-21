@@ -3,7 +3,7 @@ import { supabaseClient } from '../supabase'
 import { shortenLink } from '../helpers'
 import CampaignStatusWidget from './CampaignStatusWidget'
 
-export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers, onOpenLeads, buyerLeads = [] }) {
+export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers, onOpenLeads, onEditProduct, buyerLeads = [] }) {
     const isTempVerified = seller.tempVerifiedUntil && new Date(seller.tempVerifiedUntil) > new Date();
     const tempDaysLeft = seller.tempVerifiedUntil ? Math.ceil((new Date(seller.tempVerifiedUntil) - new Date()) / (1000 * 60 * 60 * 24)) : 0;
     const isVerifiedDisplay = seller.isVerified || isTempVerified;
@@ -241,12 +241,25 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                         onClick={() => onProductClick(product)}
                                     >
                                         <img 
-                                            src={product.images[0]}
+                                            src={product.images?.[0] || 'https://via.placeholder.com/300/6366f1/fff?text=Product'}
                                             alt={product.name}
                                             className="w-full h-32 object-cover rounded-lg mb-1"
+                                            onError={e => e.target.src='https://via.placeholder.com/300/6366f1/fff?text=Product'}
                                         />
                                         {isOwnProfile && (
                                             <div className="absolute top-2 right-2 flex gap-1">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (onEditProduct) onEditProduct(product);
+                                                    }}
+                                                    className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center text-white"
+                                                    title="Edit product"
+                                                >
+                                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/>
+                                                    </svg>
+                                                </button>
                                                 <button
                                                     onClick={async (e) => {
                                                         e.stopPropagation();
@@ -261,7 +274,6 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                                                 catch(e) { prompt('Copy this link:', short); }
                                                             }
                                                         } catch(err) {
-                                                            // Share cancelled or failed — show prompt as reliable fallback
                                                             prompt('Copy this link:', link);
                                                         }
                                                     }}
