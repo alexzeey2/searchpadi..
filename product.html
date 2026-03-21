@@ -671,9 +671,9 @@ function addProductBubble(text) {
 
 
 // Tick mark SVGs — like real WhatsApp
-const tickSingle = `<svg viewBox="0 0 16 11" width="14" height="11" style="display:inline-block;vertical-align:middle;margin-left:3px"><path d="M11.071.653a.75.75 0 0 1 1.06 1.06L5.93 7.913l-1.06-1.06 6.2-6.2z" fill="#8696a0"/><path d="M5.929 7.913L2.47 4.454a.75.75 0 1 0-1.06 1.06l3.988 3.99 1.06-1.06-.53-.531z" fill="#8696a0"/></svg>`;
-const tickDouble = `<svg viewBox="0 0 19 11" width="16" height="11" style="display:inline-block;vertical-align:middle;margin-left:3px"><path d="M15.071.653a.75.75 0 0 1 1.06 1.06L9.93 7.913l-1.06-1.06 6.2-6.2z" fill="#8696a0"/><path d="M9.929 7.913L6.47 4.454a.75.75 0 1 0-1.06 1.06l3.988 3.99 1.06-1.06-.53-.531z" fill="#8696a0"/><path d="M4.071.653a.75.75 0 0 1 1.06 1.06L1.47 4.374l-1.06-1.06L4.07.653z" fill="#8696a0"/></svg>`;
-const tickBlue = `<svg viewBox="0 0 19 11" width="16" height="11" style="display:inline-block;vertical-align:middle;margin-left:3px"><path d="M15.071.653a.75.75 0 0 1 1.06 1.06L9.93 7.913l-1.06-1.06 6.2-6.2z" fill="#53bdeb"/><path d="M9.929 7.913L6.47 4.454a.75.75 0 1 0-1.06 1.06l3.988 3.99 1.06-1.06-.53-.531z" fill="#53bdeb"/><path d="M4.071.653a.75.75 0 0 1 1.06 1.06L1.47 4.374l-1.06-1.06L4.07.653z" fill="#53bdeb"/></svg>`;
+// Tick marks — WhatsApp style
+const tickDouble = `<span style="color:#8696a0;font-size:12px;margin-left:2px;">✓✓</span>`;
+const tickBlue = `<span style="color:#53bdeb;font-size:12px;margin-left:2px;">✓✓</span>`;
 
 // Turn all pending sent bubbles' ticks blue (called when AI replies)
 function makeTicksBlue() {
