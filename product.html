@@ -586,6 +586,7 @@ function openLeadModal() {
 
 // ── Chat Screen ──────────────────────────────────────────
 let chatStep = 'initial'; // 'initial' | 'awaiting_offer' | 'awaiting_choice' | 'awaiting_final_offer' | 'awaiting_number_final' | 'done'
+let chatHistory = []; // records full conversation transcript
 
 function autoResize(el) {
     el.style.height = 'auto';
@@ -594,6 +595,7 @@ function autoResize(el) {
 
 function openChatScreen() {
     chatStep = 'initial';
+    chatHistory = [];
     const screen = document.getElementById('chatScreen');
     screen.style.display = 'flex';
     document.getElementById('chatAvatar').src = currentSeller?.profile_photo || 'https://via.placeholder.com/80/6366f1/fff?text=S';
@@ -630,6 +632,7 @@ function closeChatScreen() {
     document.getElementById('chatScreen').style.display = 'none';
     document.getElementById('productTag').style.display = 'none';
     chatStep = 'initial';
+    chatHistory = [];
     document.getElementById('chatMessages').innerHTML = `
         <div class="safety-card">
             <div class="safety-card-icon">🔒</div>
@@ -662,6 +665,8 @@ function addProductBubble(text) {
         </div>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
+    // Record to transcript
+    chatHistory.push({ role: 'buyer', text, time: now });
 }
 
 
@@ -673,6 +678,8 @@ function addBubble(text, type) {
     div.innerHTML = `<div class="chat-bubble ${type}">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}${type==='sent'?' ✓✓':''}</div></div>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
+    // Record to transcript
+    chatHistory.push({ role: type === 'sent' ? 'buyer' : 'ai', text, time: now });
 }
 
 function showTyping() {
@@ -968,7 +975,8 @@ async function saveLead(phone) {
                 product_name: productName,
                 product_image: images?.[0] || null,
                 buyer_whatsapp: phone,
-                message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`
+                message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`,
+                chat_transcript: chatHistory.length > 0 ? chatHistory : null
             })
         });
         if (!response.ok) console.error('saveLead failed:', response.status);
