@@ -491,6 +491,7 @@ function render(p, seller) {
     productName = p.name;
     productDesc = p.description || '';
     productPriceAmount = p.price_amount || 0;
+    window._currentAskClicks = p.ask_for_price_clicks || 0;
     document.title = p.name + ' - SearchPadi';
 
     document.getElementById('productTitle').textContent = p.name;
@@ -582,6 +583,14 @@ function openWa(type) {
 
 function openLeadModal() {
     openChatScreen();
+    // Track Ask for Price click
+    if (productId) {
+        fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${productId}`, {
+            method: 'PATCH',
+            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+            body: JSON.stringify({ ask_for_price_clicks: (window._currentAskClicks || 0) + 1 })
+        }).catch(() => {});
+    }
 }
 
 // ── Chat Screen ──────────────────────────────────────────
