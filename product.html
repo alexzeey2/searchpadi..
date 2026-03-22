@@ -817,7 +817,7 @@ function askForNumber(onComplete) {
                     showTyping();
                     setTimeout(() => {
                         hideTyping();
-                        addBubble(`Alright 😊 👍\nYou can contact the store owner immediately to discuss the price.`, 'received');
+                        addBubble(`Alright 😊 👍\nYou can also contact me Right NOW so we can discuss the price.`, 'received');
                         onComplete();
                     }, 2000);
                 }, 500);
@@ -847,14 +847,17 @@ async function sendChatMessage() {
             showTyping();
             setTimeout(() => {
                 hideTyping();
-                addBubble(`Yes, the ${productName} is still available! 😊`, 'received');
-                setTimeout(() => {
-                    showTyping();
-                    setTimeout(() => {
-                        hideTyping();
-                        askForNumber(() => showContactButtons(0));
-                    }, 2500);
-                }, 1500);
+                addBubble(`Yes, the ${productName} is still available! 😊\n\nPlease drop your WhatsApp number so I can reach you directly`, 'received');
+                chatStep = 'awaiting_number_final';
+                const input = document.getElementById('chatInput');
+                input.disabled = false;
+                input.value = '';
+                input.placeholder = 'Enter your WhatsApp number...';
+                input.setAttribute('inputmode', 'numeric');
+                input.setAttribute('pattern', '[0-9]*');
+                autoResize(input);
+                input.focus();
+                window._onNumberComplete = () => showContactButtons(0);
             }, 3500);
         }, 2000);
 
