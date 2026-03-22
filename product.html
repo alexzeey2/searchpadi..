@@ -803,7 +803,7 @@ function askForNumber(onComplete) {
         showTyping();
         setTimeout(() => {
             hideTyping();
-            addBubble(`Please drop your WhatsApp number so the store owner can also reach you directly`, 'received');
+            addBubble(`Please drop your WhatsApp number so I can reach you directly`, 'received');
             chatStep = 'awaiting_number_final';
             input.disabled = false;
             input.value = '';
@@ -847,21 +847,14 @@ async function sendChatMessage() {
             showTyping();
             setTimeout(() => {
                 hideTyping();
-                addBubble(`Hello! I am ${sellerName}'s assistant. Yes, the ${productName} is still available! 😊\n\nWould you like to talk with the store owner now?`, 'received');
-                chatStep = 'awaiting_choice';
-                showYesNoButtons(
-                    () => { askForNumber(() => showContactButtons(0)); },
-                    () => {
-                        setTimeout(() => {
-                            showTyping();
-                            setTimeout(() => {
-                                hideTyping();
-                                addBubble(`No problem! Feel free to come back anytime if you change your mind. 😊`, 'received');
-                                chatStep = 'done';
-                            }, 2000);
-                        }, 500);
-                    }
-                );
+                addBubble(`Yes, the ${productName} is still available! 😊`, 'received');
+                setTimeout(() => {
+                    showTyping();
+                    setTimeout(() => {
+                        hideTyping();
+                        askForNumber(() => showContactButtons(0));
+                    }, 2500);
+                }, 1500);
             }, 3500);
         }, 2000);
 
