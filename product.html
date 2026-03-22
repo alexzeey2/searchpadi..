@@ -749,9 +749,14 @@ function showContactButtons(agreedAmt) {
     sendBtn.style.opacity = '0.3';
     sendBtn.style.pointerEvents = 'none';
 
-    // Show buttons directly after number is dropped
+    // Show Alright message then buttons
     setTimeout(() => {
-        const div = document.createElement('div');
+        showTyping();
+        setTimeout(() => {
+            hideTyping();
+            addBubble(`Alright 😊 👍\nYou can also contact me Right NOW so we can discuss the price.`, 'received');
+            setTimeout(() => {
+                const div = document.createElement('div');
         div.style.cssText = 'padding:8px 16px 12px;';
         div.innerHTML = `
             <div style="display:flex;gap:10px;">
@@ -768,6 +773,8 @@ function showContactButtons(agreedAmt) {
         msgs.scrollTop = msgs.scrollHeight;
         chatStep = 'done';
     }, 800);
+        }, 2000);
+    }, 1500);
 }
 
 function contactSeller(type, wa, agreedAmt) {
