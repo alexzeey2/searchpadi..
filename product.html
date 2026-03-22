@@ -784,8 +784,8 @@ function showYesNoButtons(onYes, onNo) {
         <button id="btnNo" style="flex:1;background:#1f2c34;border:1px solid #3a4a54;border-radius:12px;padding:12px;color:#e9edef;font-weight:700;font-size:14px;cursor:pointer;">No</button>`;
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
-    document.getElementById('btnYes').onclick = () => { div.remove(); onYes(); };
-    document.getElementById('btnNo').onclick = () => { div.remove(); onNo(); };
+    document.getElementById('btnYes').onclick = () => { div.remove(); addBubble('Yes please', 'sent'); onYes(); };
+    document.getElementById('btnNo').onclick = () => { div.remove(); addBubble('No', 'sent'); onNo(); };
 }
 
 function askForNumber(onComplete) {
@@ -839,35 +839,26 @@ async function sendChatMessage() {
             setTimeout(() => {
                 hideTyping();
                 if (originalPrice > 0) {
-                    // Message 1 — greeting + availability + price
-                    addBubble(`Hello! I am ${sellerName}'s assistant. Yes, the ${productName} is still available! 😊\n\nThe price is ${formatPrice(originalPrice)}. You can bargain directly with the store owner if the price is too high.`, 'received');
-
-                    // Message 2 — question comes separately after a pause
-                    setTimeout(() => {
-                        showTyping();
-                        setTimeout(() => {
-                            hideTyping();
-                            addBubble(`Would you like to talk with the store owner now?`, 'received');
-                            chatStep = 'awaiting_choice';
-                            showYesNoButtons(
-                                () => {
-                                    // Yes — ask for number then show contact buttons
-                                    askForNumber(() => showContactButtons(originalPrice));
-                                },
-                                () => {
-                                    // No
-                                    setTimeout(() => {
-                                        showTyping();
-                                        setTimeout(() => {
-                                            hideTyping();
-                                            addBubble(`No problem! Feel free to come back anytime if you change your mind. 😊`, 'received');
-                                            chatStep = 'done';
-                                        }, 2000);
-                                    }, 500);
-                                }
-                            );
-                        }, 2500);
-                    }, 2000);
+                    // Single message — greeting + price + question
+                    addBubble(`Hello! I am ${sellerName}'s assistant. Yes, the ${productName} is still available! 😊\n\nThe price is ${formatPrice(originalPrice)}. You can bargain directly with the store owner if the price is too high.\n\nWould you like to talk with the store owner now?`, 'received');
+                    chatStep = 'awaiting_choice';
+                    showYesNoButtons(
+                        () => {
+                            // Yes — ask for number then show contact buttons
+                            askForNumber(() => showContactButtons(originalPrice));
+                        },
+                        () => {
+                            // No
+                            setTimeout(() => {
+                                showTyping();
+                                setTimeout(() => {
+                                    hideTyping();
+                                    addBubble(`No problem! Feel free to come back anytime if you change your mind. 😊`, 'received');
+                                    chatStep = 'done';
+                                }, 2000);
+                            }, 500);
+                        }
+                    );
 
                 } else {
                     // No price set
