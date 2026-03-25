@@ -49,12 +49,16 @@
         .close-btn { background: none; border: none; cursor: pointer; padding: 4px; }
 
         /* Floating price card */
+        @keyframes price-glow {
+            0%, 100% { box-shadow: 0 0 6px 1px rgba(167,139,250,0.5), 0 0 18px 3px rgba(124,58,237,0.3); border-color: rgba(167,139,250,0.5); }
+            50% { box-shadow: 0 0 12px 3px rgba(167,139,250,0.85), 0 0 32px 6px rgba(124,58,237,0.5); border-color: rgba(196,181,253,0.9); }
+        }
         .price-card {
             background: rgba(0,0,0,0.72); backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.18);
+            border: 1px solid rgba(167,139,250,0.5);
             border-radius: 20px; padding: 5px 13px;
             display: flex; flex-direction: column; align-items: flex-end;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+            animation: price-glow 2s ease-in-out infinite;
         }
         .price-card-label { font-size: 10px; color: rgba(255,255,255,0.55); font-weight: 500; letter-spacing: 0.04em; }
         .price-card-amount { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
@@ -546,19 +550,48 @@ function render(p, seller) {
     document.getElementById('skeleton').style.display = 'none';
     document.getElementById('viewer').style.display = 'block';
 
-    // Show price card
+    // Show price card (initial render)
+    renderPrice(p);
+} // end render()
+
+function renderPrice(p) {
     const priceCard = document.getElementById('priceCard');
     const priceCardAmount = document.getElementById('priceCardAmount');
-    if (p.price && p.price !== 'Ask for Price') {
-        priceCardAmount.textContent = p.price;
-        priceCardAmount.className = 'price-card-amount';
-        priceCard.style.display = 'flex';
-    } else if (p.price_amount && p.price_amount > 0) {
+    let shown = false;
+    if (p.price_amount && Number(p.price_amount) > 0) {
         priceCardAmount.textContent = '₦' + Number(p.price_amount).toLocaleString('en-NG');
         priceCardAmount.className = 'price-card-amount';
         priceCard.style.display = 'flex';
+        shown = true;
+    } else if (p.price && p.price !== 'Ask for Price') {
+        // Ensure ₦ prefix if it looks like a number string
+        const raw = String(p.price).trim();
+        const hasNaira = raw.startsWith('₦');
+        const numVal = Number(raw.replace(/[₦,]/g, ''));
+        if (!isNaN(numVal) && numVal > 0) {
+            priceCardAmount.textContent = '₦' + numVal.toLocaleString('en-NG');
+        } else {
+            priceCardAmount.textContent = hasNaira ? raw : '₦' + raw;
+        }
+        priceCardAmount.className = 'price-card-amount';
+        priceCard.style.display = 'flex';
+        shown = true;
     }
-} // end render()
+    if (!shown) priceCard.style.display = 'none';
+}
+
+// Refresh price live from Supabase so updates reflect immediately
+async function refreshPrice() {
+    if (!productId) return;
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/products?id=eq.${encodeURIComponent(productId)}&select=price,price_amount`, { headers: H });
+        const data = await res.json();
+        if (data?.[0]) renderPrice(data[0]);
+    } catch(e) {}
+}
+// Refresh on page focus (seller may have just updated price in app)
+document.addEventListener('visibilitychange', () => { if (!document.hidden) refreshPrice(); });
+window.addEventListener('focus', refreshPrice);
 
 function changeImg(dir) {
     goTo((currentImg + dir + images.length) % images.length);
@@ -665,30 +698,17 @@ function openChatScreen() {
     input.disabled = true;
     input.value = '';
 
-    // Auto-send buyer's opening message after short delay
+    // Pre-fill buyer's opening message — let them send it themselves
+    const autoMsg = `Hi, is the ${productName} still available? I want to discuss the price.`;
     setTimeout(() => {
-        const autoMsg = `Hi, is the ${productName} still available? I want to discuss the price.`;
-        addProductBubble(autoMsg);
-        productTag.style.display = 'none';
-        trackAdClick();
-
-        setTimeout(() => {
-            showTyping();
-            setTimeout(() => {
-                hideTyping();
-                addBubble(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price?`, 'received');
-                chatStep = 'awaiting_number_final';
-                input.disabled = false;
-                input.value = '';
-                input.placeholder = 'Enter your WhatsApp number...';
-                input.setAttribute('inputmode', 'numeric');
-                input.setAttribute('pattern', '[0-9]*');
-                autoResize(input);
-                input.focus();
-                window._onNumberComplete = () => showContactButtons(0);
-            }, 2500);
-        }, 1200);
-    }, 600);
+        input.value = autoMsg;
+        input.disabled = false;
+        chatStep = 'awaiting_first_send';
+        autoResize(input);
+        input.focus();
+        // Move cursor to end
+        input.setSelectionRange(input.value.length, input.value.length);
+    }, 400);
 }
 
 function closeChatScreen() {
@@ -885,6 +905,33 @@ async function sendChatMessage() {
     const text = input.value.trim();
     if (!text) return;
     if (chatStep === 'awaiting_choice' || chatStep === 'done' || chatStep === 'initial') return;
+
+    if (chatStep === 'awaiting_first_send') {
+        input.disabled = true;
+        addProductBubble(text);
+        input.value = '';
+        autoResize(input);
+        document.getElementById('productTag').style.display = 'none';
+        trackAdClick();
+
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                addBubble(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price?`, 'received');
+                chatStep = 'awaiting_number_final';
+                input.disabled = false;
+                input.value = '';
+                input.placeholder = 'Enter your WhatsApp number...';
+                input.setAttribute('inputmode', 'numeric');
+                input.setAttribute('pattern', '[0-9]*');
+                autoResize(input);
+                input.focus();
+                window._onNumberComplete = () => showContactButtons(0);
+            }, 2500);
+        }, 1200);
+        return;
+    }
 
     if (chatStep === 'awaiting_number_final') {
         const cleaned = text.replace(/\D/g, '');
