@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SearchPadi - Product</title>
     <meta name="theme-color" content="#000000">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta property="og:type" content="website">
+    <meta name="referrer" content="no-referrer-when-downgrade">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #000; color: white; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; height: 100vh; overflow: hidden; }
@@ -244,15 +247,13 @@
 
     <div class="top-bar">
         <div class="progress-lines" id="progressLines"></div>
-        <!-- Price card above seller row, right-aligned, no absolute positioning -->
-        <div style="display:flex;justify-content:flex-end;margin-bottom:8px;">
-            <div class="price-card" id="priceCard" style="display:none;">
-                <div class="price-card-label">PRICE</div>
-                <div id="priceCardAmount" class="price-card-amount"></div>
-            </div>
+        <!-- Price card absolutely positioned top-right, seller row padded so they never overlap -->
+        <div class="price-card" id="priceCard" style="display:none;position:absolute;top:38px;right:16px;z-index:20;">
+            <div class="price-card-label">PRICE</div>
+            <div id="priceCardAmount" class="price-card-amount"></div>
         </div>
         <div class="seller-info-row">
-            <a class="seller-left" id="sellerLink" href="#" style="max-width:100%;">
+            <a class="seller-left" id="sellerLink" href="#" style="max-width:calc(100% - 120px);">
                 <div class="avatar-wrap" style="position:relative;">
                     <!-- Back button sits BEHIND the avatar so avatar shows on top -->
                     <button onclick="event.preventDefault();history.back();" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.55);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:0;">
