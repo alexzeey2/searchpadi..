@@ -808,21 +808,23 @@ function makeTicksBlue() {
     });
 }
 
-// WhatsApp-style receive sound via Web Audio API
+// WhatsApp-style soft pop — loud and clear
 function playReceiveSound() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        // Two-tone WhatsApp "ting" — short high note then slightly lower
-        const notes = [{ f: 1318, t: 0, d: 0.12 }, { f: 1047, t: 0.11, d: 0.18 }];
+        // Soft pop: quick pitch drop with high gain, like WhatsApp's receive tone
+        const notes = [{ f: 1400, t: 0, d: 0.08 }, { f: 980, t: 0.07, d: 0.2 }];
         notes.forEach(({ f, t, d }) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
+            const compressor = ctx.createDynamicsCompressor();
             osc.connect(gain);
-            gain.connect(ctx.destination);
+            gain.connect(compressor);
+            compressor.connect(ctx.destination);
             osc.type = 'sine';
             osc.frequency.setValueAtTime(f, ctx.currentTime + t);
             gain.gain.setValueAtTime(0, ctx.currentTime + t);
-            gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + t + 0.01);
+            gain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + t + 0.01);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
             osc.start(ctx.currentTime + t);
             osc.stop(ctx.currentTime + t + d);
