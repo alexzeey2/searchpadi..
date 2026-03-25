@@ -247,14 +247,14 @@
         <div class="seller-info-row">
             <a class="seller-left" id="sellerLink" href="#">
                 <div class="avatar-wrap" style="position:relative;">
-                    <div class="avatar-ring"></div>
-                    <img class="avatar-img" id="sellerAvatar" src="" alt="Seller" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
-                    <!-- Back arrow overlay on avatar -->
-                    <button onclick="event.preventDefault();history.back();" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.45);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">
+                    <!-- Back button sits BEHIND the avatar so avatar shows on top -->
+                    <button onclick="event.preventDefault();history.back();" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.55);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:0;">
                         <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
                         </svg>
                     </button>
+                    <div class="avatar-ring" style="position:absolute;inset:-3px;z-index:1;"></div>
+                    <img class="avatar-img" id="sellerAvatar" src="" alt="Seller" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" style="position:relative;z-index:2;" />
                 </div>
                 <div>
                     <div class="seller-name-row">
@@ -783,15 +783,38 @@ function addBubble(text, type) {
 }
 
 function showTyping() {
-    // Ticks turn blue (seen) right as typing starts
-    makeTicksBlue();
     document.getElementById('chatHeaderSub').textContent = 'Typing...';
     document.getElementById('chatHeaderSub').style.color = '#00a884';
+    const msgs = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'typing-wrap';
+    div.id = 'typingIndicator';
+    div.innerHTML = `<div class="typing-bubble"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
 }
 
 function hideTyping() {
     document.getElementById('chatHeaderSub').textContent = 'SearchPadi Verified Seller';
     document.getElementById('chatHeaderSub').style.color = '#8696a0';
+    const el = document.getElementById('typingIndicator');
+    if (el) el.remove();
+}
+
+// Human-feel reply sequence:
+// 2s → ticks turn blue → 3s → typing starts → 1.5s → message drops
+function sellerReply(text, onDone) {
+    setTimeout(() => {
+        makeTicksBlue();
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                addBubble(text, 'received');
+                if (onDone) onDone();
+            }, 1500);
+        }, 3000);
+    }, 2000);
 }
 
 function formatNigerianNumber(raw) {
@@ -873,31 +896,19 @@ function showYesNoButtons(onYes, onNo) {
 
 function askForNumber(onComplete) {
     const input = document.getElementById('chatInput');
-    setTimeout(() => {
-        showTyping();
-        setTimeout(() => {
-            hideTyping();
-            addBubble(`Please drop your WhatsApp number so I can reach you directly`, 'received');
-            chatStep = 'awaiting_number_final';
-            input.disabled = false;
-            input.value = '';
-            input.placeholder = 'Enter your WhatsApp number...';
-            input.setAttribute('inputmode', 'numeric');
-            input.setAttribute('pattern', '[0-9]*');
-            autoResize(input);
-            input.focus();
-            window._onNumberComplete = () => {
-                setTimeout(() => {
-                    showTyping();
-                    setTimeout(() => {
-                        hideTyping();
-                        addBubble(`Alright 😊 👍\nYou can also contact me Right NOW so we can discuss the price.`, 'received');
-                        onComplete();
-                    }, 2000);
-                }, 500);
-            };
-        }, 2500);
-    }, 2000);
+    sellerReply(`Please drop your WhatsApp number so I can reach you directly`, () => {
+        chatStep = 'awaiting_number_final';
+        input.disabled = false;
+        input.value = '';
+        input.placeholder = 'Enter your WhatsApp number...';
+        input.setAttribute('inputmode', 'numeric');
+        input.setAttribute('pattern', '[0-9]*');
+        autoResize(input);
+        input.focus();
+        window._onNumberComplete = () => {
+            sellerReply(`Alright 😊 👍\nYou can also contact me Right NOW so we can discuss the price.`, onComplete);
+        };
+    });
 }
 
 async function sendChatMessage() {
@@ -913,23 +924,17 @@ async function sendChatMessage() {
         autoResize(input);
         document.getElementById('productTag').style.display = 'none';
         trackAdClick();
-
-        setTimeout(() => {
-            showTyping();
-            setTimeout(() => {
-                hideTyping();
-                addBubble(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price?`, 'received');
-                chatStep = 'awaiting_number_final';
-                input.disabled = false;
-                input.value = '';
-                input.placeholder = 'Enter your WhatsApp number...';
-                input.setAttribute('inputmode', 'numeric');
-                input.setAttribute('pattern', '[0-9]*');
-                autoResize(input);
-                input.focus();
-                window._onNumberComplete = () => showContactButtons(0);
-            }, 2500);
-        }, 1200);
+        sellerReply(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price on WhatsApp?`, () => {
+            chatStep = 'awaiting_number_final';
+            input.disabled = false;
+            input.value = '';
+            input.placeholder = 'Enter your WhatsApp number...';
+            input.setAttribute('inputmode', 'numeric');
+            input.setAttribute('pattern', '[0-9]*');
+            autoResize(input);
+            input.focus();
+            window._onNumberComplete = () => showContactButtons(0);
+        });
         return;
     }
 
@@ -942,15 +947,10 @@ async function sendChatMessage() {
             input.value = '';
             input.disabled = true;
             autoResize(input);
-            setTimeout(() => {
-                showTyping();
-                setTimeout(() => {
-                    hideTyping();
-                    addBubble(`Please enter a valid WhatsApp number so the seller can reach you 😊`, 'received');
-                    input.disabled = false;
-                    input.focus();
-                }, 2000);
-            }, 800);
+            sellerReply(`Please enter a valid WhatsApp number so the seller can reach you 😊`, () => {
+                input.disabled = false;
+                input.focus();
+            });
             return;
         }
 
@@ -961,14 +961,9 @@ async function sendChatMessage() {
         const formattedPhone = formatNigerianNumber(cleaned);
         await saveLead(formattedPhone);
 
-        setTimeout(() => {
-            showTyping();
-            setTimeout(() => {
-                hideTyping();
-                addBubble(`🎉 Great! ${currentSeller?.business_name || 'The seller'} will call or message you shortly on WhatsApp.\n\nYou can also contact them RIGHT NOW 👇`, 'received');
-                if (window._onNumberComplete) window._onNumberComplete();
-            }, 2000);
-        }, 500);
+        sellerReply(`🎉 Great! I will call or message you shortly on WhatsApp.\n\nBut you can also contact me IMMEDIATELY so we can talk about the price 👇`, () => {
+            if (window._onNumberComplete) window._onNumberComplete();
+        });
     }
 }
 
