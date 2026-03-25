@@ -253,7 +253,7 @@
             <div id="priceCardAmount" class="price-card-amount"></div>
         </div>
         <div class="seller-info-row">
-            <a class="seller-left" id="sellerLink" href="#" style="max-width:calc(100% - 110px);">
+            <a class="seller-left" id="sellerLink" href="#" style="max-width:100%;">
                 <div class="avatar-wrap" style="position:relative;">
                     <!-- Back button sits BEHIND the avatar so avatar shows on top -->
                     <button onclick="event.preventDefault();history.back();" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.55);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:0;">
@@ -619,6 +619,9 @@ function renderPrice(p) {
         shown = true;
     }
     if (!shown) priceCard.style.display = 'none';
+    // Give seller row full width when no price card, restrict when price card shows
+    const sellerLink = document.getElementById('sellerLink');
+    if (sellerLink) sellerLink.style.maxWidth = shown ? 'calc(100% - 110px)' : '100%';
 }
 
 // Refresh price live from Supabase so updates reflect immediately
