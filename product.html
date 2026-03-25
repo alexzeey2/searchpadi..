@@ -765,6 +765,28 @@ function makeTicksBlue() {
     });
 }
 
+// WhatsApp-style receive sound via Web Audio API
+function playReceiveSound() {
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        // Two-tone WhatsApp "ting" — short high note then slightly lower
+        const notes = [{ f: 1318, t: 0, d: 0.12 }, { f: 1047, t: 0.11, d: 0.18 }];
+        notes.forEach(({ f, t, d }) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(f, ctx.currentTime + t);
+            gain.gain.setValueAtTime(0, ctx.currentTime + t);
+            gain.gain.linearRampToValueAtTime(0.35, ctx.currentTime + t + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
+            osc.start(ctx.currentTime + t);
+            osc.stop(ctx.currentTime + t + d);
+        });
+    } catch(e) {}
+}
+
 function addBubble(text, type) {
     const msgs = document.getElementById('chatMessages');
     const now = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
@@ -773,8 +795,8 @@ function addBubble(text, type) {
     if (type === 'sent') {
         div.innerHTML = `<div class="chat-bubble sent">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}<span class="chat-tick">${tickDouble}</span></div></div>`;
     } else {
-        // AI reply — show message
         div.innerHTML = `<div class="chat-bubble received">${text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>')}<div class="chat-time">${now}</div></div>`;
+        playReceiveSound();
     }
     msgs.appendChild(div);
     msgs.scrollTop = msgs.scrollHeight;
