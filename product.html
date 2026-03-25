@@ -460,8 +460,23 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const H = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_ANON_KEY };
 
 async function get(table, params) {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H });
-    return res.json();
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000); // 8s timeout
+    try {
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H, signal: controller.signal });
+        clearTimeout(timer);
+        return res.json();
+    } catch(e) {
+        clearTimeout(timer);
+        throw e;
+    }
+}
+
+function showError(msg) {
+    document.getElementById('skeleton').style.display = 'none';
+    document.getElementById('viewer').style.display = 'none';
+    document.getElementById('errorMsg').textContent = msg || 'Something went wrong.';
+    document.getElementById('errorBox').style.display = 'flex';
 }
 
 let images = [], currentImg = 0, liked = false, likesCount = 0, productId = null, currentSeller = null, productName = '', productDesc = '', productPriceAmount = 0, waUrl = '#';
@@ -1074,7 +1089,14 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-load();
+// Hard fallback — if still on skeleton after 10s, show error
+const _loadTimeout = setTimeout(() => {
+    if (document.getElementById('skeleton').style.display !== 'none') {
+        showError('Taking too long. Check your connection and try again.');
+    }
+}, 10000);
+
+load().then(() => clearTimeout(_loadTimeout));
 </script>
 </body>
 </html>
