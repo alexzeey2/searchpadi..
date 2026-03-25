@@ -470,12 +470,39 @@ async function load() {
     const id = new URLSearchParams(window.location.search).get('id');
     if (!id) return showError('No product specified.');
     productId = id;
+
+    // Try cache first for instant render
     try {
+        const cached = sessionStorage.getItem('sp_product_' + id);
+        if (cached) {
+            const { p, seller } = JSON.parse(cached);
+            render(p, seller);
+            // Still fetch fresh in background to update cache
+            fetchAndCache(id);
+            return;
+        }
+    } catch(e) {}
+
+    await fetchAndCache(id);
+}
+
+async function fetchAndCache(id) {
+    try {
+        // Fetch product first to get seller_id, then both in parallel isn't possible
+        // without seller_id — so fetch product, then immediately fire seller fetch
         const products = await get('products', `id=eq.${encodeURIComponent(id)}&select=*`);
         if (!products?.length) return showError('Product not found.');
         const p = products[0];
-        const sellers = await get('profiles', `id=eq.${encodeURIComponent(p.seller_id)}&select=*`);
+
+        // Fire seller fetch and view increment in parallel
+        const [sellers] = await Promise.all([
+            get('profiles', `id=eq.${encodeURIComponent(p.seller_id)}&select=*`),
+        ]);
         const seller = sellers?.[0];
+
+        // Cache for next visit
+        try { sessionStorage.setItem('sp_product_' + id, JSON.stringify({ p, seller })); } catch(e) {}
+
         render(p, seller);
         if (seller) incrementViews(seller);
     } catch(e) {
@@ -483,27 +510,23 @@ async function load() {
     }
 }
 
-async function incrementViews(seller) {
-    try {
-        const currentViews = seller.views || 0;
-        await fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${seller.id}`, {
-            method: 'PATCH',
-            headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-            body: JSON.stringify({ views: currentViews + 1 })
-        });
-        // Fire push notification like the main app does
-        try {
-            fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    seller_id: seller.id,
-                    title: '👀 Someone viewed your product!',
-                    body: `Your listing just got a view from a shared link!`
-                })
-            });
-        } catch(e) {}
-    } catch(e) {}
+function incrementViews(seller) {
+    // Fully fire-and-forget — never blocks page render
+    const currentViews = seller.views || 0;
+    fetch(`${SUPABASE_URL}/rest/v1/profiles?id=eq.${seller.id}`, {
+        method: 'PATCH',
+        headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ views: currentViews + 1 })
+    }).catch(() => {});
+    fetch('https://fxjnbqymkdvuqfeagpur.supabase.co/functions/v1/send-push', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            seller_id: seller.id,
+            title: '👀 Someone viewed your product!',
+            body: `Your listing just got a view from a shared link!`
+        })
+    }).catch(() => {});
 }
 
 function render(p, seller) {
