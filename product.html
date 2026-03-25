@@ -48,6 +48,18 @@
         }
         .close-btn { background: none; border: none; cursor: pointer; padding: 4px; }
 
+        /* Floating price card */
+        .price-card {
+            background: rgba(0,0,0,0.72); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 20px; padding: 5px 13px;
+            display: flex; flex-direction: column; align-items: flex-end;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+        }
+        .price-card-label { font-size: 10px; color: rgba(255,255,255,0.55); font-weight: 500; letter-spacing: 0.04em; }
+        .price-card-amount { font-size: 15px; font-weight: 800; color: #fff; letter-spacing: -0.01em; }
+        .price-card-free { font-size: 14px; font-weight: 800; color: #34d399; }
+
         .nav-left, .nav-right { position: fixed; top: 0; bottom: 0; width: 33%; cursor: pointer; z-index: 5; }
         .nav-left { left: 0; }
         .nav-right { right: 0; }
@@ -230,9 +242,15 @@
         <div class="progress-lines" id="progressLines"></div>
         <div class="seller-info-row">
             <a class="seller-left" id="sellerLink" href="#">
-                <div class="avatar-wrap">
+                <div class="avatar-wrap" style="position:relative;">
                     <div class="avatar-ring"></div>
                     <img class="avatar-img" id="sellerAvatar" src="" alt="Seller" onerror="this.src='https://via.placeholder.com/80/6366f1/fff?text=S'" />
+                    <!-- Back arrow overlay on avatar -->
+                    <button onclick="event.preventDefault();history.back();" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.45);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;">
+                        <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </button>
                 </div>
                 <div>
                     <div class="seller-name-row">
@@ -247,11 +265,11 @@
                     <div class="verified-tag" id="verifiedTag" style="display:none;">✓ Verified Seller</div>
                 </div>
             </a>
-            <button class="close-btn" onclick="history.back()">
-                <svg width="28" height="28" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+            <!-- Floating price card (top right) -->
+            <div class="price-card" id="priceCard" style="display:none;">
+                <div class="price-card-label">PRICE</div>
+                <div id="priceCardAmount" class="price-card-amount"></div>
+            </div>
         </div>
     </div>
 
@@ -268,7 +286,7 @@
                 <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                 </svg>
-                Ask for Price
+                Discuss Price
             </button>
             <button class="btn-like" onclick="toggleLike()">
                 <svg id="likeIcon" width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
@@ -527,7 +545,19 @@ function render(p, seller) {
 
     document.getElementById('skeleton').style.display = 'none';
     document.getElementById('viewer').style.display = 'block';
-}
+
+    // Show price card
+    const priceCard = document.getElementById('priceCard');
+    const priceCardAmount = document.getElementById('priceCardAmount');
+    if (p.price && p.price !== 'Ask for Price') {
+        priceCardAmount.textContent = p.price;
+        priceCardAmount.className = 'price-card-amount';
+        priceCard.style.display = 'flex';
+    } else if (p.price_amount && p.price_amount > 0) {
+        priceCardAmount.textContent = '₦' + Number(p.price_amount).toLocaleString('en-NG');
+        priceCardAmount.className = 'price-card-amount';
+        priceCard.style.display = 'flex';
+    }
 
 function changeImg(dir) {
     goTo((currentImg + dir + images.length) % images.length);
@@ -628,13 +658,36 @@ function openChatScreen() {
     if (images?.length) tagImg.src = images[0];
     tagName.textContent = productName;
     productTag.style.display = 'flex';
-    // Pre-fill textarea with product name + description + message
-    const descSnippet = productDesc ? `\n${productDesc.slice(0, 80)}${productDesc.length > 80 ? '...' : ''}` : '';
-    const preMsg = `Hi ${currentSeller?.business_name || 'there'}, I saw this on SearchPadi. Is it still available? What's the price?`;
+
+    // Disable input while auto-flow starts
     const input = document.getElementById('chatInput');
-    input.value = preMsg;
-    autoResize(input);
-    input.focus();
+    input.disabled = true;
+    input.value = '';
+
+    // Auto-send buyer's opening message after short delay
+    setTimeout(() => {
+        const autoMsg = `Hi, is the ${productName} still available? I want to discuss the price.`;
+        addProductBubble(autoMsg);
+        productTag.style.display = 'none';
+        trackAdClick();
+
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                addBubble(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price?`, 'received');
+                chatStep = 'awaiting_number_final';
+                input.disabled = false;
+                input.value = '';
+                input.placeholder = 'Enter your WhatsApp number...';
+                input.setAttribute('inputmode', 'numeric');
+                input.setAttribute('pattern', '[0-9]*');
+                autoResize(input);
+                input.focus();
+                window._onNumberComplete = () => showContactButtons(0);
+            }, 2500);
+        }, 1200);
+    }, 600);
 }
 
 function closeChatScreen() {
@@ -749,14 +802,9 @@ function showContactButtons(agreedAmt) {
     sendBtn.style.opacity = '0.3';
     sendBtn.style.pointerEvents = 'none';
 
-    // Show Alright message then buttons
+    // Show contact buttons directly (message already shown in sendChatMessage)
     setTimeout(() => {
-        showTyping();
-        setTimeout(() => {
-            hideTyping();
-            addBubble(`Alright 😊 👍\nYou can also contact me Right NOW so we can discuss the price.`, 'received');
-            setTimeout(() => {
-                const div = document.createElement('div');
+        const div = document.createElement('div');
         div.style.cssText = 'padding:8px 16px 12px;';
         div.innerHTML = `
             <div style="display:flex;gap:10px;">
@@ -766,15 +814,13 @@ function showContactButtons(agreedAmt) {
                 </button>
                 <button onclick="contactSeller('call','${wa}',${agreedAmt})" style="flex:1;background:#1f2c34;border:1px solid #3a4a54;border-radius:12px;padding:13px;color:#e9edef;font-weight:700;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
                     <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-                    Call
+                    Call Now
                 </button>
             </div>`;
         msgs.appendChild(div);
         msgs.scrollTop = msgs.scrollHeight;
         chatStep = 'done';
-    }, 800);
-        }, 2000);
-    }, 1500);
+    }, 1000);
 }
 
 function contactSeller(type, wa, agreedAmt) {
@@ -837,44 +883,13 @@ async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
-    if (chatStep === 'awaiting_choice' || chatStep === 'done') return;
+    if (chatStep === 'awaiting_choice' || chatStep === 'done' || chatStep === 'initial') return;
 
-    const originalPrice = productPriceAmount;
-    const sellerName = currentSeller?.business_name || 'the seller';
-
-    if (chatStep === 'initial') {
-        addProductBubble(text);
-        input.value = '';
-        autoResize(input);
-        input.disabled = true;
-        document.getElementById('productTag').style.display = 'none';
-        await trackAdClick();
-
-        setTimeout(() => {
-            showTyping();
-            setTimeout(() => {
-                hideTyping();
-                addBubble(`Yes, the ${productName} is still available! 😊\n\nPlease drop your WhatsApp number so I can reach you directly`, 'received');
-                chatStep = 'awaiting_number_final';
-                const input = document.getElementById('chatInput');
-                input.disabled = false;
-                input.value = '';
-                input.placeholder = 'Enter your WhatsApp number...';
-                input.setAttribute('inputmode', 'numeric');
-                input.setAttribute('pattern', '[0-9]*');
-                autoResize(input);
-                input.focus();
-                window._onNumberComplete = () => showContactButtons(0);
-            }, 3500);
-        }, 2000);
-
-    } else if (chatStep === 'awaiting_number_final') {
+    if (chatStep === 'awaiting_number_final') {
         const cleaned = text.replace(/\D/g, '');
-        // Check if it looks like a valid number — mostly digits, right length
         const isValidNumber = cleaned.length >= 10 && cleaned.length <= 14 && (text.replace(/\D/g, '').length / text.length) > 0.6;
-        
+
         if (!isValidNumber) {
-            // Looks like random text — end chat with buttons
             addBubble(text, 'sent');
             input.value = '';
             input.disabled = true;
@@ -883,10 +898,11 @@ async function sendChatMessage() {
                 showTyping();
                 setTimeout(() => {
                     hideTyping();
-                    addBubble(`Are you sure you really want to buy this product? 🤔`, 'received');
-                    showContactButtons(agreedPrice);
-                }, 3500);
-            }, 2000);
+                    addBubble(`Please enter a valid WhatsApp number so the seller can reach you 😊`, 'received');
+                    input.disabled = false;
+                    input.focus();
+                }, 2000);
+            }, 800);
             return;
         }
 
@@ -896,7 +912,15 @@ async function sendChatMessage() {
         autoResize(input);
         const formattedPhone = formatNigerianNumber(cleaned);
         await saveLead(formattedPhone);
-        if (window._onNumberComplete) window._onNumberComplete();
+
+        setTimeout(() => {
+            showTyping();
+            setTimeout(() => {
+                hideTyping();
+                addBubble(`🎉 Great! ${currentSeller?.business_name || 'The seller'} will call or message you shortly on WhatsApp.\n\nYou can also contact them RIGHT NOW 👇`, 'received');
+                if (window._onNumberComplete) window._onNumberComplete();
+            }, 2000);
+        }, 500);
     }
 }
 
