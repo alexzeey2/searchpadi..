@@ -808,26 +808,41 @@ function makeTicksBlue() {
     });
 }
 
-// WhatsApp-style soft pop — loud and clear
+// Loud notification sound
 function playReceiveSound() {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
-        // Soft pop: quick pitch drop with high gain, like WhatsApp's receive tone
-        const notes = [{ f: 1400, t: 0, d: 0.08 }, { f: 980, t: 0.07, d: 0.2 }];
-        notes.forEach(({ f, t, d }) => {
+        const master = ctx.createGain();
+        const compressor = ctx.createDynamicsCompressor();
+        compressor.threshold.setValueAtTime(-6, ctx.currentTime);
+        compressor.knee.setValueAtTime(0, ctx.currentTime);
+        compressor.ratio.setValueAtTime(20, ctx.currentTime);
+        compressor.attack.setValueAtTime(0, ctx.currentTime);
+        compressor.release.setValueAtTime(0.05, ctx.currentTime);
+        master.gain.setValueAtTime(3.5, ctx.currentTime);
+        master.connect(compressor);
+        compressor.connect(ctx.destination);
+
+        // Rich 3-tone notification with harmonics for fullness
+        const notes = [
+            { f: 2400, t: 0,    d: 0.12, type: 'sine'     },
+            { f: 2400, t: 0,    d: 0.12, type: 'triangle'  }, // harmonic layer
+            { f: 1600, t: 0.1,  d: 0.18, type: 'sine'     },
+            { f: 1200, t: 0.22, d: 0.28, type: 'sine'     },
+            { f: 1200, t: 0.22, d: 0.28, type: 'triangle'  }, // harmonic layer
+        ];
+        notes.forEach(({ f, t, d, type }) => {
             const osc = ctx.createOscillator();
             const gain = ctx.createGain();
-            const compressor = ctx.createDynamicsCompressor();
             osc.connect(gain);
-            gain.connect(compressor);
-            compressor.connect(ctx.destination);
-            osc.type = 'sine';
+            gain.connect(master);
+            osc.type = type;
             osc.frequency.setValueAtTime(f, ctx.currentTime + t);
             gain.gain.setValueAtTime(0, ctx.currentTime + t);
-            gain.gain.linearRampToValueAtTime(0.9, ctx.currentTime + t + 0.01);
+            gain.gain.linearRampToValueAtTime(1.0, ctx.currentTime + t + 0.004);
             gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + t + d);
             osc.start(ctx.currentTime + t);
-            osc.stop(ctx.currentTime + t + d);
+            osc.stop(ctx.currentTime + t + d + 0.05);
         });
     } catch(e) {}
 }
