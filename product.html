@@ -247,13 +247,13 @@
 
     <div class="top-bar">
         <div class="progress-lines" id="progressLines"></div>
-        <!-- Price card absolutely positioned top-right, seller row padded so they never overlap -->
+        <!-- Price card floats top-right, seller info wraps freely underneath it -->
         <div class="price-card" id="priceCard" style="display:none;position:absolute;top:38px;right:16px;z-index:20;">
             <div class="price-card-label">PRICE</div>
             <div id="priceCardAmount" class="price-card-amount"></div>
         </div>
         <div class="seller-info-row">
-            <a class="seller-left" id="sellerLink" href="#" style="max-width:calc(100% - 120px);">
+            <a class="seller-left" id="sellerLink" href="#" style="max-width:100%;padding-right:110px;">
                 <div class="avatar-wrap" style="position:relative;">
                     <!-- Back button sits BEHIND the avatar so avatar shows on top -->
                     <button onclick="event.preventDefault();history.back();" style="position:absolute;inset:0;border-radius:50%;background:rgba(0,0,0,0.55);border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:0;">
@@ -266,14 +266,14 @@
                 </div>
                 <div style="min-width:0;">
                     <div class="seller-name-row">
-                        <span class="seller-name" id="sellerName" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;display:block;"></span>
+                        <span class="seller-name" id="sellerName" style="display:block;word-break:break-word;"></span>
                         <span class="blue-tick" id="blueTick" style="display:none;">
                             <svg width="15" height="15" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
                         </span>
                     </div>
-                    <div class="seller-location" id="sellerLocation" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;"></div>
+                    <div class="seller-location" id="sellerLocation" style="word-break:break-word;"></div>
                     <div class="verified-tag" id="verifiedTag" style="display:none;">✓ Verified Seller</div>
                 </div>
             </a>
