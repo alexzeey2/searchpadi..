@@ -2,18 +2,24 @@ import React, { useState, useRef } from 'react'
 import { supabaseClient } from '../supabase'
 import { DEFAULT_PRODUCT_IMAGE } from '../helpers'
 
+const MAX_IMAGES = 4;
+
 export default function EditProductModal({ product, onClose, onSave }) {
     const [formData, setFormData] = useState({
         name: product.name || '',
         description: product.description || '',
         price_amount: product.price_amount ? String(product.price_amount) : ''
     });
-    const [previewImage, setPreviewImage] = useState(product.images?.[0] || DEFAULT_PRODUCT_IMAGE);
-    const [newImage, setNewImage] = useState(null); // only set if seller changes photo
+    // Initialise with existing images, pad with null slots up to MAX if needed
+    const existingImages = (product.images || []).filter(Boolean);
+    const initialSlots = existingImages.length < MAX_IMAGES
+        ? [...existingImages, null]
+        : existingImages.slice(0, MAX_IMAGES);
+    const [previewImages, setPreviewImages] = useState(initialSlots);
     const [priceError, setPriceError] = useState('');
-    const [uploadingImage, setUploadingImage] = useState(false);
+    const [uploadingIndex, setUploadingIndex] = useState(null);
     const [saving, setSaving] = useState(false);
-    const fileInputRef = useRef(null);
+    const fileInputRefs = useRef([]);
 
     const compressImage = (file, maxWidth = 800, quality = 0.7) => {
         return new Promise((resolve, reject) => {
@@ -24,10 +30,7 @@ export default function EditProductModal({ product, onClose, onSave }) {
                     const canvas = document.createElement('canvas');
                     let width = img.width;
                     let height = img.height;
-                    if (width > maxWidth) {
-                        height = (height * maxWidth) / width;
-                        width = maxWidth;
-                    }
+                    if (width > maxWidth) { height = (height * maxWidth) / width; width = maxWidth; }
                     canvas.width = width;
                     canvas.height = height;
                     canvas.getContext('2d').drawImage(img, 0, 0, width, height);
@@ -59,20 +62,34 @@ export default function EditProductModal({ product, onClose, onSave }) {
         }
     };
 
-    const handleImageUpload = async (e) => {
+    const handleImageUpload = async (index, e) => {
         const file = e.target.files[0];
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) { alert('Image size must be less than 5MB'); return; }
         try {
-            setUploadingImage(true);
+            setUploadingIndex(index);
             const compressed = await compressImage(file, 800, 0.7);
-            setPreviewImage(compressed);
-            setNewImage(compressed);
-        } catch (err) {
+            const updated = [...previewImages];
+            updated[index] = compressed;
+            // If this was the last slot and under max, add new empty slot
+            if (index === updated.length - 1 && updated.length < MAX_IMAGES) {
+                updated.push(null);
+            }
+            setPreviewImages(updated);
+        } catch {
             alert('Failed to process image. Please try another.');
         } finally {
-            setUploadingImage(false);
+            setUploadingIndex(null);
         }
+    };
+
+    const removeImage = (index) => {
+        const updated = previewImages.filter((_, i) => i !== index);
+        if (updated.length === 0) updated.push(null);
+        if (updated[updated.length - 1] !== null && updated.length < MAX_IMAGES) {
+            updated.push(null);
+        }
+        setPreviewImages(updated);
     };
 
     const handleSubmit = async (e) => {
@@ -82,22 +99,17 @@ export default function EditProductModal({ product, onClose, onSave }) {
             setPriceError('Enter numbers only. Example: 5000 or 15000');
             return;
         }
-
         setSaving(true);
         try {
             const numericPrice = validatePrice(formData.price_amount);
+            const finalImages = previewImages.filter(img => img !== null);
             const updates = {
                 name: formData.name.trim(),
                 description: formData.description.trim(),
                 price_amount: numericPrice || null,
+                images: finalImages.length > 0 ? finalImages : (product.images || [DEFAULT_PRODUCT_IMAGE]),
                 keywords: formData.name.toLowerCase().split(' ').filter(w => w.length > 2),
             };
-            if (newImage) {
-                // Replace first image, keep any others
-                const updatedImages = [...(product.images || [])];
-                updatedImages[0] = newImage;
-                updates.images = updatedImages;
-            }
 
             const { error } = await supabaseClient
                 .from('products')
@@ -106,14 +118,9 @@ export default function EditProductModal({ product, onClose, onSave }) {
 
             if (error) throw error;
 
-            // Return updated product to parent
-            onSave({
-                ...product,
-                ...updates,
-                images: updates.images || product.images,
-            });
+            onSave({ ...product, ...updates });
             onClose();
-        } catch (err) {
+        } catch {
             alert('Failed to save. Please try again.');
         } finally {
             setSaving(false);
@@ -131,29 +138,66 @@ export default function EditProductModal({ product, onClose, onSave }) {
 
                     <form onSubmit={handleSubmit} className="space-y-4">
 
-                        {/* Image */}
-                        <div className="relative w-full">
-                            <img
-                                src={previewImage}
-                                alt="Preview"
-                                className="w-full h-48 object-cover rounded-lg border-2 border-purple-600"
-                                onError={e => e.target.src = DEFAULT_PRODUCT_IMAGE}
-                            />
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                onChange={handleImageUpload}
-                                accept="image/*"
-                                className="hidden"
-                            />
-                            <button
-                                type="button"
-                                onClick={() => fileInputRef.current.click()}
-                                disabled={uploadingImage}
-                                className="absolute bottom-3 right-3 bg-purple-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-purple-700 disabled:bg-gray-600"
-                            >
-                                {uploadingImage ? 'Uploading...' : '🔄 Change Photo'}
-                            </button>
+                        {/* Image Grid */}
+                        <div>
+                            <label className="block text-sm font-medium text-gray-300 mb-2">
+                                Product Photos <span className="text-gray-500">({previewImages.filter(i => i !== null).length}/{MAX_IMAGES})</span>
+                            </label>
+                            <div className="grid grid-cols-2 gap-3">
+                                {previewImages.map((img, index) => (
+                                    <div key={index} className="relative" style={{ aspectRatio: '1' }}>
+                                        {img ? (
+                                            <>
+                                                <img
+                                                    src={img}
+                                                    alt={`Product ${index + 1}`}
+                                                    className="w-full h-full object-cover rounded-xl border-2 border-purple-600"
+                                                    onError={e => e.target.src = DEFAULT_PRODUCT_IMAGE}
+                                                />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeImage(index)}
+                                                    className="absolute top-2 right-2 w-6 h-6 bg-black/70 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                                                >✕</button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => fileInputRefs.current[index]?.click()}
+                                                    disabled={uploadingIndex === index}
+                                                    className="absolute bottom-2 right-2 bg-purple-600 text-white px-2 py-1 rounded-lg text-xs font-semibold"
+                                                >
+                                                    {uploadingIndex === index ? '...' : '🔄'}
+                                                </button>
+                                                {index === 0 && (
+                                                    <div className="absolute top-2 left-2 bg-black/60 text-white text-xs px-2 py-0.5 rounded-full font-semibold">Cover</div>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <button
+                                                type="button"
+                                                onClick={() => fileInputRefs.current[index]?.click()}
+                                                disabled={uploadingIndex !== null}
+                                                className="w-full h-full border-2 border-dashed border-gray-600 rounded-xl flex flex-col items-center justify-center gap-2 text-gray-400 hover:border-purple-500 hover:text-purple-400 transition-colors"
+                                            >
+                                                {uploadingIndex === index ? (
+                                                    <span className="text-sm">Uploading...</span>
+                                                ) : (
+                                                    <>
+                                                        <span className="text-2xl">📷</span>
+                                                        <span className="text-xs font-medium">Add Photo</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        )}
+                                        <input
+                                            type="file"
+                                            ref={el => fileInputRefs.current[index] = el}
+                                            onChange={(e) => handleImageUpload(index, e)}
+                                            accept="image/*"
+                                            className="hidden"
+                                        />
+                                    </div>
+                                ))}
+                            </div>
                         </div>
 
                         {/* Name */}
@@ -205,10 +249,9 @@ export default function EditProductModal({ product, onClose, onSave }) {
                             )}
                         </div>
 
-                        {/* Save button */}
                         <button
                             type="submit"
-                            disabled={saving || uploadingImage}
+                            disabled={saving || uploadingIndex !== null}
                             className="w-full bg-purple-600 text-white py-3 rounded-lg font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                         >
                             {saving && (
