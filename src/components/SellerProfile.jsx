@@ -13,6 +13,8 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
     const [campaignsLoading, setCampaignsLoading] = useState(false);
     const [activeAdsCount, setActiveAdsCount] = useState(0);
     const [now, setNow] = useState(Date.now());
+    const [promoTab, setPromoTab] = useState(0);
+    const sliderRef = useRef(null);
     const [showLeadsChat, setShowLeadsChat] = useState(false);
     const [activeLead, setActiveLead] = useState(null);
     const [replyText, setReplyText] = useState('');
@@ -55,6 +57,20 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
         const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
         const s = Math.floor((diff % (1000 * 60)) / 1000);
         return { h, m, s, diff };
+    };
+
+    const handleTabClick = (idx) => {
+        setPromoTab(idx);
+        if (sliderRef.current) {
+            sliderRef.current.scrollTo({ left: idx * sliderRef.current.offsetWidth, behavior: 'smooth' });
+        }
+    };
+
+    const handleSliderScroll = () => {
+        if (sliderRef.current) {
+            const idx = Math.round(sliderRef.current.scrollLeft / sliderRef.current.offsetWidth);
+            setPromoTab(idx);
+        }
     };
 
     const openCampaignSheet = async () => {
@@ -715,72 +731,6 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             ) : (() => {
                                 const pendingAds = campaigns.filter(c => c.status === 'pending');
                                 const activeAds = campaigns.filter(c => c.status === 'running' || c.status === 'approved');
-
-                                const AdCard = ({ c, isActive }) => {
-                                    const timeLeft = isActive ? getTimeLeft(c) : null;
-                                    const urgentColor = timeLeft && timeLeft.h < 3 ? 'text-red-400' : 'text-green-400';
-                                    return (
-                                        <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#2a2a2a] border border-gray-800">
-                                            {c.product?.images?.[0] ? (
-                                                <img
-                                                    src={c.product.images[0]}
-                                                    alt={c.product?.name}
-                                                    className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                                                />
-                                            ) : (
-                                                <div className="w-16 h-16 rounded-xl bg-gray-700 flex items-center justify-center flex-shrink-0">
-                                                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-                                                </div>
-                                            )}
-                                            <div className="flex-1 min-w-0">
-                                                <p className="text-white font-semibold text-sm truncate">{c.product?.name || 'Product'}</p>
-                                                {isActive ? (
-                                                    <>
-                                                        <div className="flex items-center gap-1.5 mt-1">
-                                                            <span className="text-xl font-black text-purple-400">{c.ad_clicks || 0}</span>
-                                                            <span className="text-gray-400 text-xs leading-tight">{(c.ad_clicks || 0) === 1 ? 'person clicked' : 'people clicked'}<br/>this advert</span>
-                                                        </div>
-                                                        {timeLeft ? (
-                                                            <div className={`flex items-center gap-1 mt-1.5 text-xs font-mono font-bold ${urgentColor}`}>
-                                                                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                                {String(timeLeft.h).padStart(2,'0')}:{String(timeLeft.m).padStart(2,'0')}:{String(timeLeft.s).padStart(2,'0')} left
-                                                            </div>
-                                                        ) : (
-                                                            <div className="text-red-400 text-xs mt-1.5 font-semibold">Ad expired</div>
-                                                        )}
-                                                    </>
-                                                ) : (
-                                                    <p className="text-gray-500 text-xs mt-1">Awaiting admin approval</p>
-                                                )}
-                                            </div>
-                                            <div className={`px-2 py-1 rounded-full text-[10px] font-bold flex-shrink-0 ${
-                                                c.status === 'running' ? 'bg-green-500/15 text-green-400 border border-green-500/30' :
-                                                c.status === 'approved' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
-                                                'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'
-                                            }`}>
-                                                {c.status === 'running' ? '🟢 Live' : c.status === 'approved' ? '✅ Approved' : '⏳ Pending'}
-                                            </div>
-                                        </div>
-                                    );
-                                };
-
-                                const [promoTab, setPromoTab] = React.useState(0); // 0 = Active, 1 = Pending
-                                const sliderRef = React.useRef(null);
-
-                                const handleTabClick = (idx) => {
-                                    setPromoTab(idx);
-                                    if (sliderRef.current) {
-                                        sliderRef.current.scrollTo({ left: idx * sliderRef.current.offsetWidth, behavior: 'smooth' });
-                                    }
-                                };
-
-                                const handleSliderScroll = () => {
-                                    if (sliderRef.current) {
-                                        const idx = Math.round(sliderRef.current.scrollLeft / sliderRef.current.offsetWidth);
-                                        setPromoTab(idx);
-                                    }
-                                };
-
                                 return (
                                     <div className="py-2">
                                         {/* Tab switcher */}
@@ -809,10 +759,10 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                         <div
                                             ref={sliderRef}
                                             onScroll={handleSliderScroll}
-                                            style={{ display:'flex', overflowX:'auto', scrollSnapType:'x mandatory', scrollBehavior:'smooth', WebkitOverflowScrolling:'touch', msOverflowStyle:'none', scrollbarWidth:'none' }}
+                                            style={{ display:'flex', overflowX:'auto', scrollSnapType:'x mandatory', WebkitOverflowScrolling:'touch', msOverflowStyle:'none', scrollbarWidth:'none' }}
                                         >
                                             {/* Page 1 — Active Ads */}
-                                            <div style={{ minWidth:'100%', scrollSnapAlign:'start' }} className="pr-1">
+                                            <div style={{ minWidth:'100%', scrollSnapAlign:'start' }}>
                                                 {activeAds.length === 0 ? (
                                                     <div className="text-center py-10">
                                                         <div className="text-3xl mb-2">📢</div>
@@ -859,7 +809,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                             </div>
 
                                             {/* Page 2 — Pending Ads */}
-                                            <div style={{ minWidth:'100%', scrollSnapAlign:'start' }} className="pr-1">
+                                            <div style={{ minWidth:'100%', scrollSnapAlign:'start' }}>
                                                 {pendingAds.length === 0 ? (
                                                     <div className="text-center py-10">
                                                         <div className="text-3xl mb-2">⏳</div>
