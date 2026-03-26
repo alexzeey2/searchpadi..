@@ -635,51 +635,52 @@ export default function App() {
         setIsTyping(false);
     };
 
-    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '') => {
+    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0) => {
         try {
-            // Get sellers in this category
+            // Step 1: Fetch 10 sellers in this category (with pagination support for "Find More")
             let sellerQuery = supabaseClient
                 .from('profiles')
                 .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
-                .eq('category', category);
+                .eq('category', category)
+                .order('created_at', { ascending: false })
+                .range(sellerPageOffset, sellerPageOffset + 9);
 
             if (gender && gender !== 'both') {
                 sellerQuery = sellerQuery.or(`gender.eq.${gender},gender.eq.both,gender.is.null`);
             }
 
-            const { data: categorySellerData } = await sellerQuery.limit(50);
+            const { data: categorySellerData } = await sellerQuery;
 
             if (!categorySellerData || categorySellerData.length === 0) {
-                // No sellers in this category at all
-                setMessages(prev => [...prev, {
-                    id: prev.length + 1, type: 'assistant',
-                    text: `No sellers found for that yet 😔\n\nTry a different category!`,
-                    buttons: [
-                        { text: '📱 Phones & Gadgets', value: 'phones' },
-                        { text: '💻 Electronics', value: 'electronics' },
-                        { text: '👟 Shoes & Footwear', value: 'shoes' },
-                        { text: '👔 Clothes & Fashion', value: 'fashion' },
-                        { text: '🏠 Home & Furniture', value: 'furniture' },
-                        { text: '🍕 Foods & Edibles', value: 'foods' },
-                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
-                    ],
-                    timestamp: new Date(), messageId: Date.now()
-                }]);
-                setCurrentStep('category');
+                if (sellerPageOffset === 0) {
+                    // No sellers at all in this category
+                    setMessages(prev => [...prev, {
+                        id: prev.length + 1, type: 'assistant',
+                        text: `No sellers found for that yet 😔\n\nTry a different category!`,
+                        buttons: [
+                            { text: '📱 Phones & Gadgets', value: 'phones' },
+                            { text: '💻 Electronics', value: 'electronics' },
+                            { text: '👟 Shoes & Footwear', value: 'shoes' },
+                            { text: '👔 Clothes & Fashion', value: 'fashion' },
+                            { text: '🏠 Home & Furniture', value: 'furniture' },
+                            { text: '🍕 Foods & Edibles', value: 'foods' },
+                            { text: '💄 Beauty & Personal Care', value: 'beauty' },
+                        ],
+                        timestamp: new Date(), messageId: Date.now()
+                    }]);
+                    setCurrentStep('category');
+                } else {
+                    setMessages(prev => [...prev, {
+                        id: prev.length + 1, type: 'assistant',
+                        text: `No more sellers in this category 🔍`,
+                        timestamp: new Date(), messageId: Date.now()
+                    }]);
+                    setShowNoMoreMessage(true);
+                }
                 return;
             }
 
-            const sellerIds = categorySellerData.map(s => s.id);
-
-            // Fetch first 10 products from these sellers
-            const { data: productsData } = await supabaseClient
-                .from('products')
-                .select('id,seller_id,name,price,images,keywords,likes,description')
-                .in('seller_id', sellerIds)
-                .order('created_at', { ascending: false })
-                .limit(10);
-
-            // Merge seller info into products
+            // Build seller map
             const sellerMap = {};
             categorySellerData.forEach(s => {
                 const isTrusted = (s.is_free_trial && s.free_trial_expires_at)
@@ -695,9 +696,19 @@ export default function App() {
                     leadsCount: s.leads_count || 0,
                     tempVerifiedUntil: s.temp_verified_until || null,
                     subscription: s.subscription_plan || 'free',
+                    products: []
                 };
             });
 
+            // Step 2: Fetch ALL products from these 10 sellers
+            const sellerIds = categorySellerData.map(s => s.id);
+            const { data: productsData } = await supabaseClient
+                .from('products')
+                .select('id,seller_id,name,price,images,keywords,likes,description')
+                .in('seller_id', sellerIds)
+                .order('created_at', { ascending: false });
+
+            // Step 3: Score and filter products by search terms
             let mappedProducts = (productsData || []).map(p => {
                 const seller = sellerMap[p.seller_id];
                 if (!seller) return null;
@@ -713,10 +724,18 @@ export default function App() {
                 };
             }).filter(Boolean);
 
-            // Sort by relevance if search terms exist
+            // Keep only products that match search terms (score > 0), sorted by relevance
             if (searchTerms && searchTerms.length > 0) {
-                mappedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore);
+                const matched = mappedProducts.filter(p => p.relevanceScore > 0);
+                mappedProducts = matched.sort((a, b) => b.relevanceScore - a.relevanceScore);
             }
+
+            // Update in-memory sellers
+            setSellers(prev => {
+                const existingIds = new Set(prev.map(s => s.id));
+                const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
+                return [...prev, ...newSellers];
+            });
 
             if (mappedProducts.length > 0) {
                 setMessages(prev => [...prev, {
@@ -724,30 +743,21 @@ export default function App() {
                     text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
                     timestamp: new Date(), messageId: Date.now()
                 }]);
+                // Replace (not append) displayed products on each new fetch batch
                 setDisplayedProducts(mappedProducts);
-                setProductOffset(10);
+                setProductOffset(sellerPageOffset + 10);
                 setShowProducts(true);
+                setShowSellers(false);
                 setCurrentStep('products');
-
-                // Also update in-memory sellers so Find More works
-                setSellers(prev => {
-                    const existingIds = new Set(prev.map(s => s.id));
-                    const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
-                    return [...prev, ...newSellers];
-                });
             } else {
-                // No products — show seller cards directly
+                // No matching products in these 10 sellers — show the sellers themselves
                 setMessages(prev => [...prev, {
                     id: prev.length + 1, type: 'assistant',
-                    text: `I couldn't find a matching product, but here are trusted sellers in this category 👇`,
+                    text: `I couldn't find a matching product, but here are sellers in this category you can contact 👇`,
                     timestamp: new Date(), messageId: Date.now()
                 }]);
-                setSellers(prev => {
-                    const existingIds = new Set(prev.map(s => s.id));
-                    const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
-                    return [...prev, ...newSellers];
-                });
-                setSellerOffset(10);
+                setShowProducts(false);
+                setSellerOffset(sellerPageOffset + 10);
                 setShowSellers(true);
                 setCurrentStep('sellers');
             }
@@ -846,145 +856,82 @@ export default function App() {
     };
 
     const handleFindMoreProducts = async () => {
-        // Show skeleton while loading next batch
-        setIsTyping(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsTyping(false);
-
         const category = selectedCategory || searchContext?.category;
+        if (!category) return;
 
-        try {
-            const categorySellerIds = category
-                ? sellers.filter(s => {
-                    if (s.category !== category) return false;
-                    if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
-                    return true;
-                  }).map(s => s.id)
-                : null;
+        // Show typing skeleton while loading
+        setIsTyping(true);
 
-            let query = supabaseClient
-                .from('products')
-                .select('id,seller_id,name,price,images,keywords,likes,description')
-                .order('created_at', { ascending: false })
-                .range(productOffset, productOffset + 9);
+        // Clear previous results while loading
+        setShowProducts(false);
+        setDisplayedProducts([]);
 
-            if (categorySellerIds && categorySellerIds.length > 0) {
-                query = query.in('seller_id', categorySellerIds);
-            }
+        const searchTerms = searchContext?.searchTerms || null;
 
-            const { data: nextData, error } = await query;
+        // Fetch the next page of 10 sellers and their products
+        await fetchCategoryProducts(category, selectedGender, searchTerms, searchContext?.query || '', productOffset);
 
-            if (error || !nextData || nextData.length === 0) {
-                setMessages(prev => [...prev, {
-                    id: prev.length + 1, type: 'assistant',
-                    text: `That's all the products in this category 🔍 Here are the sellers directly:`,
-                    timestamp: new Date(), messageId: Date.now()
-                }]);
-                setShowProducts(false);
-                setShowSellers(true);
-                setCurrentStep('sellers');
-                setSellerOffset(SELLERS_PER_PAGE);
-            } else {
-                const mapped = nextData.map(product => {
-                    const seller = sellers.find(s => s.id === product.seller_id);
-                    if (!seller) return null;
-                    return {
-                        id: product.id, name: product.name,
-                        price: product.price || 'Ask for Price',
-                        description: product.description || '',
-                        images: product.images || [],
-                        keywords: product.keywords || [],
-                        likes: product.likes || 0, liked: false,
-                        seller: {
-                            id: seller.id, name: seller.name,
-                            whatsappNumber: seller.whatsappNumber,
-                            location: seller.location,
-                            profilePhoto: seller.profilePhoto,
-                            isVerified: seller.isVerified,
-                            isTrusted: seller.isTrusted,
-                        }
-                    };
-                }).filter(Boolean);
-
-                if (mapped.length === 0) {
-                    setMessages(prev => [...prev, {
-                        id: prev.length + 1, type: 'assistant',
-                        text: `No more products found. Here are the sellers:`,
-                        timestamp: new Date(), messageId: Date.now()
-                    }]);
-                    setShowProducts(false);
-                    setShowSellers(true);
-                    setCurrentStep('sellers');
-                    setSellerOffset(SELLERS_PER_PAGE);
-                } else {
-                    setDisplayedProducts(prev => [...prev, ...mapped]);
-                    setProductOffset(prev => prev + 10);
-                }
-            }
-        } catch(e) {
-            console.error('handleFindMoreProducts error:', e);
-        }
+        setIsTyping(false);
     };
 
 
     const handleFindMoreSellers = async () => {
-        await simulateTyping(500);
+        const category = selectedCategory || searchContext?.category;
+        if (!category) return;
 
-        // First check sellers already in memory for this category
-        const categorySellers = sellers.filter(s => {
-            if (s.category !== selectedCategory) return false;
-            if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
-            return true;
-        });
+        setIsTyping(true);
+        setShowSellers(false);
 
-        if (sellerOffset < categorySellers.length) {
-            // Still have sellers in memory to show
-            setSellerOffset(prev => Math.min(prev + SELLERS_PER_PAGE, categorySellers.length));
+        // Fetch next page of 10 sellers in this category
+        let sellerQuery = supabaseClient
+            .from('profiles')
+            .select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until,leads_count')
+            .eq('category', category)
+            .order('created_at', { ascending: false })
+            .range(sellerOffset, sellerOffset + SELLERS_PER_PAGE - 1);
+
+        if (selectedGender && selectedGender !== 'both') {
+            sellerQuery = sellerQuery.or(`gender.eq.${selectedGender},gender.eq.both,gender.is.null`);
+        }
+
+        const { data: moreSellers } = await sellerQuery;
+        setIsTyping(false);
+
+        if (!moreSellers || moreSellers.length === 0) {
+            setShowSellers(true);
+            setShowNoMoreMessage(true);
+            addMessage("Those are all the sellers we have in this category right now. Try 'Start Afresh' to explore something different!", 'assistant');
         } else {
-            // Fetch more sellers from Supabase
-            let query = supabaseClient
-                .from('profiles')
-                .select('id,business_name,email,category,gender,location,bio,profile_photo,whatsapp,is_verified,is_free_trial,free_trial_expires_at,subscription_plan,views,share_count,temp_verified_until,leads_count')
-                .order('created_at', { ascending: false })
-                .range(sellers.length, sellers.length + SELLERS_PER_PAGE - 1);
-
-            if (selectedCategory) query = query.eq('category', selectedCategory);
-
-            const { data: moreSellers } = await query;
-
-            if (!moreSellers || moreSellers.length === 0) {
-                setShowNoMoreMessage(true);
-                addMessage("These are all the verified sellers we have in this category right now. Try 'Start Afresh' to explore a different category!", 'assistant');
-            } else {
-                const mapped = moreSellers.map(seller => {
-                    const isTrusted = seller.is_free_trial && seller.free_trial_expires_at
-                        ? new Date(seller.free_trial_expires_at) > new Date()
-                        : seller.subscription_plan === 'growth_pro';
-                    return {
-                        id: seller.id,
-                        name: seller.business_name,
-                        email: seller.email,
-                        category: seller.category,
-                        gender: seller.gender || null,
-                        location: seller.location,
-                        bio: seller.bio || 'Seller on SearchPadi',
-                        isVerified: seller.is_verified || false,
-                        isTrusted,
-                        isFreeTrial: seller.is_free_trial || false,
-                        freeTrialExpiresAt: seller.free_trial_expires_at,
-                        whatsappNumber: seller.whatsapp,
-                        profilePhoto: seller.profile_photo,
-                        views: seller.views || 0,
-                        subscription: seller.subscription_plan || 'free',
-                        shareCount: seller.share_count || 0,
+            const mapped = moreSellers.map(seller => {
+                const isTrusted = seller.is_free_trial && seller.free_trial_expires_at
+                    ? new Date(seller.free_trial_expires_at) > new Date()
+                    : seller.subscription_plan === 'growth_pro';
+                return {
+                    id: seller.id, name: seller.business_name,
+                    email: seller.email, category: seller.category,
+                    gender: seller.gender || null, location: seller.location,
+                    bio: seller.bio || 'Seller on SearchPadi',
+                    isVerified: seller.is_verified || false, isTrusted,
+                    isFreeTrial: seller.is_free_trial || false,
+                    freeTrialExpiresAt: seller.free_trial_expires_at,
+                    whatsappNumber: seller.whatsapp,
+                    profilePhoto: seller.profile_photo || DEFAULT_PROFILE_IMAGE,
+                    views: seller.views || 0,
+                    subscription: seller.subscription_plan || 'free',
+                    shareCount: seller.share_count || 0,
                     leadsCount: seller.leads_count || 0,
-                        tempVerifiedUntil: seller.temp_verified_until || null,
-                        products: []
-                    };
-                });
-                setSellers(prev => [...prev, ...mapped]);
-                setSellerOffset(prev => prev + mapped.length);
-            }
+                    tempVerifiedUntil: seller.temp_verified_until || null,
+                    products: []
+                };
+            });
+            // Replace the sellers list with the new page
+            setSellers(prev => {
+                const existingIds = new Set(prev.map(s => s.id));
+                const newOnes = mapped.filter(s => !existingIds.has(s.id));
+                return [...prev, ...newOnes];
+            });
+            setSellerOffset(prev => prev + mapped.length);
+            setShowSellers(true);
         }
     };
 
@@ -1663,16 +1610,6 @@ export default function App() {
 
             {/* Messages */}
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
-
-                {isLoadingData && (
-                    <div className="flex gap-2" style={{animation:'pulse 1.5s ease-in-out infinite'}}>
-                        <div style={{background:'#1f2937',borderRadius:'0 16px 16px 16px',padding:'12px',display:'inline-block',maxWidth:'85%'}}>
-                            <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'8px',width:'200px'}}></div>
-                            <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'160px'}}></div>
-                        </div>
-                        <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
-                    </div>
-                )}
 
                 {messages.map((message) => (
                     <div key={message.id} className="message-enter relative z-10">
