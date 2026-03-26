@@ -65,7 +65,7 @@ export default function App() {
     const [searchQuery, setSearchQuery] = useState('');
     const [searchContext, setSearchContext] = useState(null);
     const [clickedButtons, setClickedButtons] = useState({});
-    const [isLoadingData, setIsLoadingData] = useState(true);
+    const [isLoadingData, setIsLoadingData] = useState(false);
     const [showSplash, setShowSplash] = useState(true);
     const messagesEndRef = useRef(null);
 
@@ -578,7 +578,7 @@ export default function App() {
         const query = searchQuery.trim();
         if (!query) return;
 
-        // Reset UI state but keep sellers in memory
+        // Reset state
         setShowProducts(false);
         setShowSellers(false);
         setDisplayedProducts([]);
@@ -592,19 +592,22 @@ export default function App() {
         setClickedButtons({});
         setCurrentStep('searching');
 
-        // Show buyer message immediately, then skeleton
+        // Show Somto opening + buyer message
         setMessages([
-            { id: 1, type: 'assistant', text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', timestamp: new Date(), messageId: 1 },
+            { id: 1, type: 'assistant', text: "Hi! 👋 I'm Somto.\n\nWhich product are you looking for? I'll find you a trusted seller.", timestamp: new Date(), messageId: 1 },
             { id: 2, type: 'user', text: query, timestamp: new Date(), messageId: 2 }
         ]);
         setSearchQuery('');
 
-        // Show skeleton (isTyping = the loading state)
+        // Show skeleton while fetching
         setIsTyping(true);
-        await new Promise(resolve => setTimeout(resolve, 1800));
-        setIsTyping(false);
+        
+        // Extract meaningful search terms — keep words 2+ chars, skip common filler words
+        const fillerWords = new Set(['i','a','an','the','to','for','and','or','of','in','on','at','is','my','me','want','buy','get','need','find','looking','please','can','you','help','have','does','do','are','that','this','it','be','with','from']);
+        const searchTerms = query.toLowerCase()
+            .split(/\s+/)
+            .filter(term => term.length >= 2 && !fillerWords.has(term));
 
-        const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
         const detectedCategory = detectCategory(query);
         const category = detectedCategory || 'general';
 
@@ -612,7 +615,7 @@ export default function App() {
         setSearchContext({ query, searchTerms, category });
 
         if (detectedCategory === 'shoes' || detectedCategory === 'fashion') {
-            setCurrentStep('gender');
+            setIsTyping(false);
             setMessages(prev => [...prev, {
                 id: prev.length + 1, type: 'assistant',
                 text: `Got it! Are you shopping for:`,
@@ -623,20 +626,18 @@ export default function App() {
                 ],
                 timestamp: new Date(), messageId: prev.length + 1
             }]);
+            setCurrentStep('gender');
             return;
         }
 
-        // Fetch first 10 products in this category directly from Supabase
+        // Fetch products in detected category — skeleton stays on until fetch completes
         await fetchCategoryProducts(category, null, searchTerms, query);
+        setIsTyping(false);
     };
 
     const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '') => {
-        setIsTyping(true);
-        await new Promise(resolve => setTimeout(resolve, 1500));
-        setIsTyping(false);
-
         try {
-            // Get seller IDs in this category
+            // Get sellers in this category
             let sellerQuery = supabaseClient
                 .from('profiles')
                 .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
@@ -1673,7 +1674,7 @@ export default function App() {
                     </div>
                 )}
 
-                {!isLoadingData && messages.map((message) => (
+                {messages.map((message) => (
                     <div key={message.id} className="message-enter relative z-10">
                         {message.type === 'assistant' ? (
                             <div className="flex gap-2">
