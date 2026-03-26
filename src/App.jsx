@@ -69,9 +69,9 @@ export default function App() {
     const [showSplash, setShowSplash] = useState(true);
     const messagesEndRef = useRef(null);
 
-    const PRODUCTS_PER_PAGE = 5;
-    const SELLERS_PER_PAGE = 4;
-    const DB_BATCH_SIZE = 5;
+    const PRODUCTS_PER_PAGE = 10;
+    const SELLERS_PER_PAGE = 10;
+    const DB_BATCH_SIZE = 10;
 
     // Load sellers and products from database on mount
     useEffect(() => {
@@ -764,16 +764,34 @@ export default function App() {
     };
 
     const handleFindMoreProducts = async () => {
-        await simulateTyping(300);
+        setIsTyping(true);
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        setIsTyping(false);
 
-        const { data: nextData, error } = await supabaseClient
+        // Build category-filtered query
+        let query = supabaseClient
             .from('products')
             .select('id,seller_id,name,price,images,keywords,likes,description')
             .order('created_at', { ascending: false })
             .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
 
+        // Filter by category via seller_id join — use in-memory sellers for category filtering
+        const categorySellerIds = selectedCategory
+            ? sellers.filter(s => {
+                if (s.category !== selectedCategory) return false;
+                if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
+                return true;
+              }).map(s => s.id)
+            : null;
+
+        if (categorySellerIds && categorySellerIds.length > 0) {
+            query = query.in('seller_id', categorySellerIds);
+        }
+
+        const { data: nextData, error } = await query;
+
         if (error || !nextData || nextData.length === 0) {
-            addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
+            addMessage("That's all the products in this category 🔍 Let me show you the sellers directly.", 'assistant');
             await simulateTyping(800);
             setShowProducts(false);
             setShowSellers(true);
@@ -805,7 +823,7 @@ export default function App() {
             }).filter(Boolean);
 
             if (mapped.length === 0) {
-                addMessage("No more products available. Let me show you our verified sellers for more options 🔍", 'assistant');
+                addMessage("That's all the products in this category. Showing you the sellers directly 👇", 'assistant');
                 await simulateTyping(800);
                 setShowProducts(false);
                 setShowSellers(true);
@@ -1558,7 +1576,6 @@ export default function App() {
 
                 {isLoadingData && (
                     <div className="flex gap-2" style={{animation:'pulse 1.5s ease-in-out infinite'}}>
-                        <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',flexShrink:0}}></div>
                         <div style={{background:'#1f2937',borderRadius:'0 16px 16px 16px',padding:'12px',display:'inline-block',maxWidth:'85%'}}>
                             <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'8px',width:'200px'}}></div>
                             <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'160px'}}></div>
@@ -1571,11 +1588,14 @@ export default function App() {
                     <div key={message.id} className="message-enter relative z-10">
                         {message.type === 'assistant' ? (
                             <div className="flex gap-2">
-                                <img 
-                                    src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
-                                    alt="SearchPadi Assistant"
-                                    className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                                />
+                                {/* Show Somto avatar on AI messages only when a seller is logged in */}
+                                {currentUser?.type === 'seller' && (
+                                    <img 
+                                        src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
+                                        alt="Somto"
+                                        className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                                    />
+                                )}
                                 <div className="flex-1">
                                     <div className="bg-[#2a2a2a] rounded-2xl rounded-tl-none p-3 max-w-[85%] inline-block shadow-sm">
                                         <p className="text-white whitespace-pre-line">{message.text}</p>
@@ -1613,11 +1633,13 @@ export default function App() {
 
                 {isTyping && (
                     <div className="flex gap-2 relative z-10">
-                        <img 
-                            src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
-                            alt="SearchPadi Assistant"
-                            className="w-8 h-8 rounded-full object-cover flex-shrink-0"
-                        />
+                        {currentUser?.type === 'seller' && (
+                            <img 
+                                src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
+                                alt="Somto"
+                                className="w-8 h-8 rounded-full object-cover flex-shrink-0"
+                            />
+                        )}
                         <div className="typing-indicator">
                             <div className="typing-dot"></div>
                             <div className="typing-dot"></div>
