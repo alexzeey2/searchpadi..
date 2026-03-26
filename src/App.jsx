@@ -578,108 +578,185 @@ export default function App() {
         const query = searchQuery.trim();
         if (!query) return;
 
-        resetToInitialState();
+        // Reset UI state but keep sellers in memory
+        setShowProducts(false);
+        setShowSellers(false);
+        setDisplayedProducts([]);
+        setAllProducts([]);
+        setProductOffset(0);
+        setSellerOffset(0);
+        setShowNoMoreMessage(false);
+        setSelectedSeller(null);
+        setSelectedProduct(null);
+        setSearchContext(null);
+        setClickedButtons({});
+        setCurrentStep('searching');
 
+        // Show buyer message immediately, then skeleton
         setMessages([
             { id: 1, type: 'assistant', text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', timestamp: new Date(), messageId: 1 },
             { id: 2, type: 'user', text: query, timestamp: new Date(), messageId: 2 }
         ]);
         setSearchQuery('');
-        await simulateTyping(1000);
+
+        // Show skeleton (isTyping = the loading state)
+        setIsTyping(true);
+        await new Promise(resolve => setTimeout(resolve, 1800));
+        setIsTyping(false);
 
         const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
-        
-        // Search across ALL sellers by keyword first — category is just a filter helper
-        const allProductsAcrossCategories = [];
-        sellers.forEach(seller => {
-            seller.products.forEach(product => {
-                const relevanceScore = scoreProduct(product, searchTerms, seller);
-                if (relevanceScore > 0) {
-                    allProductsAcrossCategories.push({
-                        ...product,
-                        seller: seller,
-                        relevanceScore
-                    });
-                }
-            });
-        });
-
-        if (allProductsAcrossCategories.length > 0) {
-            const sortedProducts = allProductsAcrossCategories.sort((a, b) => b.relevanceScore - a.relevanceScore);
-            addMessage(`I found something for you! 🎯\n\nDo any of these match what you want?`, 'assistant');
-            await simulateTyping(800);
-            setAllProducts(sortedProducts);
-            setDisplayedProducts(sortedProducts.slice(0, PRODUCTS_PER_PAGE));
-            setProductOffset(PRODUCTS_PER_PAGE);
-            setShowProducts(true);
-            setCurrentStep('products');
-            setSearchContext({ query, searchTerms });
-            return;
-        }
-
-        // No keyword match — use category to narrow the search
         const detectedCategory = detectCategory(query);
-        
-        if (detectedCategory) {
-            setSearchContext({ query, searchTerms });
-            setSelectedCategory(detectedCategory);
-            
-            if (detectedCategory === 'shoes' || detectedCategory === 'fashion') {
-                setCurrentStep('gender');
-                addMessage(`Got it! Are you shopping for:`, 'assistant', [
+        const category = detectedCategory || 'general';
+
+        setSelectedCategory(category);
+        setSearchContext({ query, searchTerms, category });
+
+        if (detectedCategory === 'shoes' || detectedCategory === 'fashion') {
+            setCurrentStep('gender');
+            setMessages(prev => [...prev, {
+                id: prev.length + 1, type: 'assistant',
+                text: `Got it! Are you shopping for:`,
+                buttons: [
                     { text: '👨 Male', value: 'male' },
                     { text: '👩 Female', value: 'female' },
                     { text: '👥 Both', value: 'both' }
-                ]);
-            } else {
-                showProductsForCategory(detectedCategory, null, searchTerms);
-            }
-        } else {
-            // Can't detect — ask buyer to pick a category to help Somto search better
-            addMessage(`I didn't find an exact match for "${query}" 🤔\n\nHelp me search better — which category is it?`, 'assistant', [
-                { text: '📱 Phones & Gadgets', value: 'phones' },
-                { text: '💻 Electronics', value: 'electronics' },
-                { text: '👟 Shoes & Footwear', value: 'shoes' },
-                { text: '👔 Clothes & Fashion', value: 'fashion' },
-                { text: '🏠 Home & Furniture', value: 'furniture' },
-                { text: '🍕 Foods & Edibles', value: 'foods' },
-                { text: '💄 Beauty & Personal Care', value: 'beauty' },
-                { text: '🛒 General Store', value: 'general' }
-            ]);
-            setCurrentStep('category');
-            setSearchContext({ query, searchTerms });
+                ],
+                timestamp: new Date(), messageId: prev.length + 1
+            }]);
+            return;
         }
+
+        // Fetch first 10 products in this category directly from Supabase
+        await fetchCategoryProducts(category, null, searchTerms, query);
     };
 
-    const showProductsForCategory = async (category, gender = null, searchTerms = null) => {
-        await simulateTyping(800);
-        
-        const products = getAllProducts(category, gender, searchTerms);
-        const shuffledProducts = shuffleArray(products);
+    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '') => {
+        setIsTyping(true);
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        setIsTyping(false);
 
-        if (shuffledProducts.length > 0) {
-            if (searchContext) {
-                addMessage(`Here's what I found!\nDo they match what you're looking for?`, 'assistant');
-            } else {
-                addMessage(`Here's what I found!\nDo they match what you're looking for?`, 'assistant');
+        try {
+            // Get seller IDs in this category
+            let sellerQuery = supabaseClient
+                .from('profiles')
+                .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
+                .eq('category', category);
+
+            if (gender && gender !== 'both') {
+                sellerQuery = sellerQuery.or(`gender.eq.${gender},gender.eq.both,gender.is.null`);
             }
-            await simulateTyping(1000);
-            
-            setAllProducts(shuffledProducts);
-            setDisplayedProducts(shuffledProducts.slice(0, PRODUCTS_PER_PAGE));
-            setProductOffset(PRODUCTS_PER_PAGE);
-            setShowProducts(true);
-            setCurrentStep('products');
-        } else {
-            if (searchContext) {
-                addMessage(`I couldn't find products matching "${searchContext.query}". Let me show you our verified sellers who might have what you need.`, 'assistant');
-            } else {
-                addMessage(`No products available yet. Let me show you our verified sellers.`, 'assistant');
+
+            const { data: categorySellerData } = await sellerQuery.limit(50);
+
+            if (!categorySellerData || categorySellerData.length === 0) {
+                // No sellers in this category at all
+                setMessages(prev => [...prev, {
+                    id: prev.length + 1, type: 'assistant',
+                    text: `No sellers found for that yet 😔\n\nTry a different category!`,
+                    buttons: [
+                        { text: '📱 Phones & Gadgets', value: 'phones' },
+                        { text: '💻 Electronics', value: 'electronics' },
+                        { text: '👟 Shoes & Footwear', value: 'shoes' },
+                        { text: '👔 Clothes & Fashion', value: 'fashion' },
+                        { text: '🏠 Home & Furniture', value: 'furniture' },
+                        { text: '🍕 Foods & Edibles', value: 'foods' },
+                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
+                    ],
+                    timestamp: new Date(), messageId: Date.now()
+                }]);
+                setCurrentStep('category');
+                return;
             }
-            await simulateTyping(1000);
-            setCurrentStep('sellers');
-            setShowSellers(true);
-            setSellerOffset(SELLERS_PER_PAGE);
+
+            const sellerIds = categorySellerData.map(s => s.id);
+
+            // Fetch first 10 products from these sellers
+            const { data: productsData } = await supabaseClient
+                .from('products')
+                .select('id,seller_id,name,price,images,keywords,likes,description')
+                .in('seller_id', sellerIds)
+                .order('created_at', { ascending: false })
+                .limit(10);
+
+            // Merge seller info into products
+            const sellerMap = {};
+            categorySellerData.forEach(s => {
+                const isTrusted = (s.is_free_trial && s.free_trial_expires_at)
+                    ? new Date(s.free_trial_expires_at) > new Date()
+                    : s.subscription_plan === 'growth_pro';
+                sellerMap[s.id] = {
+                    id: s.id, name: s.business_name,
+                    profilePhoto: s.profile_photo || DEFAULT_PROFILE_IMAGE,
+                    location: s.location, whatsappNumber: s.whatsapp,
+                    isVerified: s.is_verified || false, isTrusted,
+                    bio: s.bio || '', category: s.category,
+                    gender: s.gender || null, views: s.views || 0,
+                    leadsCount: s.leads_count || 0,
+                    tempVerifiedUntil: s.temp_verified_until || null,
+                    subscription: s.subscription_plan || 'free',
+                };
+            });
+
+            let mappedProducts = (productsData || []).map(p => {
+                const seller = sellerMap[p.seller_id];
+                if (!seller) return null;
+                const relevanceScore = searchTerms ? scoreProduct(p, searchTerms, seller) : 0;
+                return {
+                    id: p.id, name: p.name,
+                    price: p.price || 'Ask for Price',
+                    description: p.description || '',
+                    images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                    keywords: p.keywords || [],
+                    likes: p.likes || 0, liked: false,
+                    relevanceScore, seller
+                };
+            }).filter(Boolean);
+
+            // Sort by relevance if search terms exist
+            if (searchTerms && searchTerms.length > 0) {
+                mappedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore);
+            }
+
+            if (mappedProducts.length > 0) {
+                setMessages(prev => [...prev, {
+                    id: prev.length + 1, type: 'assistant',
+                    text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
+                    timestamp: new Date(), messageId: Date.now()
+                }]);
+                setDisplayedProducts(mappedProducts);
+                setProductOffset(10);
+                setShowProducts(true);
+                setCurrentStep('products');
+
+                // Also update in-memory sellers so Find More works
+                setSellers(prev => {
+                    const existingIds = new Set(prev.map(s => s.id));
+                    const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
+                    return [...prev, ...newSellers];
+                });
+            } else {
+                // No products — show seller cards directly
+                setMessages(prev => [...prev, {
+                    id: prev.length + 1, type: 'assistant',
+                    text: `I couldn't find a matching product, but here are trusted sellers in this category 👇`,
+                    timestamp: new Date(), messageId: Date.now()
+                }]);
+                setSellers(prev => {
+                    const existingIds = new Set(prev.map(s => s.id));
+                    const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
+                    return [...prev, ...newSellers];
+                });
+                setSellerOffset(10);
+                setShowSellers(true);
+                setCurrentStep('sellers');
+            }
+        } catch(e) {
+            console.error('fetchCategoryProducts error:', e);
+            setMessages(prev => [...prev, {
+                id: prev.length + 1, type: 'assistant',
+                text: `Something went wrong. Check your connection and try again.`,
+                timestamp: new Date(), messageId: Date.now()
+            }]);
         }
     };
 
@@ -699,31 +776,35 @@ export default function App() {
 
     const handleCategorySelect = async (category, displayName, messageId) => {
         setClickedButtons(prev => ({ ...prev, [messageId]: true }));
-        addMessage(displayName, 'user');
+        setMessages(prev => [...prev, { id: prev.length + 1, type: 'user', text: displayName, timestamp: new Date(), messageId: prev.length + 1 }]);
         trackCategorySearch(category);
-        await simulateTyping();
-
         setSelectedCategory(category);
-        
+        setSearchContext(prev => ({ ...(prev || {}), category }));
+
         if (category === 'shoes' || category === 'fashion') {
             setCurrentStep('gender');
-            addMessage(`Perfect choice! 😊 Are you shopping for:`, 'assistant', [
-                { text: '👨 Male', value: 'male' },
-                { text: '👩 Female', value: 'female' },
-                { text: '👥 Both', value: 'both' }
-            ]);
+            setMessages(prev => [...prev, {
+                id: prev.length + 1, type: 'assistant',
+                text: `Perfect choice! 😊 Are you shopping for:`,
+                buttons: [
+                    { text: '👨 Male', value: 'male' },
+                    { text: '👩 Female', value: 'female' },
+                    { text: '👥 Both', value: 'both' }
+                ],
+                timestamp: new Date(), messageId: Date.now()
+            }]);
         } else {
-            showProductsForCategory(category);
+            await fetchCategoryProducts(category, null, searchContext?.searchTerms || null, searchContext?.query || '');
         }
     };
 
     const handleGenderSelect = async (gender, displayName, messageId) => {
         setClickedButtons(prev => ({ ...prev, [messageId]: true }));
-        addMessage(displayName, 'user');
-        
+        setMessages(prev => [...prev, { id: prev.length + 1, type: 'user', text: displayName, timestamp: new Date(), messageId: prev.length + 1 }]);
         setSelectedGender(gender);
+        const category = selectedCategory || searchContext?.category || 'fashion';
         const searchTerms = searchContext ? searchContext.searchTerms : null;
-        showProductsForCategory(selectedCategory, gender, searchTerms);
+        await fetchCategoryProducts(category, gender, searchTerms, searchContext?.query || '');
     };
 
     const handleProductClick = async (product) => {
@@ -764,75 +845,83 @@ export default function App() {
     };
 
     const handleFindMoreProducts = async () => {
+        // Show skeleton while loading next batch
         setIsTyping(true);
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        await new Promise(resolve => setTimeout(resolve, 1500));
         setIsTyping(false);
 
-        // Build category-filtered query
-        let query = supabaseClient
-            .from('products')
-            .select('id,seller_id,name,price,images,keywords,likes,description')
-            .order('created_at', { ascending: false })
-            .range(productOffset, productOffset + DB_BATCH_SIZE - 1);
+        const category = selectedCategory || searchContext?.category;
 
-        // Filter by category via seller_id join — use in-memory sellers for category filtering
-        const categorySellerIds = selectedCategory
-            ? sellers.filter(s => {
-                if (s.category !== selectedCategory) return false;
-                if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
-                return true;
-              }).map(s => s.id)
-            : null;
+        try {
+            const categorySellerIds = category
+                ? sellers.filter(s => {
+                    if (s.category !== category) return false;
+                    if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
+                    return true;
+                  }).map(s => s.id)
+                : null;
 
-        if (categorySellerIds && categorySellerIds.length > 0) {
-            query = query.in('seller_id', categorySellerIds);
-        }
+            let query = supabaseClient
+                .from('products')
+                .select('id,seller_id,name,price,images,keywords,likes,description')
+                .order('created_at', { ascending: false })
+                .range(productOffset, productOffset + 9);
 
-        const { data: nextData, error } = await query;
+            if (categorySellerIds && categorySellerIds.length > 0) {
+                query = query.in('seller_id', categorySellerIds);
+            }
 
-        if (error || !nextData || nextData.length === 0) {
-            addMessage("That's all the products in this category 🔍 Let me show you the sellers directly.", 'assistant');
-            await simulateTyping(800);
-            setShowProducts(false);
-            setShowSellers(true);
-            setCurrentStep('sellers');
-            setSellerOffset(SELLERS_PER_PAGE);
-        } else {
-            const mapped = nextData.map(product => {
-                const seller = sellers.find(s => s.id === product.seller_id);
-                if (!seller) return null;
-                return {
-                    id: product.id,
-                    name: product.name,
-                    price: product.price || 'Ask for Price',
-                    description: product.description || '',
-                    images: product.images || [],
-                    keywords: product.keywords || [],
-                    likes: product.likes || 0,
-                    liked: false,
-                    seller: {
-                        id: seller.id,
-                        name: seller.name,
-                        whatsappNumber: seller.whatsappNumber,
-                        location: seller.location,
-                        profilePhoto: seller.profilePhoto,
-                        isVerified: seller.isVerified,
-                        isTrusted: seller.isTrusted,
-                    }
-                };
-            }).filter(Boolean);
+            const { data: nextData, error } = await query;
 
-            if (mapped.length === 0) {
-                addMessage("That's all the products in this category. Showing you the sellers directly 👇", 'assistant');
-                await simulateTyping(800);
+            if (error || !nextData || nextData.length === 0) {
+                setMessages(prev => [...prev, {
+                    id: prev.length + 1, type: 'assistant',
+                    text: `That's all the products in this category 🔍 Here are the sellers directly:`,
+                    timestamp: new Date(), messageId: Date.now()
+                }]);
                 setShowProducts(false);
                 setShowSellers(true);
                 setCurrentStep('sellers');
                 setSellerOffset(SELLERS_PER_PAGE);
             } else {
-                setDisplayedProducts(prev => [...prev, ...mapped]);
-                setProductOffset(prev => prev + DB_BATCH_SIZE);
+                const mapped = nextData.map(product => {
+                    const seller = sellers.find(s => s.id === product.seller_id);
+                    if (!seller) return null;
+                    return {
+                        id: product.id, name: product.name,
+                        price: product.price || 'Ask for Price',
+                        description: product.description || '',
+                        images: product.images || [],
+                        keywords: product.keywords || [],
+                        likes: product.likes || 0, liked: false,
+                        seller: {
+                            id: seller.id, name: seller.name,
+                            whatsappNumber: seller.whatsappNumber,
+                            location: seller.location,
+                            profilePhoto: seller.profilePhoto,
+                            isVerified: seller.isVerified,
+                            isTrusted: seller.isTrusted,
+                        }
+                    };
+                }).filter(Boolean);
+
+                if (mapped.length === 0) {
+                    setMessages(prev => [...prev, {
+                        id: prev.length + 1, type: 'assistant',
+                        text: `No more products found. Here are the sellers:`,
+                        timestamp: new Date(), messageId: Date.now()
+                    }]);
+                    setShowProducts(false);
+                    setShowSellers(true);
+                    setCurrentStep('sellers');
+                    setSellerOffset(SELLERS_PER_PAGE);
+                } else {
+                    setDisplayedProducts(prev => [...prev, ...mapped]);
+                    setProductOffset(prev => prev + 10);
+                }
             }
+        } catch(e) {
+            console.error('handleFindMoreProducts error:', e);
         }
     };
 
