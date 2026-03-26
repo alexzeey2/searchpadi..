@@ -11,9 +11,51 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
     const [showCampaignSheet, setShowCampaignSheet] = useState(false);
     const [campaigns, setCampaigns] = useState([]);
     const [campaignsLoading, setCampaignsLoading] = useState(false);
+    const [activeAdsCount, setActiveAdsCount] = useState(0);
+    const [now, setNow] = useState(Date.now());
     const [showLeadsChat, setShowLeadsChat] = useState(false);
     const [activeLead, setActiveLead] = useState(null);
     const [replyText, setReplyText] = useState('');
+
+    // Tick every second for countdown timers
+    useEffect(() => {
+        const interval = setInterval(() => setNow(Date.now()), 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Fetch count of active ads for badge (only running/approved within 24hrs)
+    useEffect(() => {
+        if (!isOwnProfile) return;
+        const fetchActiveCount = async () => {
+            try {
+                const { data } = await supabaseClient
+                    .from('pending_payments')
+                    .select('id,status,activated_at,created_at')
+                    .eq('seller_id', seller.id)
+                    .in('status', ['running', 'approved']);
+                if (data) {
+                    const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+                    const active = data.filter(c => {
+                        const startTime = new Date(c.activated_at || c.created_at).getTime();
+                        return startTime > cutoff;
+                    });
+                    setActiveAdsCount(active.length);
+                }
+            } catch(e) { /* silent */ }
+        };
+        fetchActiveCount();
+    }, [isOwnProfile, seller.id]);
+
+    const getTimeLeft = (campaign) => {
+        const startTime = new Date(campaign.activated_at || campaign.created_at).getTime();
+        const expiresAt = startTime + 24 * 60 * 60 * 1000;
+        const diff = expiresAt - now;
+        if (diff <= 0) return null;
+        const h = Math.floor(diff / (1000 * 60 * 60));
+        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const s = Math.floor((diff % (1000 * 60)) / 1000);
+        return { h, m, s, diff };
+    };
 
     const openCampaignSheet = async () => {
         setShowCampaignSheet(true);
@@ -21,7 +63,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
         try {
             const { data } = await supabaseClient
                 .from('pending_payments')
-                .select('id,product_id,ad_clicks,status,created_at')
+                .select('id,product_id,ad_clicks,status,created_at,activated_at')
                 .eq('seller_id', seller.id)
                 .in('status', ['running', 'approved', 'pending'])
                 .order('created_at', { ascending: false });
@@ -34,7 +76,15 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     .in('id', productIds);
                 const productMap = {};
                 (products || []).forEach(p => { productMap[p.id] = p; });
-                setCampaigns(data.map(c => ({ ...c, product: productMap[c.product_id] || null })));
+                const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+                const enriched = data.map(c => ({ ...c, product: productMap[c.product_id] || null }));
+                // Filter out active/approved ads that have expired (>24hrs since activation)
+                const current = enriched.filter(c => {
+                    if (c.status === 'pending') return true;
+                    const startTime = new Date(c.activated_at || c.created_at).getTime();
+                    return startTime > cutoff;
+                });
+                setCampaigns(current);
             } else {
                 setCampaigns([]);
             }
@@ -117,6 +167,11 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
                             </svg>
+                            {activeAdsCount > 0 && (
+                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+                                    {activeAdsCount > 9 ? '9+' : activeAdsCount}
+                                </span>
+                            )}
                         </button>
                     )}
                     <button 
@@ -657,9 +712,14 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                         Get Customers
                                     </button>
                                 </div>
-                            ) : (
-                                <div className="space-y-3 py-2">
-                                    {campaigns.map(c => (
+                            ) : (() => {
+                                const pendingAds = campaigns.filter(c => c.status === 'pending');
+                                const activeAds = campaigns.filter(c => c.status === 'running' || c.status === 'approved');
+
+                                const AdCard = ({ c, isActive }) => {
+                                    const timeLeft = isActive ? getTimeLeft(c) : null;
+                                    const urgentColor = timeLeft && timeLeft.h < 3 ? 'text-red-400' : 'text-green-400';
+                                    return (
                                         <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#2a2a2a] border border-gray-800">
                                             {c.product?.images?.[0] ? (
                                                 <img
@@ -674,10 +734,24 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                             )}
                                             <div className="flex-1 min-w-0">
                                                 <p className="text-white font-semibold text-sm truncate">{c.product?.name || 'Product'}</p>
-                                                <div className="flex items-center gap-1.5 mt-1.5">
-                                                    <span className="text-2xl font-black text-purple-400">{c.ad_clicks || 0}</span>
-                                                    <span className="text-gray-400 text-xs leading-tight">{(c.ad_clicks || 0) === 1 ? 'person clicked' : 'people clicked'}<br/>this advert</span>
-                                                </div>
+                                                {isActive ? (
+                                                    <>
+                                                        <div className="flex items-center gap-1.5 mt-1">
+                                                            <span className="text-xl font-black text-purple-400">{c.ad_clicks || 0}</span>
+                                                            <span className="text-gray-400 text-xs leading-tight">{(c.ad_clicks || 0) === 1 ? 'person clicked' : 'people clicked'}<br/>this advert</span>
+                                                        </div>
+                                                        {timeLeft ? (
+                                                            <div className={`flex items-center gap-1 mt-1.5 text-xs font-mono font-bold ${urgentColor}`}>
+                                                                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                                {String(timeLeft.h).padStart(2,'0')}:{String(timeLeft.m).padStart(2,'0')}:{String(timeLeft.s).padStart(2,'0')} left
+                                                            </div>
+                                                        ) : (
+                                                            <div className="text-red-400 text-xs mt-1.5 font-semibold">Ad expired</div>
+                                                        )}
+                                                    </>
+                                                ) : (
+                                                    <p className="text-gray-500 text-xs mt-1">Awaiting admin approval</p>
+                                                )}
                                             </div>
                                             <div className={`px-2 py-1 rounded-full text-[10px] font-bold flex-shrink-0 ${
                                                 c.status === 'running' ? 'bg-green-500/15 text-green-400 border border-green-500/30' :
@@ -687,9 +761,43 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                                 {c.status === 'running' ? '🟢 Live' : c.status === 'approved' ? '✅ Approved' : '⏳ Pending'}
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                            )}
+                                    );
+                                };
+
+                                return (
+                                    <div className="py-2 space-y-5">
+                                        {/* ACTIVE ADS SECTION */}
+                                        {activeAds.length > 0 && (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Active Ads</span>
+                                                    <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                                        {activeAds.length}
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {activeAds.map(c => <AdCard key={c.id} c={c} isActive={true} />)}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* PENDING ADS SECTION */}
+                                        {pendingAds.length > 0 && (
+                                            <div>
+                                                <div className="flex items-center gap-2 mb-3">
+                                                    <span className="text-yellow-400 text-xs font-bold uppercase tracking-wider">Pending Ads</span>
+                                                    <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                                        {pendingAds.length}
+                                                    </span>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    {pendingAds.map(c => <AdCard key={c.id} c={c} isActive={false} />)}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
