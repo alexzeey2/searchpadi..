@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { supabaseClient } from '../supabase'
 import { shortenLink } from '../helpers'
-import CampaignStatusWidget from './CampaignStatusWidget'
 
 export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsApp, onShowSubscription, onAddProduct, onProductClick, onDeleteProduct, onEditProfile, onShare, onCopyProfileLink, onCopyProductLink, onAttractCustomers, onOpenLeads, onEditProduct, buyerLeads = [] }) {
     const isTempVerified = seller.tempVerifiedUntil && new Date(seller.tempVerifiedUntil) > new Date();
@@ -9,9 +8,42 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
     const isVerifiedDisplay = seller.isVerified || isTempVerified;
 
     const [showVerifySheet, setShowVerifySheet] = useState(false);
+    const [showCampaignSheet, setShowCampaignSheet] = useState(false);
+    const [campaigns, setCampaigns] = useState([]);
+    const [campaignsLoading, setCampaignsLoading] = useState(false);
     const [showLeadsChat, setShowLeadsChat] = useState(false);
     const [activeLead, setActiveLead] = useState(null);
     const [replyText, setReplyText] = useState('');
+
+    const openCampaignSheet = async () => {
+        setShowCampaignSheet(true);
+        setCampaignsLoading(true);
+        try {
+            const { data } = await supabaseClient
+                .from('pending_payments')
+                .select('id,product_id,ad_clicks,status,created_at')
+                .eq('seller_id', seller.id)
+                .in('status', ['running', 'approved', 'pending'])
+                .order('created_at', { ascending: false });
+
+            if (data && data.length > 0) {
+                const productIds = [...new Set(data.map(c => c.product_id).filter(Boolean))];
+                const { data: products } = await supabaseClient
+                    .from('products')
+                    .select('id,name,images')
+                    .in('id', productIds);
+                const productMap = {};
+                (products || []).forEach(p => { productMap[p.id] = p; });
+                setCampaigns(data.map(c => ({ ...c, product: productMap[c.product_id] || null })));
+            } else {
+                setCampaigns([]);
+            }
+        } catch(e) {
+            setCampaigns([]);
+        } finally {
+            setCampaignsLoading(false);
+        }
+    };
     const [showWaChoice, setShowWaChoice] = useState(false);
     const [pendingWaMsg, setPendingWaMsg] = useState({ phone: '', msg: '' });
     const [verifyPhoto, setVerifyPhoto] = useState(null);
@@ -76,6 +108,17 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     {isOwnProfile ? 'My Profile' : 'Seller Profile'}
                 </h2>
                 <div className="flex items-center gap-2">
+                    {isOwnProfile && (
+                        <button
+                            onClick={openCampaignSheet}
+                            className="relative w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
+                            title="My Promotions"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                            </svg>
+                        </button>
+                    )}
                     <button 
                         onClick={onClose}
                         className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white"
@@ -136,9 +179,6 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     <div className="mb-4">
                         {isOwnProfile ? (
                             <>
-                            {/* Campaign Status Widget */}
-                            <CampaignStatusWidget sellerId={seller.id} />
-
                             {/* Get Customers + icon buttons row */}
                             <div className="flex items-center gap-2">
                                 <button
@@ -573,6 +613,84 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                 <button onClick={() => setShowVerifySheet(false)} className="w-full text-gray-500 text-sm mt-3">Cancel</button>
                             </>
                         )}
+                    </div>
+                </div>
+            )}
+
+            {/* CAMPAIGN PROMOTIONS SHEET */}
+            {showCampaignSheet && (
+                <div className="fixed inset-0 bg-black/70 z-[200] flex items-end" onClick={e => e.target === e.currentTarget && setShowCampaignSheet(false)}>
+                    <div className="bg-[#1a1a1a] rounded-t-2xl w-full border-t border-gray-800" onClick={e => e.stopPropagation()} style={{maxHeight:'80vh',display:'flex',flexDirection:'column'}}>
+                        <div className="p-5 pb-3 flex-shrink-0">
+                            <div className="w-9 h-1 bg-gray-700 rounded-full mx-auto mb-5"/>
+                            <div className="flex items-center gap-2 mb-1">
+                                <svg className="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                                </svg>
+                                <h3 className="text-white text-lg font-bold">My Promotions</h3>
+                            </div>
+                            <p className="text-gray-500 text-xs">Products you're currently advertising</p>
+                        </div>
+
+                        <div className="overflow-y-auto flex-1 px-5 pb-8">
+                            {campaignsLoading ? (
+                                <div className="space-y-3 py-2">
+                                    {[1,2].map(i => (
+                                        <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-[#2a2a2a] animate-pulse">
+                                            <div className="w-16 h-16 rounded-xl bg-gray-700 flex-shrink-0"/>
+                                            <div className="flex-1">
+                                                <div className="h-3 bg-gray-700 rounded w-3/4 mb-2"/>
+                                                <div className="h-3 bg-gray-700 rounded w-1/2"/>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : campaigns.length === 0 ? (
+                                <div className="text-center py-10">
+                                    <div className="text-4xl mb-3">📢</div>
+                                    <p className="text-white font-semibold mb-1">No active promotions</p>
+                                    <p className="text-gray-500 text-sm mb-4">Start a campaign to get buyers directly on WhatsApp</p>
+                                    <button
+                                        onClick={() => { setShowCampaignSheet(false); onShowSubscription(); }}
+                                        className="bg-purple-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-purple-700 transition-colors"
+                                    >
+                                        Get Customers
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3 py-2">
+                                    {campaigns.map(c => (
+                                        <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#2a2a2a] border border-gray-800">
+                                            {c.product?.images?.[0] ? (
+                                                <img
+                                                    src={c.product.images[0]}
+                                                    alt={c.product?.name}
+                                                    className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                                                />
+                                            ) : (
+                                                <div className="w-16 h-16 rounded-xl bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                                    <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                </div>
+                                            )}
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-white font-semibold text-sm truncate">{c.product?.name || 'Product'}</p>
+                                                <div className="flex items-center gap-1.5 mt-1.5">
+                                                    <span className="text-2xl font-black text-purple-400">{c.ad_clicks || 0}</span>
+                                                    <span className="text-gray-400 text-xs leading-tight">{(c.ad_clicks || 0) === 1 ? 'person clicked' : 'people clicked'}<br/>this advert</span>
+                                                </div>
+                                            </div>
+                                            <div className={`px-2 py-1 rounded-full text-[10px] font-bold flex-shrink-0 ${
+                                                c.status === 'running' ? 'bg-green-500/15 text-green-400 border border-green-500/30' :
+                                                c.status === 'approved' ? 'bg-blue-500/15 text-blue-400 border border-blue-500/30' :
+                                                'bg-yellow-500/15 text-yellow-400 border border-yellow-500/30'
+                                            }`}>
+                                                {c.status === 'running' ? '🟢 Live' : c.status === 'approved' ? '✅ Approved' : '⏳ Pending'}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
