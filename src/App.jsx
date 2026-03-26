@@ -43,7 +43,7 @@ export default function App() {
         { 
             id: 1, 
             type: 'assistant', 
-            text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\nYou might like these handpicked items just for you! ✨', 
+            text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', 
             timestamp: new Date(),
             messageId: 1
         }
@@ -432,57 +432,9 @@ export default function App() {
             .subscribe();
     };
 
-    // Load initial recommended products
+    // Products no longer auto-load on open — buyer must search first
     useEffect(() => {
-        if (currentStep === 'recommendations' && displayedProducts.length === 0 && sellers.length > 0 && !isLoadingData) {
-            (async () => {
-            // Get all products from all sellers - shuffle sellers first so same seller doesn't dominate
-            const allProductsList = [];
-            const shuffledSellers = shuffleArray([...sellers]);
-            shuffledSellers.forEach(seller => {
-                seller.products.forEach(product => {
-                    allProductsList.push({
-                        ...product,
-                        seller: seller
-                    });
-                });
-            });
-
-            if (allProductsList.length === 0) {
-                // Sellers exist but no products yet
-                setMessages([
-                    { 
-                        id: 1, 
-                        type: 'assistant', 
-                        text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\nOur sellers are setting up their products. Check back soon! ✨', 
-                        timestamp: new Date(),
-                        messageId: 1
-                    }
-                ]);
-                setShowProducts(false);
-                return;
-            }
-
-            // Fetch active campaigns and pin those products first
-            const { data: activeCampaigns } = await supabaseClient
-                .from('pending_payments').select('seller_id, product_id')
-                .eq('status', 'running');
-            const activeCampaignProductIds = new Set((activeCampaigns || []).map(c => c.product_id).filter(Boolean));
-            const activeSellerIds = new Set((activeCampaigns || []).map(c => c.seller_id));
-
-            // Featured (campaign) products first, then shuffle the rest
-            const featured = allProductsList.filter(p => activeCampaignProductIds.has(p.id) || activeSellerIds.has(p.seller?.id));
-            const rest = shuffleArray(allProductsList.filter(p => !activeCampaignProductIds.has(p.id) && !activeSellerIds.has(p.seller?.id)));
-            const sorted = [...featured, ...rest];
-
-            // Show first 5, store rest for load more
-            setAllProducts(sorted);
-            setDisplayedProducts(sorted.slice(0, PRODUCTS_PER_PAGE));
-            setProductOffset(PRODUCTS_PER_PAGE);
-            setShowProducts(true);
-            })();
-        } else if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
-            // Wait a bit longer before showing empty state — sellers may still be populating
+        if (currentStep === 'recommendations' && sellers.length === 0 && !isLoadingData) {
             setTimeout(() => {
                 setSellers(prev => {
                     if (prev.length === 0) {
@@ -490,7 +442,7 @@ export default function App() {
                             { 
                                 id: 1, 
                                 type: 'assistant', 
-                                text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\n🚀 Be the first! Click "Become a Seller" to start.', 
+                                text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', 
                                 timestamp: new Date(),
                                 messageId: 1
                             }
@@ -586,7 +538,13 @@ export default function App() {
     };
 
     const resetToInitialState = () => {
-        setMessages([]);
+        setMessages([{ 
+            id: 1, 
+            type: 'assistant', 
+            text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', 
+            timestamp: new Date(),
+            messageId: 1
+        }]);
         setCurrentStep('category');
         setSelectedCategory(null);
         setSelectedGender(null);
@@ -609,12 +567,16 @@ export default function App() {
 
         resetToInitialState();
 
-        setMessages([{ id: 1, type: 'user', text: query, timestamp: new Date(), messageId: 1 }]);
+        setMessages([
+            { id: 1, type: 'assistant', text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', timestamp: new Date(), messageId: 1 },
+            { id: 2, type: 'user', text: query, timestamp: new Date(), messageId: 2 }
+        ]);
         setSearchQuery('');
         await simulateTyping(1000);
 
         const searchTerms = query.toLowerCase().split(' ').filter(term => term.length > 2);
         
+        // Search across ALL sellers by keyword first — category is just a filter helper
         const allProductsAcrossCategories = [];
         sellers.forEach(seller => {
             seller.products.forEach(product => {
@@ -630,13 +592,9 @@ export default function App() {
         });
 
         if (allProductsAcrossCategories.length > 0) {
-            const sortedProducts = shuffleArray(
-                allProductsAcrossCategories.sort((a, b) => b.relevanceScore - a.relevanceScore)
-            );
-            
-            addMessage(`Here's what I found!\nDo they match what you're looking for?`, 'assistant');
-            await simulateTyping(1000);
-            
+            const sortedProducts = allProductsAcrossCategories.sort((a, b) => b.relevanceScore - a.relevanceScore);
+            addMessage(`I found something for you! 🎯\n\nDo any of these match what you want?`, 'assistant');
+            await simulateTyping(800);
             setAllProducts(sortedProducts);
             setDisplayedProducts(sortedProducts.slice(0, PRODUCTS_PER_PAGE));
             setProductOffset(PRODUCTS_PER_PAGE);
@@ -646,6 +604,7 @@ export default function App() {
             return;
         }
 
+        // No keyword match — use category to narrow the search
         const detectedCategory = detectCategory(query);
         
         if (detectedCategory) {
@@ -654,7 +613,7 @@ export default function App() {
             
             if (detectedCategory === 'shoes' || detectedCategory === 'fashion') {
                 setCurrentStep('gender');
-                addMessage(`Great! I found what you're looking for 🎯\n\nAre you shopping for:`, 'assistant', [
+                addMessage(`Got it! Are you shopping for:`, 'assistant', [
                     { text: '👨 Male', value: 'male' },
                     { text: '👩 Female', value: 'female' },
                     { text: '👥 Both', value: 'both' }
@@ -663,7 +622,8 @@ export default function App() {
                 showProductsForCategory(detectedCategory, null, searchTerms);
             }
         } else {
-            addMessage(`I'd love to help you find what you're looking for! 😊\n\nCould you be more specific? For example:\n• "iPhone 13"\n• "Gaming laptop"\n• "Nike sneakers"\n\nOr choose a category to browse:`, 'assistant', [
+            // Can't detect — ask buyer to pick a category to help Somto search better
+            addMessage(`I didn't find an exact match for "${query}" 🤔\n\nHelp me search better — which category is it?`, 'assistant', [
                 { text: '📱 Phones & Gadgets', value: 'phones' },
                 { text: '💻 Electronics', value: 'electronics' },
                 { text: '👟 Shoes & Footwear', value: 'shoes' },
@@ -673,6 +633,8 @@ export default function App() {
                 { text: '💄 Beauty & Personal Care', value: 'beauty' },
                 { text: '🛒 General Store', value: 'general' }
             ]);
+            setCurrentStep('category');
+            setSearchContext({ query, searchTerms });
         }
     };
 
@@ -1523,9 +1485,16 @@ export default function App() {
                             </div>
                         </div>
                     ) : (
-                        <div className="cursor-default select-none">
-                            <h1 className="text-xl font-bold">SearchPadi</h1>
-                            <p className="text-sm opacity-90">Find Verified Sellers 🇳🇬</p>
+                        <div className="flex items-center gap-3">
+                            <img
+                                src="https://i.postimg.cc/KcrmDRbc/grok-1771024499914.jpg"
+                                alt="Somto"
+                                className="w-10 h-10 rounded-full object-cover border-2 border-purple-300"
+                            />
+                            <div>
+                                <h1 className="text-lg font-bold">Somto</h1>
+                                <p className="text-xs opacity-90">Your SearchPadi AI 🇳🇬</p>
+                            </div>
                         </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -1556,12 +1525,15 @@ export default function App() {
                             </button>
                         ) : (
                             <a
-                                href="/signup.html"
+                                href="https://wa.me/2349058150220?text=Hi, I need help with SearchPadi"
                                 target="_blank"
                                 rel="noopener noreferrer"
-                                className="bg-white text-purple-700 px-4 py-2 rounded-lg text-sm font-semibold hover:bg-purple-50 transition-colors whitespace-nowrap inline-block"
+                                className="bg-white/20 text-white p-2.5 rounded-full hover:bg-white/30 transition-colors flex items-center justify-center"
+                                title="Chat with us"
                             >
-                                Become a Seller
+                                <svg width="22" height="22" fill="white" viewBox="0 0 24 24">
+                                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                                </svg>
                             </a>
                         )}
                     </div>
@@ -1835,7 +1807,7 @@ export default function App() {
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
                         onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                        placeholder="What are you looking for?"
+                        placeholder="Type what you're looking for..."
                         className="flex-1 bg-[#2a2a2a] rounded-full px-5 py-3 text-white placeholder-gray-500 focus:outline-none focus:bg-[#333333] text-sm border-0 glowing-search-input"
                     />
                     <button
