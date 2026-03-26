@@ -764,50 +764,91 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                     );
                                 };
 
+                                const [promoTab, setPromoTab] = React.useState(0); // 0 = Active, 1 = Pending
+                                const sliderRef = React.useRef(null);
+
+                                const handleTabClick = (idx) => {
+                                    setPromoTab(idx);
+                                    if (sliderRef.current) {
+                                        sliderRef.current.scrollTo({ left: idx * sliderRef.current.offsetWidth, behavior: 'smooth' });
+                                    }
+                                };
+
+                                const handleSliderScroll = () => {
+                                    if (sliderRef.current) {
+                                        const idx = Math.round(sliderRef.current.scrollLeft / sliderRef.current.offsetWidth);
+                                        setPromoTab(idx);
+                                    }
+                                };
+
                                 return (
                                     <div className="py-2">
-                                        {/* SIDE BY SIDE: Active left, Pending right */}
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {/* ACTIVE ADS */}
-                                            <div>
-                                                <div className="flex items-center gap-1.5 mb-2">
-                                                    <span className="text-green-400 text-[11px] font-bold uppercase tracking-wider">Active</span>
-                                                    <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                                                        {activeAds.length}
-                                                    </span>
-                                                </div>
+                                        {/* Tab switcher */}
+                                        <div className="flex gap-2 mb-4 relative">
+                                            <button
+                                                onClick={() => handleTabClick(0)}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-colors ${promoTab === 0 ? 'bg-green-500/20 text-green-400 border border-green-500/40' : 'bg-[#2a2a2a] text-gray-500 border border-gray-800'}`}
+                                            >
+                                                🟢 Active
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${promoTab === 0 ? 'bg-green-500 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                                                    {activeAds.length}
+                                                </span>
+                                            </button>
+                                            <button
+                                                onClick={() => handleTabClick(1)}
+                                                className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-sm font-bold transition-colors ${promoTab === 1 ? 'bg-yellow-500/20 text-yellow-400 border border-yellow-500/40' : 'bg-[#2a2a2a] text-gray-500 border border-gray-800'}`}
+                                            >
+                                                ⏳ Pending
+                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${promoTab === 1 ? 'bg-yellow-500 text-white' : 'bg-gray-700 text-gray-400'}`}>
+                                                    {pendingAds.length}
+                                                </span>
+                                            </button>
+                                        </div>
+
+                                        {/* Swipeable slider */}
+                                        <div
+                                            ref={sliderRef}
+                                            onScroll={handleSliderScroll}
+                                            style={{ display:'flex', overflowX:'auto', scrollSnapType:'x mandatory', scrollBehavior:'smooth', WebkitOverflowScrolling:'touch', msOverflowStyle:'none', scrollbarWidth:'none' }}
+                                        >
+                                            {/* Page 1 — Active Ads */}
+                                            <div style={{ minWidth:'100%', scrollSnapAlign:'start' }} className="pr-1">
                                                 {activeAds.length === 0 ? (
-                                                    <div className="rounded-xl bg-[#2a2a2a] border border-gray-800 p-3 text-center">
-                                                        <p className="text-gray-600 text-xs">No active ads</p>
+                                                    <div className="text-center py-10">
+                                                        <div className="text-3xl mb-2">📢</div>
+                                                        <p className="text-gray-500 text-sm">No active ads right now</p>
+                                                        <button onClick={() => { setShowCampaignSheet(false); onShowSubscription(); }} className="mt-4 bg-purple-600 text-white px-5 py-2 rounded-xl text-sm font-bold">Get Customers</button>
                                                     </div>
                                                 ) : (
-                                                    <div className="space-y-2">
+                                                    <div className="space-y-3">
                                                         {activeAds.map(c => {
                                                             const timeLeft = getTimeLeft(c);
                                                             const urgentColor = timeLeft && timeLeft.h < 3 ? 'text-red-400' : 'text-green-400';
                                                             return (
-                                                                <div key={c.id} className="rounded-xl bg-[#2a2a2a] border border-green-900/40 p-2.5 flex flex-col gap-1.5">
+                                                                <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#2a2a2a] border border-green-900/40">
                                                                     {c.product?.images?.[0] ? (
-                                                                        <img src={c.product.images[0]} alt={c.product?.name} className="w-full h-20 rounded-lg object-cover"/>
+                                                                        <img src={c.product.images[0]} alt={c.product?.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0"/>
                                                                     ) : (
-                                                                        <div className="w-full h-20 rounded-lg bg-gray-700 flex items-center justify-center">
-                                                                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                        <div className="w-16 h-16 rounded-xl bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                                                            <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                                         </div>
                                                                     )}
-                                                                    <p className="text-white font-semibold text-xs truncate">{c.product?.name || 'Product'}</p>
-                                                                    <div className="flex items-center gap-1">
-                                                                        <span className="text-purple-400 font-black text-base leading-none">{c.ad_clicks || 0}</span>
-                                                                        <span className="text-gray-500 text-[10px] leading-tight">clicks</span>
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-white font-semibold text-sm truncate">{c.product?.name || 'Product'}</p>
+                                                                        <div className="flex items-center gap-1.5 mt-1">
+                                                                            <span className="text-xl font-black text-purple-400">{c.ad_clicks || 0}</span>
+                                                                            <span className="text-gray-400 text-xs leading-tight">{(c.ad_clicks || 0) === 1 ? 'person clicked' : 'people clicked'}<br/>this advert</span>
+                                                                        </div>
+                                                                        {timeLeft ? (
+                                                                            <div className={`flex items-center gap-1 mt-1.5 text-xs font-mono font-bold ${urgentColor}`}>
+                                                                                <svg className="w-3 h-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                                                {String(timeLeft.h).padStart(2,'0')}:{String(timeLeft.m).padStart(2,'0')}:{String(timeLeft.s).padStart(2,'0')} left
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="text-red-400 text-xs mt-1.5 font-semibold">Ad expired</div>
+                                                                        )}
                                                                     </div>
-                                                                    {timeLeft ? (
-                                                                        <div className={`flex items-center gap-0.5 text-[10px] font-mono font-bold ${urgentColor}`}>
-                                                                            <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                                                                            {String(timeLeft.h).padStart(2,'0')}:{String(timeLeft.m).padStart(2,'0')}:{String(timeLeft.s).padStart(2,'0')}
-                                                                        </div>
-                                                                    ) : (
-                                                                        <div className="text-red-400 text-[10px] font-semibold">Expired</div>
-                                                                    )}
-                                                                    <span className="self-start bg-green-500/15 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full text-[9px] font-bold">
+                                                                    <span className={`flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-bold ${c.status === 'running' ? 'bg-green-500/15 text-green-400 border border-green-500/30' : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'}`}>
                                                                         {c.status === 'running' ? '🟢 Live' : '✅ Approved'}
                                                                     </span>
                                                                 </div>
@@ -817,32 +858,29 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                                 )}
                                             </div>
 
-                                            {/* PENDING ADS */}
-                                            <div>
-                                                <div className="flex items-center gap-1.5 mb-2">
-                                                    <span className="text-yellow-400 text-[11px] font-bold uppercase tracking-wider">Pending</span>
-                                                    <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
-                                                        {pendingAds.length}
-                                                    </span>
-                                                </div>
+                                            {/* Page 2 — Pending Ads */}
+                                            <div style={{ minWidth:'100%', scrollSnapAlign:'start' }} className="pr-1">
                                                 {pendingAds.length === 0 ? (
-                                                    <div className="rounded-xl bg-[#2a2a2a] border border-gray-800 p-3 text-center">
-                                                        <p className="text-gray-600 text-xs">No pending ads</p>
+                                                    <div className="text-center py-10">
+                                                        <div className="text-3xl mb-2">⏳</div>
+                                                        <p className="text-gray-500 text-sm">No pending ads</p>
                                                     </div>
                                                 ) : (
-                                                    <div className="space-y-2">
+                                                    <div className="space-y-3">
                                                         {pendingAds.map(c => (
-                                                            <div key={c.id} className="rounded-xl bg-[#2a2a2a] border border-yellow-900/40 p-2.5 flex flex-col gap-1.5">
+                                                            <div key={c.id} className="flex items-center gap-3 p-3 rounded-xl bg-[#2a2a2a] border border-yellow-900/40">
                                                                 {c.product?.images?.[0] ? (
-                                                                    <img src={c.product.images[0]} alt={c.product?.name} className="w-full h-20 rounded-lg object-cover"/>
+                                                                    <img src={c.product.images[0]} alt={c.product?.name} className="w-16 h-16 rounded-xl object-cover flex-shrink-0"/>
                                                                 ) : (
-                                                                    <div className="w-full h-20 rounded-lg bg-gray-700 flex items-center justify-center">
-                                                                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                    <div className="w-16 h-16 rounded-xl bg-gray-700 flex items-center justify-center flex-shrink-0">
+                                                                        <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
                                                                     </div>
                                                                 )}
-                                                                <p className="text-white font-semibold text-xs truncate">{c.product?.name || 'Product'}</p>
-                                                                <p className="text-gray-500 text-[10px] leading-snug">Awaiting admin approval</p>
-                                                                <span className="self-start bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded-full text-[9px] font-bold">⏳ Pending</span>
+                                                                <div className="flex-1 min-w-0">
+                                                                    <p className="text-white font-semibold text-sm truncate">{c.product?.name || 'Product'}</p>
+                                                                    <p className="text-gray-500 text-xs mt-1">Awaiting admin approval</p>
+                                                                </div>
+                                                                <span className="flex-shrink-0 bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 px-2 py-1 rounded-full text-[10px] font-bold">⏳ Pending</span>
                                                             </div>
                                                         ))}
                                                     </div>
