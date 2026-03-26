@@ -76,53 +76,6 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     {isOwnProfile ? 'My Profile' : 'Seller Profile'}
                 </h2>
                 <div className="flex items-center gap-2">
-                    {isOwnProfile && (
-                        <button
-                            onClick={onEditProfile}
-                            className="bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors flex items-center gap-1"
-                        >
-                            ✎ Edit
-                        </button>
-                    )}
-                    {/* Message icon — visible to all, functional only for owner */}
-                    <button
-                        onClick={isOwnProfile ? () => { setShowLeadsChat(true); setActiveLead(null); if (onOpenLeads) onOpenLeads(); } : undefined}
-                        className={`relative w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white transition-colors ${isOwnProfile ? 'hover:bg-gray-700 cursor-pointer' : 'cursor-default opacity-60'}`}
-                        title={isOwnProfile ? "Buyer messages" : ""}
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/>
-                        </svg>
-                        {(isOwnProfile ? buyerLeads.length : (seller.leadsCount || 0)) > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center">
-                                {(isOwnProfile ? buyerLeads.length : (seller.leadsCount || 0)) > 9 ? '9+' : (isOwnProfile ? buyerLeads.length : (seller.leadsCount || 0))}
-                            </span>
-                        )}
-                    </button>
-                    <button
-                        onClick={async () => {
-                            if (onCopyProfileLink) { onCopyProfileLink(seller.id); return; }
-                            const link = `${window.location.origin}/seller.html?id=${seller.id}`;
-                            try {
-                                const short = await shortenLink(link);
-                                if (navigator.share) {
-                                    await navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short });
-                                } else {
-                                    try { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
-                                    catch(e) { prompt('Copy this link:', short); }
-                                }
-                            } catch(e) {
-                                // Share cancelled or failed — show prompt as reliable fallback
-                                prompt('Copy this link:', link);
-                            }
-                        }}
-                        className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
-                        title="Share profile"
-                    >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/>
-                        </svg>
-                    </button>
                     <button 
                         onClick={onClose}
                         className="w-8 h-8 rounded-full bg-gray-800 flex items-center justify-center text-white"
@@ -186,7 +139,8 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                             {/* Campaign Status Widget */}
                             <CampaignStatusWidget sellerId={seller.id} />
 
-                            <div className="flex gap-2">
+                            {/* Get Customers + icon buttons row */}
+                            <div className="flex items-center gap-2">
                                 <button
                                     onClick={onShowSubscription}
                                     className="flex-1 bg-purple-600 text-white py-2 px-3 rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors flex items-center justify-center gap-1.5"
@@ -195,11 +149,44 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                     Get Customers
                                 </button>
                                 <button
-                                    onClick={() => { setShowVerifySheet(true); setVerifyDone(false); setVerifyPhoto(null); setVerifyPreview(null); setVerifyError(''); }}
-                                    className="flex-1 bg-[#2a2a2a] border border-gray-700 text-gray-300 py-2 px-3 rounded-lg text-sm font-semibold hover:border-purple-500 hover:text-purple-400 transition-all flex items-center justify-center gap-1.5 whitespace-nowrap"
+                                    onClick={onEditProfile}
+                                    className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
+                                    title="Edit profile"
                                 >
-                                    <svg className="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/></svg>
-                                    Verify for Free
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                </button>
+                                <button
+                                    onClick={() => { setShowLeadsChat(true); setActiveLead(null); if (onOpenLeads) onOpenLeads(); }}
+                                    className="relative w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
+                                    title="Buyer messages"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/></svg>
+                                    {buyerLeads.length > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+                                            {buyerLeads.length > 9 ? '9+' : buyerLeads.length}
+                                        </span>
+                                    )}
+                                </button>
+                                <button
+                                    onClick={async () => {
+                                        if (onCopyProfileLink) { onCopyProfileLink(seller.id); return; }
+                                        const link = `${window.location.origin}/seller.html?id=${seller.id}`;
+                                        try {
+                                            const short = await shortenLink(link);
+                                            if (navigator.share) {
+                                                await navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short });
+                                            } else {
+                                                try { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
+                                                catch(e) { prompt('Copy this link:', short); }
+                                            }
+                                        } catch(e) {
+                                            prompt('Copy this link:', link);
+                                        }
+                                    }}
+                                    className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
+                                    title="Share profile"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                                 </button>
                             </div>
                             </>
