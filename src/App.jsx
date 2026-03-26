@@ -805,7 +805,9 @@ export default function App() {
                 timestamp: new Date(), messageId: Date.now()
             }]);
         } else {
+            setIsTyping(true);
             await fetchCategoryProducts(category, null, searchContext?.searchTerms || null, searchContext?.query || '');
+            setIsTyping(false);
         }
     };
 
@@ -815,7 +817,9 @@ export default function App() {
         setSelectedGender(gender);
         const category = selectedCategory || searchContext?.category || 'fashion';
         const searchTerms = searchContext ? searchContext.searchTerms : null;
+        setIsTyping(true);
         await fetchCategoryProducts(category, gender, searchTerms, searchContext?.query || '');
+        setIsTyping(false);
     };
 
     const handleProductClick = async (product) => {
@@ -1400,7 +1404,7 @@ export default function App() {
     const filteredSellers = selectedCategory && showSellers 
         ? sellers.filter(s => {
             if (s.category !== selectedCategory) return false;
-            if (selectedGender && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
+            if (selectedGender && selectedGender !== 'both' && s.gender && s.gender !== 'both' && s.gender !== selectedGender) return false;
             return true;
         }).slice(0, sellerOffset)
         : [];
