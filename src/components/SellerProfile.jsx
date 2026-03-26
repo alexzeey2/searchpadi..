@@ -765,36 +765,90 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                 };
 
                                 return (
-                                    <div className="py-2 space-y-5">
-                                        {/* ACTIVE ADS SECTION */}
-                                        {activeAds.length > 0 && (
+                                    <div className="py-2">
+                                        {/* SIDE BY SIDE: Active left, Pending right */}
+                                        <div className="grid grid-cols-2 gap-3">
+                                            {/* ACTIVE ADS */}
                                             <div>
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <span className="text-green-400 text-xs font-bold uppercase tracking-wider">Active Ads</span>
-                                                    <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                                <div className="flex items-center gap-1.5 mb-2">
+                                                    <span className="text-green-400 text-[11px] font-bold uppercase tracking-wider">Active</span>
+                                                    <span className="bg-green-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
                                                         {activeAds.length}
                                                     </span>
                                                 </div>
-                                                <div className="space-y-3">
-                                                    {activeAds.map(c => <AdCard key={c.id} c={c} isActive={true} />)}
-                                                </div>
+                                                {activeAds.length === 0 ? (
+                                                    <div className="rounded-xl bg-[#2a2a2a] border border-gray-800 p-3 text-center">
+                                                        <p className="text-gray-600 text-xs">No active ads</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {activeAds.map(c => {
+                                                            const timeLeft = getTimeLeft(c);
+                                                            const urgentColor = timeLeft && timeLeft.h < 3 ? 'text-red-400' : 'text-green-400';
+                                                            return (
+                                                                <div key={c.id} className="rounded-xl bg-[#2a2a2a] border border-green-900/40 p-2.5 flex flex-col gap-1.5">
+                                                                    {c.product?.images?.[0] ? (
+                                                                        <img src={c.product.images[0]} alt={c.product?.name} className="w-full h-20 rounded-lg object-cover"/>
+                                                                    ) : (
+                                                                        <div className="w-full h-20 rounded-lg bg-gray-700 flex items-center justify-center">
+                                                                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                        </div>
+                                                                    )}
+                                                                    <p className="text-white font-semibold text-xs truncate">{c.product?.name || 'Product'}</p>
+                                                                    <div className="flex items-center gap-1">
+                                                                        <span className="text-purple-400 font-black text-base leading-none">{c.ad_clicks || 0}</span>
+                                                                        <span className="text-gray-500 text-[10px] leading-tight">clicks</span>
+                                                                    </div>
+                                                                    {timeLeft ? (
+                                                                        <div className={`flex items-center gap-0.5 text-[10px] font-mono font-bold ${urgentColor}`}>
+                                                                            <svg className="w-2.5 h-2.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                                                                            {String(timeLeft.h).padStart(2,'0')}:{String(timeLeft.m).padStart(2,'0')}:{String(timeLeft.s).padStart(2,'0')}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-red-400 text-[10px] font-semibold">Expired</div>
+                                                                    )}
+                                                                    <span className="self-start bg-green-500/15 text-green-400 border border-green-500/30 px-1.5 py-0.5 rounded-full text-[9px] font-bold">
+                                                                        {c.status === 'running' ? '🟢 Live' : '✅ Approved'}
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
 
-                                        {/* PENDING ADS SECTION */}
-                                        {pendingAds.length > 0 && (
+                                            {/* PENDING ADS */}
                                             <div>
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <span className="text-yellow-400 text-xs font-bold uppercase tracking-wider">Pending Ads</span>
-                                                    <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+                                                <div className="flex items-center gap-1.5 mb-2">
+                                                    <span className="text-yellow-400 text-[11px] font-bold uppercase tracking-wider">Pending</span>
+                                                    <span className="bg-yellow-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full min-w-[18px] text-center leading-none">
                                                         {pendingAds.length}
                                                     </span>
                                                 </div>
-                                                <div className="space-y-3">
-                                                    {pendingAds.map(c => <AdCard key={c.id} c={c} isActive={false} />)}
-                                                </div>
+                                                {pendingAds.length === 0 ? (
+                                                    <div className="rounded-xl bg-[#2a2a2a] border border-gray-800 p-3 text-center">
+                                                        <p className="text-gray-600 text-xs">No pending ads</p>
+                                                    </div>
+                                                ) : (
+                                                    <div className="space-y-2">
+                                                        {pendingAds.map(c => (
+                                                            <div key={c.id} className="rounded-xl bg-[#2a2a2a] border border-yellow-900/40 p-2.5 flex flex-col gap-1.5">
+                                                                {c.product?.images?.[0] ? (
+                                                                    <img src={c.product.images[0]} alt={c.product?.name} className="w-full h-20 rounded-lg object-cover"/>
+                                                                ) : (
+                                                                    <div className="w-full h-20 rounded-lg bg-gray-700 flex items-center justify-center">
+                                                                        <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                                                                    </div>
+                                                                )}
+                                                                <p className="text-white font-semibold text-xs truncate">{c.product?.name || 'Product'}</p>
+                                                                <p className="text-gray-500 text-[10px] leading-snug">Awaiting admin approval</p>
+                                                                <span className="self-start bg-yellow-500/15 text-yellow-400 border border-yellow-500/30 px-1.5 py-0.5 rounded-full text-[9px] font-bold">⏳ Pending</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                )}
                                             </div>
-                                        )}
+                                        </div>
                                     </div>
                                 );
                             })()}
