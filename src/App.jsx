@@ -474,33 +474,44 @@ export default function App() {
     };
 
     const detectCategory = (query) => {
-        const queryLower = query.toLowerCase();
+        const q = query.toLowerCase();
         
-        if (queryLower.match(/phone|iphone|samsung|tablet|ipad|mobile|smartphone|galaxy/)) {
+        if (q.match(/phone|iphone|samsung|tablet|ipad|mobile|smartphone|galaxy|tecno|infinix|itel|charger|earphone|airpod|headphone|powerbank|sim/)) {
             return 'phones';
-        } else if (queryLower.match(/laptop|computer|macbook|gaming|ps5|electronics/)) {
+        } else if (q.match(/laptop|computer|macbook|gaming|ps5|ps4|xbox|electronics|monitor|keyboard|mouse|printer|speaker|tv|television|camera|projector|router/)) {
             return 'electronics';
-        } else if (queryLower.match(/shoe|sneaker|heel|boot|sandal|footwear/)) {
+        } else if (q.match(/shoe|sneaker|heel|boot|sandal|footwear|slipper|loafer|trainer|canvas/)) {
             return 'shoes';
-        } else if (queryLower.match(/cloth|fashion|dress|shirt|trouser|wear/)) {
+        } else if (q.match(/cloth|fashion|dress|shirt|trouser|wear|jean|blouse|skirt|suit|jacket|hoodie|necklace|bracelet|chain|jewel|ring|wristwatch|watch|bag|handbag|purse|cap|hat|belt|underwear/)) {
             return 'fashion';
-        } else if (queryLower.match(/furniture|sofa|bed|table|chair|fridge/)) {
+        } else if (q.match(/furniture|sofa|bed|table|chair|fridge|wardrobe|mattress|curtain|fan|ac|washing|microwave|cooker|stove|blender/)) {
             return 'furniture';
+        } else if (q.match(/food|rice|beans|yam|pepper|tomato|oil|spice|snack|drink|juice|cake|bread|chicken|fish|meat|fruit|indomie|noodle/)) {
+            return 'foods';
+        } else if (q.match(/beauty|makeup|cream|lotion|hair|wig|lash|lip|skincare|perfume|soap|gel|serum|nail|cosmetic/)) {
+            return 'beauty';
         }
         
         return null;
     };
 
-    const scoreProduct = (product, searchTerms) => {
+    const scoreProduct = (product, searchTerms, seller = null) => {
         let score = 0;
-        const productText = (product.name + ' ' + product.keywords.join(' ')).toLowerCase();
-        
+        const productText = [
+            product.name || '',
+            (product.keywords || []).join(' '),
+            product.description || '',
+            seller?.bio || product.seller?.bio || '',
+            seller?.name || product.seller?.name || ''
+        ].join(' ').toLowerCase();
+
         searchTerms.forEach(term => {
             if (productText.includes(term)) {
                 score += 1;
-                if (product.name.toLowerCase().includes(term)) {
-                    score += 2;
-                }
+                // Extra weight if it's in the product name
+                if ((product.name || '').toLowerCase().includes(term)) score += 3;
+                // Extra weight if it's in keywords
+                if ((product.keywords || []).join(' ').toLowerCase().includes(term)) score += 2;
             }
         });
 
@@ -518,7 +529,7 @@ export default function App() {
             })
             .forEach(seller => {
                 seller.products.forEach(product => {
-                    const relevanceScore = searchTerms ? scoreProduct(product, searchTerms) : 0;
+                    const relevanceScore = searchTerms ? scoreProduct(product, searchTerms, seller) : 0;
                     allProds.push({
                         ...product,
                         seller: seller,
@@ -527,11 +538,13 @@ export default function App() {
                 });
             });
 
-        if (searchTerms) {
-            const matchedProducts = allProds.filter(p => p.relevanceScore > 0);
-            if (matchedProducts.length > 0) {
-                return shuffleArray(matchedProducts.sort((a, b) => b.relevanceScore - a.relevanceScore));
+        if (searchTerms && searchTerms.length > 0) {
+            const matched = allProds.filter(p => p.relevanceScore > 0);
+            if (matched.length > 0) {
+                return matched.sort((a, b) => b.relevanceScore - a.relevanceScore);
             }
+            // No keyword match within category — return all products in that category anyway
+            return shuffleArray(allProds);
         }
         
         return shuffleArray(allProds);
@@ -580,7 +593,7 @@ export default function App() {
         const allProductsAcrossCategories = [];
         sellers.forEach(seller => {
             seller.products.forEach(product => {
-                const relevanceScore = scoreProduct(product, searchTerms);
+                const relevanceScore = scoreProduct(product, searchTerms, seller);
                 if (relevanceScore > 0) {
                     allProductsAcrossCategories.push({
                         ...product,
@@ -1544,36 +1557,11 @@ export default function App() {
             <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-20">
 
                 {isLoadingData && (
-                    <div style={{animation:'pulse 1.5s ease-in-out infinite'}} className="space-y-4">
-                        {/* Avatar chat bubble skeleton */}
-                        <div className="flex gap-2">
-                            <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',flexShrink:0}}></div>
-                            <div className="flex-1">
-                                <div style={{background:'#1f2937',borderRadius:'0 16px 16px 16px',padding:'12px',display:'inline-block',maxWidth:'85%'}}>
-                                    <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'8px',width:'180px'}}></div>
-                                    <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'140px'}}></div>
-                                </div>
-                                {/* Pill button skeletons */}
-                                <div style={{display:'flex',gap:'8px',marginTop:'12px',flexWrap:'wrap'}}>
-                                    {[1,2,3].map(i => (
-                                        <div key={i} style={{height:'36px',width:'90px',background:'#374151',borderRadius:'999px'}}></div>
-                                    ))}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* 2-column product grid skeleton */}
-                        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:'12px'}}>
-                            {[1,2,3,4].map(i => (
-                                <div key={i} style={{background:'#1f2937',borderRadius:'12px',overflow:'hidden',border:'1px solid #374151'}}>
-                                    <div style={{height:'130px',background:'#374151'}}></div>
-                                    <div style={{padding:'10px'}}>
-                                        <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'6px'}}></div>
-                                        <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'60%',marginBottom:'10px'}}></div>
-                                        <div style={{height:'32px',background:'#374151',borderRadius:'6px'}}></div>
-                                    </div>
-                                </div>
-                            ))}
+                    <div className="flex gap-2" style={{animation:'pulse 1.5s ease-in-out infinite'}}>
+                        <div style={{width:'32px',height:'32px',borderRadius:'50%',background:'#374151',flexShrink:0}}></div>
+                        <div style={{background:'#1f2937',borderRadius:'0 16px 16px 16px',padding:'12px',display:'inline-block',maxWidth:'85%'}}>
+                            <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',marginBottom:'8px',width:'200px'}}></div>
+                            <div style={{height:'10px',background:'#4b5563',borderRadius:'4px',width:'160px'}}></div>
                         </div>
                         <style>{`@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}`}</style>
                     </div>
