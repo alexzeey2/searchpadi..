@@ -1055,9 +1055,10 @@ async function sendChatMessage() {
 }
 
 async function trackAdClick() {
-    if (!currentSeller) return;
+    if (!currentSeller || !productId) return;
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=in.(running,approved)&select=id,ad_clicks`, { headers: H });
+        // Match by both seller_id AND product_id so we hit the exact campaign
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&product_id=eq.${productId}&status=in.(running,approved)&select=id,ad_clicks`, { headers: H });
         const campaigns = await res.json();
         if (campaigns?.length) {
             const c = campaigns[0];
