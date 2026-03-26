@@ -1057,7 +1057,7 @@ async function sendChatMessage() {
 async function trackAdClick() {
     if (!currentSeller) return;
     try {
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=eq.running&select=id,ad_clicks`, { headers: H });
+        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&status=in.(running,approved)&select=id,ad_clicks`, { headers: H });
         const campaigns = await res.json();
         if (campaigns?.length) {
             const c = campaigns[0];
