@@ -176,18 +176,33 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                 <div className="flex items-center gap-2">
                     {isOwnProfile && (
                         <button
-                            onClick={openCampaignSheet}
-                            className="relative w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
-                            title="My Promotions"
+                            onClick={onEditProfile}
+                            className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-white text-sm font-semibold transition-colors"
                         >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
-                            </svg>
-                            {activeAdsCount > 0 && (
-                                <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
-                                    {activeAdsCount > 9 ? '9+' : activeAdsCount}
-                                </span>
-                            )}
+                            Edit
+                        </button>
+                    )}
+                    {isOwnProfile && (
+                        <button
+                            onClick={async () => {
+                                if (onCopyProfileLink) { onCopyProfileLink(seller.id); return; }
+                                const link = `${window.location.origin}/seller.html?id=${seller.id}`;
+                                try {
+                                    const short = await shortenLink(link);
+                                    if (navigator.share) {
+                                        await navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short });
+                                    } else {
+                                        try { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
+                                        catch(e) { prompt('Copy this link:', short); }
+                                    }
+                                } catch(e) {
+                                    prompt('Copy this link:', link);
+                                }
+                            }}
+                            className="w-8 h-8 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors"
+                            title="Share profile"
+                        >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                         </button>
                     )}
                     <button 
@@ -250,7 +265,7 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                     <div className="mb-4">
                         {isOwnProfile ? (
                             <>
-                            {/* Get Customers + icon buttons row */}
+                            {/* Get Customers + Promo + Messages row */}
                             <div className="flex items-center gap-2">
                                 <button
                                     onClick={onShowSubscription}
@@ -260,44 +275,30 @@ export default function SellerProfile({ seller, isOwnProfile, onClose, onWhatsAp
                                     Get Customers
                                 </button>
                                 <button
-                                    onClick={onEditProfile}
-                                    className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
-                                    title="Edit profile"
+                                    onClick={openCampaignSheet}
+                                    className="relative w-11 h-11 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
+                                    title="My Promotions"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/>
+                                    </svg>
+                                    {activeAdsCount > 0 && (
+                                        <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
+                                            {activeAdsCount > 9 ? '9+' : activeAdsCount}
+                                        </span>
+                                    )}
                                 </button>
                                 <button
                                     onClick={() => { setShowLeadsChat(true); setActiveLead(null); if (onOpenLeads) onOpenLeads(); }}
-                                    className="relative w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
+                                    className="relative w-11 h-11 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
                                     title="Buyer messages"
                                 >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/></svg>
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-3 3v-3z"/></svg>
                                     {buyerLeads.length > 0 && (
                                         <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-[10px] font-bold flex items-center justify-center text-white">
                                             {buyerLeads.length > 9 ? '9+' : buyerLeads.length}
                                         </span>
                                     )}
-                                </button>
-                                <button
-                                    onClick={async () => {
-                                        if (onCopyProfileLink) { onCopyProfileLink(seller.id); return; }
-                                        const link = `${window.location.origin}/seller.html?id=${seller.id}`;
-                                        try {
-                                            const short = await shortenLink(link);
-                                            if (navigator.share) {
-                                                await navigator.share({ title: seller.name, text: `Check out ${seller.name} on SearchPadi!`, url: short });
-                                            } else {
-                                                try { await navigator.clipboard.writeText(short); alert('🔗 Profile link copied!'); }
-                                                catch(e) { prompt('Copy this link:', short); }
-                                            }
-                                        } catch(e) {
-                                            prompt('Copy this link:', link);
-                                        }
-                                    }}
-                                    className="w-9 h-9 rounded-full bg-gray-800 hover:bg-gray-700 flex items-center justify-center text-white transition-colors flex-shrink-0"
-                                    title="Share profile"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"/></svg>
                                 </button>
                             </div>
                             </>
