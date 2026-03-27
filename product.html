@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SearchPadi - Product</title>
     <meta name="theme-color" content="#000000">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
     <meta property="og:type" content="website">
     <meta name="referrer" content="no-referrer-when-downgrade">
     <style>
@@ -464,7 +463,7 @@ const H = { 'apikey': SUPABASE_ANON_KEY, 'Authorization': 'Bearer ' + SUPABASE_A
 
 async function get(table, params) {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000); // 20s timeout for slow browsers
+    const timer = setTimeout(() => controller.abort(), 8000); // 8s timeout
     try {
         const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, { headers: H, signal: controller.signal });
         clearTimeout(timer);
@@ -489,17 +488,20 @@ async function load() {
     if (!id) return showError('No product specified.');
     productId = id;
 
-    // Try cache first for instant render
-    try {
-        const cached = sessionStorage.getItem('sp_product_' + id);
-        if (cached) {
-            const { p, seller } = JSON.parse(cached);
-            render(p, seller);
-            // Still fetch fresh in background to update cache
-            fetchAndCache(id);
-            return;
-        }
-    } catch(e) {}
+    // Facebook in-app browser blocks sessionStorage — skip cache for it
+    const isFacebookBrowser = /FBAN|FBAV|FB_IAB|Instagram/i.test(navigator.userAgent);
+
+    if (!isFacebookBrowser) {
+        try {
+            const cached = sessionStorage.getItem('sp_product_' + id);
+            if (cached) {
+                const { p, seller } = JSON.parse(cached);
+                render(p, seller);
+                fetchAndCache(id); // refresh in background
+                return;
+            }
+        } catch(e) {}
+    }
 
     await fetchAndCache(id);
 }
@@ -513,7 +515,7 @@ async function fetchAndCache(id) {
         const seller = p.profiles || null;
         delete p.profiles; // clean up before caching
 
-        try { sessionStorage.setItem('sp_product_' + id, JSON.stringify({ p, seller })); } catch(e) {}
+        try { sessionStorage.setItem('sp_product_' + id, JSON.stringify({ p, seller })); } catch(e) { /* Facebook WebView blocks sessionStorage */ }
 
         render(p, seller);
         if (seller) incrementViews(seller);
@@ -1115,12 +1117,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Hard fallback — if still on skeleton after 25s, show error
+// Hard fallback — if still on skeleton after 10s, show error
 const _loadTimeout = setTimeout(() => {
     if (document.getElementById('skeleton').style.display !== 'none') {
         showError('Taking too long. Check your connection and try again.');
     }
-}, 25000);
+}, 10000);
 
 load().then(() => clearTimeout(_loadTimeout));
 </script>
