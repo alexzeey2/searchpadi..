@@ -495,24 +495,18 @@ export default function App() {
         return null;
     };
 
-    const scoreProduct = (product, searchTerms, seller = null) => {
+    const scoreProduct = (product, searchTerms) => {
+        // Only match against product name, keywords and description — NOT seller bio or name
+        // This prevents all products from a seller showing up just because their bio matches
         let score = 0;
-        const productText = [
-            product.name || '',
-            (product.keywords || []).join(' '),
-            product.description || '',
-            seller?.bio || product.seller?.bio || '',
-            seller?.name || product.seller?.name || ''
-        ].join(' ').toLowerCase();
+        const nameLower = (product.name || '').toLowerCase();
+        const descLower = (product.description || '').toLowerCase();
+        const keywordsLower = (product.keywords || []).join(' ').toLowerCase();
 
         searchTerms.forEach(term => {
-            if (productText.includes(term)) {
-                score += 1;
-                // Extra weight if it's in the product name
-                if ((product.name || '').toLowerCase().includes(term)) score += 3;
-                // Extra weight if it's in keywords
-                if ((product.keywords || []).join(' ').toLowerCase().includes(term)) score += 2;
-            }
+            if (nameLower.includes(term)) score += 4;
+            if (keywordsLower.includes(term)) score += 2;
+            if (descLower.includes(term)) score += 1;
         });
 
         return score;
@@ -700,19 +694,39 @@ export default function App() {
                 };
             });
 
-            // Step 2: Fetch ALL products from these 10 sellers
+            // Step 2: Fetch products from these sellers — filter by search terms directly in DB
             const sellerIds = categorySellerData.map(s => s.id);
-            const { data: productsData } = await supabaseClient
+            let productsQuery = supabaseClient
                 .from('products')
                 .select('id,seller_id,name,price,images,keywords,likes,description')
                 .in('seller_id', sellerIds)
                 .order('created_at', { ascending: false });
 
-            // Step 3: Score and filter products by search terms
+            // If we have search terms, filter by product name OR description in Supabase
+            // This means only products whose name/description actually match come back
+            if (searchTerms && searchTerms.length > 0) {
+                const orFilters = searchTerms.map(term =>
+                    `name.ilike.%${term}%,description.ilike.%${term}%`
+                ).join(',');
+                productsQuery = productsQuery.or(orFilters);
+            }
+
+            const { data: productsData } = await productsQuery;
+
+            // Step 3: Score matched products by relevance (name match scores higher than description)
             let mappedProducts = (productsData || []).map(p => {
                 const seller = sellerMap[p.seller_id];
                 if (!seller) return null;
-                const relevanceScore = searchTerms ? scoreProduct(p, searchTerms, seller) : 0;
+                // Only score against product name/description/keywords — NOT seller bio/name
+                let score = 0;
+                const nameLower = (p.name || '').toLowerCase();
+                const descLower = (p.description || '').toLowerCase();
+                const keywordsLower = (p.keywords || []).join(' ').toLowerCase();
+                (searchTerms || []).forEach(term => {
+                    if (nameLower.includes(term)) score += 4;
+                    if (keywordsLower.includes(term)) score += 2;
+                    if (descLower.includes(term)) score += 1;
+                });
                 return {
                     id: p.id, name: p.name,
                     price: p.price || 'Ask for Price',
@@ -720,14 +734,15 @@ export default function App() {
                     images: p.images || [DEFAULT_PRODUCT_IMAGE],
                     keywords: p.keywords || [],
                     likes: p.likes || 0, liked: false,
-                    relevanceScore, seller
+                    relevanceScore: score, seller
                 };
             }).filter(Boolean);
 
-            // Keep only products that match search terms (score > 0), sorted by relevance
+            // Sort by relevance score — highest first
             if (searchTerms && searchTerms.length > 0) {
-                const matched = mappedProducts.filter(p => p.relevanceScore > 0);
-                mappedProducts = matched.sort((a, b) => b.relevanceScore - a.relevanceScore);
+                mappedProducts = mappedProducts
+                    .filter(p => p.relevanceScore > 0)
+                    .sort((a, b) => b.relevanceScore - a.relevanceScore);
             }
 
             // Update in-memory sellers
