@@ -690,7 +690,7 @@ function openWa(type) {
 
 function openLeadModal() {
     openChatScreen();
-    // Track Ask for Price click using atomic increment
+    // Track Ask for Price click (product clicks counter)
     if (productId) {
         fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_ask_clicks`, {
             method: 'POST',
@@ -698,6 +698,8 @@ function openLeadModal() {
             body: JSON.stringify({ product_id_input: productId })
         }).catch(() => {});
     }
+    // Track ad click immediately when buyer opens the chat
+    trackAdClick();
 }
 
 // ── Chat Screen ──────────────────────────────────────────
@@ -1010,7 +1012,6 @@ async function sendChatMessage() {
         input.value = '';
         autoResize(input);
         document.getElementById('productTag').style.display = 'none';
-        trackAdClick();
         sellerReply(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price on WhatsApp?`, () => {
             chatStep = 'awaiting_number_final';
             input.disabled = false;
@@ -1055,20 +1056,23 @@ async function sendChatMessage() {
 }
 
 async function trackAdClick() {
-    if (!currentSeller || !productId) return;
+    if (!currentSeller?.id || !productId) return;
     try {
-        // Match by both seller_id AND product_id so we hit the exact campaign
-        const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&product_id=eq.${productId}&status=in.(running,approved)&select=id,ad_clicks`, { headers: H });
+        // Find all active campaigns for this seller + product
+        const res = await fetch(
+            `${SUPABASE_URL}/rest/v1/pending_payments?seller_id=eq.${currentSeller.id}&product_id=eq.${productId}&status=in.(running,approved)&select=id`,
+            { headers: H }
+        );
         const campaigns = await res.json();
-        if (campaigns?.length) {
-            const c = campaigns[0];
-            const newClicks = (c.ad_clicks || 0) + 1;
-            await fetch(`${SUPABASE_URL}/rest/v1/pending_payments?id=eq.${c.id}`, {
-                method: 'PATCH',
-                headers: { ...H, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
-                body: JSON.stringify({ ad_clicks: newClicks })
-            });
-        }
+        if (!campaigns?.length) return;
+        // Increment every matching campaign atomically (handles same product promoted twice)
+        await Promise.all(campaigns.map(c =>
+            fetch(`${SUPABASE_URL}/rest/v1/rpc/increment_ad_clicks`, {
+                method: 'POST',
+                headers: { ...H, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ campaign_id: c.id })
+            }).catch(() => {})
+        ));
     } catch(e) {}
 }
 
