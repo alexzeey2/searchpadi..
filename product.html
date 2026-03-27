@@ -506,19 +506,13 @@ async function load() {
 
 async function fetchAndCache(id) {
     try {
-        // Fetch product first to get seller_id, then both in parallel isn't possible
-        // without seller_id — so fetch product, then immediately fire seller fetch
-        const products = await get('products', `id=eq.${encodeURIComponent(id)}&select=*`);
+        // Fetch product + seller in ONE request using Supabase join — saves one round trip
+        const products = await get('products', `id=eq.${encodeURIComponent(id)}&select=*,profiles(*)`);
         if (!products?.length) return showError('Product not found.');
         const p = products[0];
+        const seller = p.profiles || null;
+        delete p.profiles; // clean up before caching
 
-        // Fire seller fetch and view increment in parallel
-        const [sellers] = await Promise.all([
-            get('profiles', `id=eq.${encodeURIComponent(p.seller_id)}&select=*`),
-        ]);
-        const seller = sellers?.[0];
-
-        // Cache for next visit
         try { sessionStorage.setItem('sp_product_' + id, JSON.stringify({ p, seller })); } catch(e) {}
 
         render(p, seller);
