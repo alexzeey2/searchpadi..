@@ -1031,8 +1031,11 @@ export default function App() {
                     likes: p.likes || 0, liked: false
                 }))
             };
+            // Close product page and open seller profile at the same time
+            setSelectedProduct(null);
             setSelectedSeller(fullSeller);
         } catch(e) {
+            setSelectedProduct(null);
             setSelectedSeller(seller);
         } finally {
             setIsLoadingProfile(false);
@@ -1950,10 +1953,7 @@ export default function App() {
                     <ProductDetail 
                         product={derivedProduct}
                         onClose={() => setSelectedProduct(null)}
-                        onSellerClick={(seller) => {
-                            setSelectedProduct(null);
-                            openSellerProfile(seller);
-                        }}
+                        onSellerClick={(seller) => openSellerProfile(seller)}
                         onWhatsApp={handleWhatsAppMessage}
                         onToggleLike={toggleProductLike}
                     />
