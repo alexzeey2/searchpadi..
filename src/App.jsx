@@ -608,22 +608,6 @@ export default function App() {
         setSelectedCategory(category);
         setSearchContext({ query, searchTerms, category });
 
-        if (detectedCategory === 'shoes' || detectedCategory === 'fashion') {
-            setIsTyping(false);
-            setMessages(prev => [...prev, {
-                id: prev.length + 1, type: 'assistant',
-                text: `Got it! Are you shopping for:`,
-                buttons: [
-                    { text: '👨 Male', value: 'male' },
-                    { text: '👩 Female', value: 'female' },
-                    { text: '👥 Both', value: 'both' }
-                ],
-                timestamp: new Date(), messageId: prev.length + 1
-            }]);
-            setCurrentStep('gender');
-            return;
-        }
-
         // Fetch products in detected category — skeleton stays on until fetch completes
         await fetchCategoryProducts(category, null, searchTerms, query);
         setIsTyping(false);
@@ -807,23 +791,9 @@ export default function App() {
         setSelectedCategory(category);
         setSearchContext(prev => ({ ...(prev || {}), category }));
 
-        if (category === 'shoes' || category === 'fashion') {
-            setCurrentStep('gender');
-            setMessages(prev => [...prev, {
-                id: prev.length + 1, type: 'assistant',
-                text: `Perfect choice! 😊 Are you shopping for:`,
-                buttons: [
-                    { text: '👨 Male', value: 'male' },
-                    { text: '👩 Female', value: 'female' },
-                    { text: '👥 Both', value: 'both' }
-                ],
-                timestamp: new Date(), messageId: Date.now()
-            }]);
-        } else {
-            setIsTyping(true);
+        setIsTyping(true);
             await fetchCategoryProducts(category, null, searchContext?.searchTerms || null, searchContext?.query || '');
             setIsTyping(false);
-        }
     };
 
     const handleGenderSelect = async (gender, displayName, messageId) => {
