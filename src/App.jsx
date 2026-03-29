@@ -615,23 +615,27 @@ export default function App() {
 
     const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0) => {
         try {
-            // STEP 1: Search ALL products across ALL sellers by name/description/keywords
-            // Category is ignored at this stage — a furniture seller can sell slippers
+            // STEP 1: Search products by name and description only — no category, no bio
             if (searchTerms && searchTerms.length > 0) {
-                const { data: allProductsData } = await supabaseClient
+                const orFilters = searchTerms.map(term =>
+                    `name.ilike.%${term}%,description.ilike.%${term}%`
+                ).join(',');
+
+                const { data: matchedProducts } = await supabaseClient
                     .from('products')
                     .select('id,seller_id,name,price,images,keywords,likes,description')
-                    .or(searchTerms.map(term => `name.ilike.%${term}%,description.ilike.%${term}%`).join(','))
-                    .order('created_at', { ascending: false })
-                    .limit(50);
+                    .or(orFilters)
+                    .order('created_at', { ascending: false });
 
-                if (allProductsData && allProductsData.length > 0) {
-                    // Fetch the sellers for these matched products
-                    const sellerIds = [...new Set(allProductsData.map(p => p.seller_id))];
+                if (matchedProducts && matchedProducts.length > 0) {
+                    // Get unique seller IDs from matched products, limit to 2 sellers at a time
+                    const uniqueSellerIds = [...new Set(matchedProducts.map(p => p.seller_id))]
+                        .slice(sellerPageOffset, sellerPageOffset + 2);
+
                     const { data: sellersData } = await supabaseClient
                         .from('profiles')
                         .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
-                        .in('id', sellerIds);
+                        .in('id', uniqueSellerIds);
 
                     const sellerMap = {};
                     (sellersData || []).forEach(s => {
@@ -652,26 +656,21 @@ export default function App() {
                         };
                     });
 
-                    // Score and map products
-                    const mappedProducts = allProductsData.map(p => {
-                        const seller = sellerMap[p.seller_id];
-                        if (!seller) return null;
-                        let score = 0;
-                        const nameLower = (p.name || '').toLowerCase();
-                        const descLower = (p.description || '').toLowerCase();
-                        const keywordsLower = (p.keywords || []).join(' ').toLowerCase();
-                        searchTerms.forEach(term => {
-                            if (nameLower.includes(term)) score += 4;
-                            if (keywordsLower.includes(term)) score += 2;
-                            if (descLower.includes(term)) score += 1;
-                        });
-                        return { id: p.id, name: p.name, price: p.price || 'Ask for Price',
-                            description: p.description || '', images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                            keywords: p.keywords || [], likes: p.likes || 0, liked: false,
-                            relevanceScore: score, seller };
-                    }).filter(Boolean).sort((a, b) => b.relevanceScore - a.relevanceScore);
+                    // Only show products from the 2 sellers
+                    const mappedProducts = matchedProducts
+                        .filter(p => uniqueSellerIds.includes(p.seller_id))
+                        .map(p => {
+                            const seller = sellerMap[p.seller_id];
+                            if (!seller) return null;
+                            return {
+                                id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                                description: p.description || '',
+                                images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                                keywords: p.keywords || [], likes: p.likes || 0, liked: false,
+                                seller
+                            };
+                        }).filter(Boolean);
 
-                    // Update sellers in memory
                     setSellers(prev => {
                         const existingIds = new Set(prev.map(s => s.id));
                         const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
@@ -692,19 +691,17 @@ export default function App() {
                 }
             }
 
-            // STEP 2: No products found — fall back to showing sellers in the detected category
+            // STEP 2: No products found — fall back to sellers in detected category
             const categories = (category === 'shoes' || category === 'fashion')
                 ? ['shoes', 'fashion']
                 : [category];
 
-            let sellerQuery = supabaseClient
+            const { data: categorySellerData } = await supabaseClient
                 .from('profiles')
                 .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
                 .in('category', categories)
                 .order('created_at', { ascending: false })
                 .range(sellerPageOffset, sellerPageOffset + 1);
-
-            const { data: categorySellerData } = await sellerQuery;
 
             if (!categorySellerData || categorySellerData.length === 0) {
                 setMessages(prev => [...prev, {
