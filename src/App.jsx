@@ -691,13 +691,9 @@ export default function App() {
                 .in('seller_id', sellerIds)
                 .order('created_at', { ascending: false });
 
-            // If we have search terms, filter by product name OR description in Supabase
-            // This means only products whose name/description actually match come back
+            // Fetch all products from these sellers — filter locally for reliability
             if (searchTerms && searchTerms.length > 0) {
-                const orFilters = searchTerms.map(term =>
-                    `name.ilike.%${term}%,description.ilike.%${term}%,keywords.cs.{${term}}`
-                ).join(',');
-                productsQuery = productsQuery.or(orFilters);
+                // no Supabase filter — local scoring handles relevance
             }
 
             const { data: productsData } = await productsQuery;
