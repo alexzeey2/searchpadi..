@@ -603,29 +603,30 @@ export default function App() {
             .split(/\s+/)
             .filter(term => term.length >= 2 && !fillerWords.has(term));
 
+        // Also keep the full query as a phrase for exact matching
+        const fullPhrase = query.toLowerCase().trim();
+
         const detectedCategory = detectCategory(query);
         const category = detectedCategory || 'general';
 
         setSelectedCategory(category);
-        setSearchContext({ query, searchTerms, category });
+        setSearchContext({ query, searchTerms, category, fullPhrase });
 
         // Fetch products in detected category — skeleton stays on until fetch completes
-        await fetchCategoryProducts(category, null, searchTerms, query);
+        await fetchCategoryProducts(category, null, searchTerms, query, 0, fullPhrase);
         setIsTyping(false);
     };
 
-    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0) => {
+    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0, fullPhrase = null) => {
         try {
-            // STEP 1: Search products by name and description only — no category, no bio
+            // STEP 1: Search products by full phrase first, then individual terms
             if (searchTerms && searchTerms.length > 0) {
-                const orFilters = searchTerms.map(term =>
-                    `name.ilike.%${term}%,description.ilike.%${term}%`
-                ).join(',');
-
+                // Try full phrase match first
+                const phrase = fullPhrase || searchTerms.join(' ');
                 const { data: matchedProducts } = await supabaseClient
                     .from('products')
                     .select('id,seller_id,name,price,images,keywords,likes,description')
-                    .or(orFilters)
+                    .or(`name.ilike.%${phrase}%,description.ilike.%${phrase}%`)
                     .order('created_at', { ascending: false });
 
                 if (matchedProducts && matchedProducts.length > 0) {
