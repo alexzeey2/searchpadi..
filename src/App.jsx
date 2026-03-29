@@ -809,9 +809,6 @@ export default function App() {
     const handleProductClick = async (product) => {
         setIsLoadingProductView(true);
         
-        // Simulate brief loading for better UX
-        await new Promise(resolve => setTimeout(resolve, 300));
-        
         // Increment view count in database
         try {
             const { error } = await supabaseClient
