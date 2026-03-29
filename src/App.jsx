@@ -615,11 +615,16 @@ export default function App() {
 
     const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0) => {
         try {
-            // Step 1: Fetch 10 sellers in this category (with pagination support for "Find More")
+            // Shoes and fashion are merged — search both together
+            const categories = (category === 'shoes' || category === 'fashion')
+                ? ['shoes', 'fashion']
+                : [category];
+
+            // Step 1: Fetch 2 sellers in this category (with pagination support for "Find More")
             let sellerQuery = supabaseClient
                 .from('profiles')
                 .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
-                .eq('category', category)
+                .in('category', categories)
                 .order('created_at', { ascending: false })
                 .range(sellerPageOffset, sellerPageOffset + 1);
 
