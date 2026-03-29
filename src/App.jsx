@@ -671,24 +671,25 @@ export default function App() {
                             };
                         }).filter(Boolean);
 
-                    setSellers(prev => {
-                        const existingIds = new Set(prev.map(s => s.id));
-                        const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
-                        return [...prev, ...newSellers];
-                    });
+                    if (mappedProducts.length > 0) {
+                        setSellers(prev => {
+                            const existingIds = new Set(prev.map(s => s.id));
+                            const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
+                            return [...prev, ...newSellers];
+                        });
 
-                    setMessages(prev => [...prev, {
-                        id: prev.length + 1, type: 'assistant',
-                        text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
-                        timestamp: new Date(), messageId: Date.now()
-                    }]);
-                    setDisplayedProducts(mappedProducts);
-                    setProductOffset(sellerPageOffset + 2);
-                    setShowProducts(true);
-                    setShowSellers(false);
-                    setCurrentStep('products');
-                    return;
-                }
+                        setMessages(prev => [...prev, {
+                            id: prev.length + 1, type: 'assistant',
+                            text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
+                            timestamp: new Date(), messageId: Date.now()
+                        }]);
+                        setDisplayedProducts(mappedProducts);
+                        setProductOffset(sellerPageOffset + 2);
+                        setShowProducts(true);
+                        setShowSellers(false);
+                        setCurrentStep('products');
+                        return;
+                    }
             }
 
             // STEP 2: No products found — fall back to sellers in detected category
@@ -1707,7 +1708,10 @@ export default function App() {
                                             </div>
                                         )}
                                         <p className="text-sm font-bold text-white line-clamp-2 mb-1">{product.name}</p>
-                                        <div className="flex items-center gap-1 text-xs text-gray-400 mt-2">
+                                        <div 
+                                            className="flex items-center gap-1 text-xs text-gray-400 mt-2"
+                                            onClick={(e) => { e.stopPropagation(); openSellerProfile(product.seller); }}
+                                        >
                                             <img 
                                                 src={product.seller.profilePhoto} 
                                                 alt={product.seller.name}
