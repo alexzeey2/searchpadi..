@@ -695,7 +695,7 @@ export default function App() {
             // This means only products whose name/description actually match come back
             if (searchTerms && searchTerms.length > 0) {
                 const orFilters = searchTerms.map(term =>
-                    `name.ilike.%${term}%,description.ilike.%${term}%`
+                    `name.ilike.%${term}%,description.ilike.%${term}%,keywords.cs.{${term}}`
                 ).join(',');
                 productsQuery = productsQuery.or(orFilters);
             }
@@ -730,7 +730,6 @@ export default function App() {
             // Sort by relevance score — highest first
             if (searchTerms && searchTerms.length > 0) {
                 mappedProducts = mappedProducts
-                    .filter(p => p.relevanceScore > 0)
                     .sort((a, b) => b.relevanceScore - a.relevanceScore);
             }
 
