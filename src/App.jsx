@@ -70,7 +70,7 @@ export default function App() {
     const messagesEndRef = useRef(null);
 
     const PRODUCTS_PER_PAGE = 10;
-    const SELLERS_PER_PAGE = 10;
+    const SELLERS_PER_PAGE = 2;
     const DB_BATCH_SIZE = 10;
 
     // Load sellers and products from database on mount
@@ -637,7 +637,7 @@ export default function App() {
                 .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
                 .eq('category', category)
                 .order('created_at', { ascending: false })
-                .range(sellerPageOffset, sellerPageOffset + 9);
+                .range(sellerPageOffset, sellerPageOffset + 1);
 
             if (gender && gender !== 'both') {
                 sellerQuery = sellerQuery.or(`gender.eq.${gender},gender.eq.both,gender.is.null`);
@@ -760,7 +760,7 @@ export default function App() {
                 }]);
                 // Replace (not append) displayed products on each new fetch batch
                 setDisplayedProducts(mappedProducts);
-                setProductOffset(sellerPageOffset + 10);
+                setProductOffset(sellerPageOffset + 2);
                 setShowProducts(true);
                 setShowSellers(false);
                 setCurrentStep('products');
@@ -772,7 +772,7 @@ export default function App() {
                     timestamp: new Date(), messageId: Date.now()
                 }]);
                 setShowProducts(false);
-                setSellerOffset(sellerPageOffset + 10);
+                setSellerOffset(sellerPageOffset + 2);
                 setShowSellers(true);
                 setCurrentStep('sellers');
             }
@@ -959,7 +959,7 @@ export default function App() {
             { 
                 id: 1, 
                 type: 'assistant', 
-                text: 'Hi! 👋 I\'m Somto, your Search Padi.\n\nYou might like these handpicked items just for you! ✨', 
+                text: 'Hi! 👋 I\'m Somto.\n\nWhich product are you looking for? I\'ll find you a trusted seller.', 
                 timestamp: new Date(),
                 messageId: 1
             }
