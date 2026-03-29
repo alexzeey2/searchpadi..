@@ -1014,9 +1014,7 @@ export default function App() {
         if (currentUser?.type === 'seller' && currentUser.data.id === seller.id) {
             fetchBuyerLeads(seller.id);
         }
-        // Show skeleton first before anything
         setIsLoadingProfile(true);
-        setSelectedSeller(null);
         try {
             const { data: allProducts } = await supabaseClient
                 .from('products')
@@ -1033,9 +1031,9 @@ export default function App() {
                     likes: p.likes || 0, liked: false
                 }))
             };
-            handleSellerClick(fullSeller);
+            setSelectedSeller(fullSeller);
         } catch(e) {
-            handleSellerClick(seller);
+            setSelectedSeller(seller);
         } finally {
             setIsLoadingProfile(false);
         }
@@ -1874,7 +1872,7 @@ export default function App() {
 
             {/* Seller Profile Skeleton */}
             {isLoadingProfile && (
-                <div className="fixed inset-0 bg-[#1a1a1a] z-50 flex flex-col overflow-hidden">
+                <div className="fixed inset-0 bg-[#1a1a1a] z-[65] flex flex-col overflow-hidden">
                     <div className="bg-[#1a1a1a] p-4 border-b border-gray-800 flex justify-between items-center">
                         <div className="h-6 w-32 bg-gray-800 rounded-lg animate-pulse"/>
                         <div className="w-8 h-8 rounded-full bg-gray-800 animate-pulse"/>
