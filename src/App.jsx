@@ -615,12 +615,88 @@ export default function App() {
 
     const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0) => {
         try {
-            // Shoes and fashion are merged — search both together
+            // STEP 1: Search ALL products across ALL sellers by name/description/keywords
+            // Category is ignored at this stage — a furniture seller can sell slippers
+            if (searchTerms && searchTerms.length > 0) {
+                const { data: allProductsData } = await supabaseClient
+                    .from('products')
+                    .select('id,seller_id,name,price,images,keywords,likes,description')
+                    .or(searchTerms.map(term => `name.ilike.%${term}%,description.ilike.%${term}%`).join(','))
+                    .order('created_at', { ascending: false })
+                    .limit(50);
+
+                if (allProductsData && allProductsData.length > 0) {
+                    // Fetch the sellers for these matched products
+                    const sellerIds = [...new Set(allProductsData.map(p => p.seller_id))];
+                    const { data: sellersData } = await supabaseClient
+                        .from('profiles')
+                        .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
+                        .in('id', sellerIds);
+
+                    const sellerMap = {};
+                    (sellersData || []).forEach(s => {
+                        const isTrusted = (s.is_free_trial && s.free_trial_expires_at)
+                            ? new Date(s.free_trial_expires_at) > new Date()
+                            : s.subscription_plan === 'growth_pro';
+                        sellerMap[s.id] = {
+                            id: s.id, name: s.business_name,
+                            profilePhoto: s.profile_photo || DEFAULT_PROFILE_IMAGE,
+                            location: s.location, whatsappNumber: s.whatsapp,
+                            isVerified: s.is_verified || false, isTrusted,
+                            bio: s.bio || '', category: s.category,
+                            gender: s.gender || null, views: s.views || 0,
+                            leadsCount: s.leads_count || 0,
+                            tempVerifiedUntil: s.temp_verified_until || null,
+                            subscription: s.subscription_plan || 'free',
+                            products: []
+                        };
+                    });
+
+                    // Score and map products
+                    const mappedProducts = allProductsData.map(p => {
+                        const seller = sellerMap[p.seller_id];
+                        if (!seller) return null;
+                        let score = 0;
+                        const nameLower = (p.name || '').toLowerCase();
+                        const descLower = (p.description || '').toLowerCase();
+                        const keywordsLower = (p.keywords || []).join(' ').toLowerCase();
+                        searchTerms.forEach(term => {
+                            if (nameLower.includes(term)) score += 4;
+                            if (keywordsLower.includes(term)) score += 2;
+                            if (descLower.includes(term)) score += 1;
+                        });
+                        return { id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                            description: p.description || '', images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                            keywords: p.keywords || [], likes: p.likes || 0, liked: false,
+                            relevanceScore: score, seller };
+                    }).filter(Boolean).sort((a, b) => b.relevanceScore - a.relevanceScore);
+
+                    // Update sellers in memory
+                    setSellers(prev => {
+                        const existingIds = new Set(prev.map(s => s.id));
+                        const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
+                        return [...prev, ...newSellers];
+                    });
+
+                    setMessages(prev => [...prev, {
+                        id: prev.length + 1, type: 'assistant',
+                        text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
+                        timestamp: new Date(), messageId: Date.now()
+                    }]);
+                    setDisplayedProducts(mappedProducts);
+                    setProductOffset(sellerPageOffset + 2);
+                    setShowProducts(true);
+                    setShowSellers(false);
+                    setCurrentStep('products');
+                    return;
+                }
+            }
+
+            // STEP 2: No products found — fall back to showing sellers in the detected category
             const categories = (category === 'shoes' || category === 'fashion')
                 ? ['shoes', 'fashion']
                 : [category];
 
-            // Step 1: Fetch 2 sellers in this category (with pagination support for "Find More")
             let sellerQuery = supabaseClient
                 .from('profiles')
                 .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
@@ -628,48 +704,32 @@ export default function App() {
                 .order('created_at', { ascending: false })
                 .range(sellerPageOffset, sellerPageOffset + 1);
 
-            if (gender && gender !== 'both') {
-                sellerQuery = sellerQuery.or(`gender.eq.${gender},gender.eq.both,gender.is.null`);
-            }
-
             const { data: categorySellerData } = await sellerQuery;
 
             if (!categorySellerData || categorySellerData.length === 0) {
-                if (sellerPageOffset === 0) {
-                    // No sellers at all in this category
-                    setMessages(prev => [...prev, {
-                        id: prev.length + 1, type: 'assistant',
-                        text: `No sellers found for that yet 😔\n\nTry a different category!`,
-                        buttons: [
-                            { text: '📱 Phones & Gadgets', value: 'phones' },
-                            { text: '💻 Electronics', value: 'electronics' },
-                            { text: '👟 Shoes & Footwear', value: 'shoes' },
-                            { text: '👔 Clothes & Fashion', value: 'fashion' },
-                            { text: '🏠 Home & Furniture', value: 'furniture' },
-                            { text: '🍕 Foods & Edibles', value: 'foods' },
-                            { text: '💄 Beauty & Personal Care', value: 'beauty' },
-                        ],
-                        timestamp: new Date(), messageId: Date.now()
-                    }]);
-                    setCurrentStep('category');
-                } else {
-                    setMessages(prev => [...prev, {
-                        id: prev.length + 1, type: 'assistant',
-                        text: `No more sellers in this category 🔍`,
-                        timestamp: new Date(), messageId: Date.now()
-                    }]);
-                    setShowNoMoreMessage(true);
-                }
+                setMessages(prev => [...prev, {
+                    id: prev.length + 1, type: 'assistant',
+                    text: `No sellers found for that yet 😔\n\nTry a different category!`,
+                    buttons: [
+                        { text: '📱 Phones & Gadgets', value: 'phones' },
+                        { text: '💻 Electronics', value: 'electronics' },
+                        { text: '👟 Shoes & Footwear', value: 'shoes' },
+                        { text: '👔 Clothes & Fashion', value: 'fashion' },
+                        { text: '🏠 Home & Furniture', value: 'furniture' },
+                        { text: '🍕 Foods & Edibles', value: 'foods' },
+                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
+                    ],
+                    timestamp: new Date(), messageId: Date.now()
+                }]);
+                setCurrentStep('category');
                 return;
             }
 
-            // Build seller map
-            const sellerMap = {};
-            categorySellerData.forEach(s => {
+            const fallbackSellers = categorySellerData.map(s => {
                 const isTrusted = (s.is_free_trial && s.free_trial_expires_at)
                     ? new Date(s.free_trial_expires_at) > new Date()
                     : s.subscription_plan === 'growth_pro';
-                sellerMap[s.id] = {
+                return {
                     id: s.id, name: s.business_name,
                     profilePhoto: s.profile_photo || DEFAULT_PROFILE_IMAGE,
                     location: s.location, whatsappNumber: s.whatsapp,
@@ -683,83 +743,22 @@ export default function App() {
                 };
             });
 
-            // Step 2: Fetch products from these sellers — filter by search terms directly in DB
-            const sellerIds = categorySellerData.map(s => s.id);
-            let productsQuery = supabaseClient
-                .from('products')
-                .select('id,seller_id,name,price,images,keywords,likes,description')
-                .in('seller_id', sellerIds)
-                .order('created_at', { ascending: false });
-
-            // Fetch all products from these sellers — filter locally for reliability
-            if (searchTerms && searchTerms.length > 0) {
-                // no Supabase filter — local scoring handles relevance
-            }
-
-            const { data: productsData } = await productsQuery;
-
-            // Step 3: Score matched products by relevance (name match scores higher than description)
-            let mappedProducts = (productsData || []).map(p => {
-                const seller = sellerMap[p.seller_id];
-                if (!seller) return null;
-                // Only score against product name/description/keywords — NOT seller bio/name
-                let score = 0;
-                const nameLower = (p.name || '').toLowerCase();
-                const descLower = (p.description || '').toLowerCase();
-                const keywordsLower = (p.keywords || []).join(' ').toLowerCase();
-                (searchTerms || []).forEach(term => {
-                    if (nameLower.includes(term)) score += 4;
-                    if (keywordsLower.includes(term)) score += 2;
-                    if (descLower.includes(term)) score += 1;
-                });
-                return {
-                    id: p.id, name: p.name,
-                    price: p.price || 'Ask for Price',
-                    description: p.description || '',
-                    images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                    keywords: p.keywords || [],
-                    likes: p.likes || 0, liked: false,
-                    relevanceScore: score, seller
-                };
-            }).filter(Boolean);
-
-            // Sort by relevance score — highest first
-            if (searchTerms && searchTerms.length > 0) {
-                mappedProducts = mappedProducts
-                    .sort((a, b) => b.relevanceScore - a.relevanceScore);
-            }
-
-            // Update in-memory sellers
             setSellers(prev => {
                 const existingIds = new Set(prev.map(s => s.id));
-                const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
-                return [...prev, ...newSellers];
+                const newOnes = fallbackSellers.filter(s => !existingIds.has(s.id));
+                return [...prev, ...newOnes];
             });
 
-            if (mappedProducts.length > 0) {
-                setMessages(prev => [...prev, {
-                    id: prev.length + 1, type: 'assistant',
-                    text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
-                    timestamp: new Date(), messageId: Date.now()
-                }]);
-                // Replace (not append) displayed products on each new fetch batch
-                setDisplayedProducts(mappedProducts);
-                setProductOffset(sellerPageOffset + 2);
-                setShowProducts(true);
-                setShowSellers(false);
-                setCurrentStep('products');
-            } else {
-                // No matching products in these 10 sellers — show the sellers themselves
-                setMessages(prev => [...prev, {
-                    id: prev.length + 1, type: 'assistant',
-                    text: `I couldn't find a matching product, but here are sellers in this category you can contact 👇`,
-                    timestamp: new Date(), messageId: Date.now()
-                }]);
-                setShowProducts(false);
-                setSellerOffset(sellerPageOffset + 2);
-                setShowSellers(true);
-                setCurrentStep('sellers');
-            }
+            setMessages(prev => [...prev, {
+                id: prev.length + 1, type: 'assistant',
+                text: `I couldn't find that exact product, but here are sellers in this category you can contact 👇`,
+                timestamp: new Date(), messageId: Date.now()
+            }]);
+            setShowProducts(false);
+            setSellerOffset(sellerPageOffset + 2);
+            setShowSellers(true);
+            setCurrentStep('sellers');
+
         } catch(e) {
             console.error('fetchCategoryProducts error:', e);
             setMessages(prev => [...prev, {
@@ -1012,12 +1011,32 @@ export default function App() {
             });
     };
 
-    const openSellerProfile = (seller) => {
+    const openSellerProfile = async (seller) => {
         if (currentUser?.type === 'seller' && currentUser.data.id === seller.id) {
             fetchBuyerLeads(seller.id);
         }
         setSelectedProduct(null);
-        handleSellerClick(seller);
+        // Fetch all products for this seller fresh
+        try {
+            const { data: allProducts } = await supabaseClient
+                .from('products')
+                .select('id,seller_id,name,price,images,keywords,likes,description')
+                .eq('seller_id', seller.id)
+                .order('created_at', { ascending: false });
+            const fullSeller = {
+                ...seller,
+                products: (allProducts || []).map(p => ({
+                    id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                    description: p.description || '',
+                    images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                    keywords: p.keywords || [],
+                    likes: p.likes || 0, liked: false
+                }))
+            };
+            handleSellerClick(fullSeller);
+        } catch(e) {
+            handleSellerClick(seller);
+        }
     };
 
     const handleRegistration = async (formData) => {
