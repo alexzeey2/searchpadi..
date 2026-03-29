@@ -691,6 +691,7 @@ export default function App() {
                         setCurrentStep('products');
                         return;
                     }
+                }
             }
 
             // STEP 2: No products found — fall back to sellers in detected category
