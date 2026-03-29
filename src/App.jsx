@@ -38,6 +38,7 @@ export default function App() {
     const [isLoggingIn, setIsLoggingIn] = useState(false);
     const [isUploadingProduct, setIsUploadingProduct] = useState(false);
     const [isLoadingProductView, setIsLoadingProductView] = useState(false);
+    const [isLoadingProfile, setIsLoadingProfile] = useState(false);
     
     const [messages, setMessages] = useState([
         { 
@@ -1013,29 +1014,31 @@ export default function App() {
         if (currentUser?.type === 'seller' && currentUser.data.id === seller.id) {
             fetchBuyerLeads(seller.id);
         }
-        // Open profile immediately with what we have
-        handleSellerClick(seller);
-        // Then fetch all products in background and update
+        // Show skeleton first before anything
+        setIsLoadingProfile(true);
+        setSelectedSeller(null);
         try {
             const { data: allProducts } = await supabaseClient
                 .from('products')
                 .select('id,seller_id,name,price,images,keywords,likes,description')
                 .eq('seller_id', seller.id)
                 .order('created_at', { ascending: false });
-            if (allProducts) {
-                const fullSeller = {
-                    ...seller,
-                    products: allProducts.map(p => ({
-                        id: p.id, name: p.name, price: p.price || 'Ask for Price',
-                        description: p.description || '',
-                        images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                        keywords: p.keywords || [],
-                        likes: p.likes || 0, liked: false
-                    }))
-                };
-                handleSellerClick(fullSeller);
-            }
-        } catch(e) { /* already showing seller, silent fail */ }
+            const fullSeller = {
+                ...seller,
+                products: (allProducts || []).map(p => ({
+                    id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                    description: p.description || '',
+                    images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                    keywords: p.keywords || [],
+                    likes: p.likes || 0, liked: false
+                }))
+            };
+            handleSellerClick(fullSeller);
+        } catch(e) {
+            handleSellerClick(seller);
+        } finally {
+            setIsLoadingProfile(false);
+        }
     };
 
     const handleRegistration = async (formData) => {
@@ -1868,6 +1871,38 @@ export default function App() {
                     </button>
                 </div>
             </div>
+
+            {/* Seller Profile Skeleton */}
+            {isLoadingProfile && (
+                <div className="fixed inset-0 bg-[#1a1a1a] z-50 flex flex-col overflow-hidden">
+                    <div className="bg-[#1a1a1a] p-4 border-b border-gray-800 flex justify-between items-center">
+                        <div className="h-6 w-32 bg-gray-800 rounded-lg animate-pulse"/>
+                        <div className="w-8 h-8 rounded-full bg-gray-800 animate-pulse"/>
+                    </div>
+                    <div className="flex-1 p-6 overflow-y-auto">
+                        <div className="flex items-center gap-6 mb-6">
+                            <div className="w-20 h-20 rounded-full bg-gray-800 animate-pulse flex-shrink-0"/>
+                            <div className="flex-1 flex justify-around">
+                                {[1,2,3].map(i => (
+                                    <div key={i} className="flex flex-col items-center gap-2">
+                                        <div className="h-6 w-8 bg-gray-800 rounded animate-pulse"/>
+                                        <div className="h-3 w-12 bg-gray-800 rounded animate-pulse"/>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="h-5 w-40 bg-gray-800 rounded animate-pulse mb-3"/>
+                        <div className="h-4 w-full bg-gray-800 rounded animate-pulse mb-2"/>
+                        <div className="h-4 w-3/4 bg-gray-800 rounded animate-pulse mb-6"/>
+                        <div className="h-12 w-full bg-gray-800 rounded-lg animate-pulse mb-6"/>
+                        <div className="grid grid-cols-2 gap-2">
+                            {[1,2,3,4].map(i => (
+                                <div key={i} className="h-32 bg-gray-800 rounded-lg animate-pulse"/>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Seller Profile View */}
             {currentSeller && (
