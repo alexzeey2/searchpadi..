@@ -603,7 +603,6 @@ export default function App() {
             .split(/\s+/)
             .filter(term => term.length >= 2 && !fillerWords.has(term));
 
-        // Also keep the full query as a phrase for exact matching
         const fullPhrase = query.toLowerCase().trim();
 
         const detectedCategory = detectCategory(query);
@@ -619,14 +618,18 @@ export default function App() {
 
     const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0, fullPhrase = null) => {
         try {
-            // STEP 1: Search products by full phrase first, then individual terms
             if (searchTerms && searchTerms.length > 0) {
-                // Try full phrase match first
-                const phrase = fullPhrase || searchTerms.join(' ');
+                const termFilters = searchTerms.map(term =>
+                    `name.ilike.%${term}%,description.ilike.%${term}%`
+                ).join(',');
+                // Also include full phrase match
+                const phraseFilter = fullPhrase ? `name.ilike.%${fullPhrase}%,description.ilike.%${fullPhrase}%` : null;
+                const orFilters = phraseFilter ? `${phraseFilter},${termFilters}` : termFilters;
+
                 const { data: matchedProducts } = await supabaseClient
                     .from('products')
                     .select('id,seller_id,name,price,images,keywords,likes,description')
-                    .or(`name.ilike.%${phrase}%,description.ilike.%${phrase}%`)
+                    .or(orFilters)
                     .order('created_at', { ascending: false });
 
                 if (matchedProducts && matchedProducts.length > 0) {
@@ -658,9 +661,15 @@ export default function App() {
                         };
                     });
 
-                    // Only show products from the 2 sellers
+                    // Only show products from the 2 sellers, and only if name matches
                     const mappedProducts = matchedProducts
-                        .filter(p => uniqueSellerIds.includes(p.seller_id))
+                        .filter(p => {
+                            if (!uniqueSellerIds.includes(p.seller_id)) return false;
+                            const nameLower = (p.name || '').toLowerCase();
+                            // Match if name contains full phrase OR any individual search term
+                            return (fullPhrase && nameLower.includes(fullPhrase)) ||
+                                searchTerms.some(term => nameLower.includes(term));
+                        })
                         .map(p => {
                             const seller = sellerMap[p.seller_id];
                             if (!seller) return null;
