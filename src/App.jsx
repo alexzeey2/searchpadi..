@@ -1013,7 +1013,6 @@ export default function App() {
         if (currentUser?.type === 'seller' && currentUser.data.id === seller.id) {
             fetchBuyerLeads(seller.id);
         }
-        setSelectedProduct(null);
         // Open profile immediately with what we have
         handleSellerClick(seller);
         // Then fetch all products in background and update
@@ -1918,7 +1917,10 @@ export default function App() {
                     <ProductDetail 
                         product={derivedProduct}
                         onClose={() => setSelectedProduct(null)}
-                        onSellerClick={openSellerProfile}
+                        onSellerClick={(seller) => {
+                            setSelectedProduct(null);
+                            openSellerProfile(seller);
+                        }}
                         onWhatsApp={handleWhatsAppMessage}
                         onToggleLike={toggleProductLike}
                     />
