@@ -1014,27 +1014,29 @@ export default function App() {
             fetchBuyerLeads(seller.id);
         }
         setSelectedProduct(null);
-        // Fetch all products for this seller fresh
+        // Open profile immediately with what we have
+        handleSellerClick(seller);
+        // Then fetch all products in background and update
         try {
             const { data: allProducts } = await supabaseClient
                 .from('products')
                 .select('id,seller_id,name,price,images,keywords,likes,description')
                 .eq('seller_id', seller.id)
                 .order('created_at', { ascending: false });
-            const fullSeller = {
-                ...seller,
-                products: (allProducts || []).map(p => ({
-                    id: p.id, name: p.name, price: p.price || 'Ask for Price',
-                    description: p.description || '',
-                    images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                    keywords: p.keywords || [],
-                    likes: p.likes || 0, liked: false
-                }))
-            };
-            handleSellerClick(fullSeller);
-        } catch(e) {
-            handleSellerClick(seller);
-        }
+            if (allProducts) {
+                const fullSeller = {
+                    ...seller,
+                    products: allProducts.map(p => ({
+                        id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                        description: p.description || '',
+                        images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                        keywords: p.keywords || [],
+                        likes: p.likes || 0, liked: false
+                    }))
+                };
+                handleSellerClick(fullSeller);
+            }
+        } catch(e) { /* already showing seller, silent fail */ }
     };
 
     const handleRegistration = async (formData) => {
