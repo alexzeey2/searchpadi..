@@ -39,6 +39,9 @@ export default function App() {
     const [isUploadingProduct, setIsUploadingProduct] = useState(false);
     const [isLoadingProductView, setIsLoadingProductView] = useState(false);
     const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+    const [showSellerPopup, setShowSellerPopup] = useState(false);
+    const [isLoadingSellerProfile, setIsLoadingSellerProfile] = useState(false);
+    const [pendingSellerAuth, setPendingSellerAuth] = useState(null);
     
     const [messages, setMessages] = useState([
         { 
@@ -92,116 +95,10 @@ export default function App() {
                     return;
                 }
 
-                // Logged in — only load their profile, skip loadSellersFromDatabase
-                const [profileResult, productsResult] = await Promise.all([
-                    supabaseClient.from('profiles').select('*').eq('id', userId).single(),
-                    supabaseClient.from('products').select('*').eq('seller_id', userId)
-                ]);
+                // Session found — ask if they're a seller before proceeding
+                setPendingSellerAuth({ userId });
+                setShowSellerPopup(true);
 
-                if (!profileResult.data) {
-                    // Profile missing — fall back to buyer view
-                    loadSellersFromDatabase();
-                    handleDeepLinks();
-                    return;
-                }
-
-                const profileData = profileResult.data;
-                const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
-                    ? new Date(profileData.free_trial_expires_at) > new Date()
-                    : profileData.subscription_plan === 'growth_pro';
-
-                const sellerData = {
-                    id: profileData.id,
-                    name: profileData.business_name,
-                    email: profileData.email,
-                    category: profileData.category,
-                    gender: profileData.gender || null,
-                    location: profileData.location,
-                    bio: profileData.bio || 'Seller on SearchPadi',
-                    isVerified: profileData.is_verified || false,
-                    isTrusted,
-                    whatsappNumber: profileData.whatsapp,
-                    profilePhoto: profileData.profile_photo || DEFAULT_PROFILE_IMAGE,
-                    views: profileData.views || 0,
-                    subscription: profileData.subscription_plan || 'free',
-                    products: (productsResult.data || []).map(p => ({
-                        id: p.id, name: p.name, price: p.price || 'Ask for Price',
-                        description: p.description || '',
-                        images: p.images || [DEFAULT_PRODUCT_IMAGE],
-                        keywords: p.keywords || [],
-                        likes: p.likes || 0,
-                        liked: false
-                    }))
-                };
-
-                setCurrentUser({ type: 'seller', data: sellerData });
-
-                // If URL has a deep link param, handle that instead of auto-opening own profile
-                const urlParams = new URLSearchParams(window.location.search);
-                const deepSellerId = urlParams.get('seller');
-                const deepProductId = urlParams.get('product');
-
-                if (deepProductId) {
-                    // Deep link to a product — load and show it
-                    const { data: productData } = await supabaseClient
-                        .from('products').select('*, profiles(*)').eq('id', deepProductId).single();
-                    if (productData) {
-                        const pSeller = productData.profiles;
-                        setSelectedProduct({
-                            id: productData.id, name: productData.name,
-                            price: productData.price || 'Ask for Price',
-                            description: productData.description || '',
-                            images: productData.images || [],
-                            keywords: productData.keywords || [],
-                            likes: productData.likes || 0, liked: false,
-                            seller: {
-                                id: pSeller.id, name: pSeller.business_name,
-                                whatsappNumber: pSeller.whatsapp, location: pSeller.location,
-                                profilePhoto: pSeller.profile_photo || DEFAULT_PROFILE_IMAGE,
-                                isVerified: pSeller.is_verified
-                            }
-                        });
-                    }
-                } else if (deepSellerId) {
-                    // Deep link to a seller profile — load and show them (not self)
-                    const { data: deepSellerData } = await supabaseClient
-                        .from('profiles').select('*').eq('id', deepSellerId).single();
-                    if (deepSellerData) {
-                        const { data: deepProducts } = await supabaseClient
-                            .from('products').select('*').eq('seller_id', deepSellerId);
-                        const deepIsTrusted = deepSellerData.is_free_trial && deepSellerData.free_trial_expires_at
-                            ? new Date(deepSellerData.free_trial_expires_at) > new Date()
-                            : deepSellerData.subscription_plan === 'growth_pro';
-                        const deepFullSeller = {
-                            id: deepSellerData.id, name: deepSellerData.business_name,
-                            email: deepSellerData.email, category: deepSellerData.category,
-                            gender: deepSellerData.gender || null,
-                            location: deepSellerData.location,
-                            bio: deepSellerData.bio || 'Seller on SearchPadi',
-                            isVerified: deepSellerData.is_verified || false,
-                            isTrusted: deepIsTrusted,
-                            whatsappNumber: deepSellerData.whatsapp,
-                            profilePhoto: deepSellerData.profile_photo || DEFAULT_PROFILE_IMAGE,
-                            views: deepSellerData.views || 0,
-                            subscription: deepSellerData.subscription_plan || 'free',
-                            products: (deepProducts || []).map(p => ({
-                                id: p.id, name: p.name, price: p.price || 'Ask for Price',
-                                description: p.description || '',
-                                images: p.images || [],
-                                keywords: p.keywords || [],
-                                likes: p.likes || 0, liked: false
-                            }))
-                        };
-                        setSelectedSeller(deepFullSeller);
-                    }
-                } else {
-                    // No deep link — open own profile as normal
-                    setSelectedSeller(sellerData);
-                    fetchBuyerLeads(profileData.id);
-                    setShowSplash(false); // skip remaining splash time for logged-in sellers
-                    // Start realtime subscription for new leads
-                    subscribeToLeads(profileData.id);
-                }
             } catch(e) {
                 // Auth failed — fall back to buyer view
                 loadSellersFromDatabase();
@@ -214,6 +111,130 @@ export default function App() {
 
         initAuth();
     }, []);
+
+    const handleSellerYes = async () => {
+        if (!pendingSellerAuth) return;
+        setIsLoadingSellerProfile(true);
+        try {
+            const { userId } = pendingSellerAuth;
+            const [profileResult, productsResult] = await Promise.all([
+                supabaseClient.from('profiles').select('*').eq('id', userId).single(),
+                supabaseClient.from('products').select('*').eq('seller_id', userId)
+            ]);
+
+            if (!profileResult.data) {
+                setShowSellerPopup(false);
+                setIsLoadingSellerProfile(false);
+                loadSellersFromDatabase();
+                handleDeepLinks();
+                return;
+            }
+
+            const profileData = profileResult.data;
+            const isTrusted = profileData.is_free_trial && profileData.free_trial_expires_at
+                ? new Date(profileData.free_trial_expires_at) > new Date()
+                : profileData.subscription_plan === 'growth_pro';
+
+            const sellerData = {
+                id: profileData.id,
+                name: profileData.business_name,
+                email: profileData.email,
+                category: profileData.category,
+                gender: profileData.gender || null,
+                location: profileData.location,
+                bio: profileData.bio || 'Seller on SearchPadi',
+                isVerified: profileData.is_verified || false,
+                isTrusted,
+                whatsappNumber: profileData.whatsapp,
+                profilePhoto: profileData.profile_photo || DEFAULT_PROFILE_IMAGE,
+                views: profileData.views || 0,
+                subscription: profileData.subscription_plan || 'free',
+                products: (productsResult.data || []).map(p => ({
+                    id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                    description: p.description || '',
+                    images: p.images || [DEFAULT_PRODUCT_IMAGE],
+                    keywords: p.keywords || [],
+                    likes: p.likes || 0, liked: false
+                }))
+            };
+
+            setCurrentUser({ type: 'seller', data: sellerData });
+            setIsLoadingSellerProfile(false);
+            setShowSellerPopup(false);
+
+            const urlParams = new URLSearchParams(window.location.search);
+            const deepSellerId = urlParams.get('seller');
+            const deepProductId = urlParams.get('product');
+
+            if (deepProductId) {
+                const { data: productData } = await supabaseClient
+                    .from('products').select('*, profiles(*)').eq('id', deepProductId).single();
+                if (productData) {
+                    const pSeller = productData.profiles;
+                    setSelectedProduct({
+                        id: productData.id, name: productData.name,
+                        price: productData.price || 'Ask for Price',
+                        description: productData.description || '',
+                        images: productData.images || [],
+                        keywords: productData.keywords || [],
+                        likes: productData.likes || 0, liked: false,
+                        seller: {
+                            id: pSeller.id, name: pSeller.business_name,
+                            whatsappNumber: pSeller.whatsapp, location: pSeller.location,
+                            profilePhoto: pSeller.profile_photo || DEFAULT_PROFILE_IMAGE,
+                            isVerified: pSeller.is_verified
+                        }
+                    });
+                }
+            } else if (deepSellerId) {
+                const { data: deepSellerData } = await supabaseClient
+                    .from('profiles').select('*').eq('id', deepSellerId).single();
+                if (deepSellerData) {
+                    const { data: deepProducts } = await supabaseClient
+                        .from('products').select('*').eq('seller_id', deepSellerId);
+                    const deepIsTrusted = deepSellerData.is_free_trial && deepSellerData.free_trial_expires_at
+                        ? new Date(deepSellerData.free_trial_expires_at) > new Date()
+                        : deepSellerData.subscription_plan === 'growth_pro';
+                    setSelectedSeller({
+                        id: deepSellerData.id, name: deepSellerData.business_name,
+                        email: deepSellerData.email, category: deepSellerData.category,
+                        gender: deepSellerData.gender || null,
+                        location: deepSellerData.location,
+                        bio: deepSellerData.bio || 'Seller on SearchPadi',
+                        isVerified: deepSellerData.is_verified || false,
+                        isTrusted: deepIsTrusted,
+                        whatsappNumber: deepSellerData.whatsapp,
+                        profilePhoto: deepSellerData.profile_photo || DEFAULT_PROFILE_IMAGE,
+                        views: deepSellerData.views || 0,
+                        subscription: deepSellerData.subscription_plan || 'free',
+                        products: (deepProducts || []).map(p => ({
+                            id: p.id, name: p.name, price: p.price || 'Ask for Price',
+                            description: p.description || '',
+                            images: p.images || [],
+                            keywords: p.keywords || [],
+                            likes: p.likes || 0, liked: false
+                        }))
+                    });
+                }
+            } else {
+                fetchBuyerLeads(profileData.id);
+                setShowSplash(false);
+                subscribeToLeads(profileData.id);
+                setTimeout(() => setSelectedSeller(sellerData), 50);
+            }
+        } catch(e) {
+            setIsLoadingSellerProfile(false);
+            setShowSellerPopup(false);
+            loadSellersFromDatabase();
+        }
+    };
+
+    const handleSellerNo = () => {
+        setShowSellerPopup(false);
+        setPendingSellerAuth(null);
+        loadSellersFromDatabase();
+        handleDeepLinks();
+    };
 
     const handleDeepLinks = async () => {
         const urlParams = new URLSearchParams(window.location.search);
@@ -619,12 +640,9 @@ export default function App() {
     const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0, fullPhrase = null) => {
         try {
             if (searchTerms && searchTerms.length > 0) {
-                const termFilters = searchTerms.map(term =>
+                const orFilters = searchTerms.map(term =>
                     `name.ilike.%${term}%,description.ilike.%${term}%`
                 ).join(',');
-                // Also include full phrase match
-                const phraseFilter = fullPhrase ? `name.ilike.%${fullPhrase}%,description.ilike.%${fullPhrase}%` : null;
-                const orFilters = phraseFilter ? `${phraseFilter},${termFilters}` : termFilters;
 
                 const { data: matchedProducts } = await supabaseClient
                     .from('products')
@@ -704,7 +722,28 @@ export default function App() {
                 }
             }
 
-            // STEP 2: No products found — fall back to sellers in detected category
+            // STEP 2: No products found
+            // If buyer searched something specific, just say not found
+            if (searchTerms && searchTerms.length > 0) {
+                setMessages(prev => [...prev, {
+                    id: prev.length + 1, type: 'assistant',
+                    text: `I couldn't find any product matching that 😔\n\nTry a different search or browse by category:`,
+                    buttons: [
+                        { text: '📱 Phones & Gadgets', value: 'phones' },
+                        { text: '💻 Electronics', value: 'electronics' },
+                        { text: '👟 Shoes & Footwear', value: 'shoes' },
+                        { text: '👔 Clothes & Fashion', value: 'fashion' },
+                        { text: '🏠 Home & Furniture', value: 'furniture' },
+                        { text: '🍕 Foods & Edibles', value: 'foods' },
+                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
+                    ],
+                    timestamp: new Date(), messageId: Date.now()
+                }]);
+                setCurrentStep('category');
+                return;
+            }
+
+            // STEP 2b: No search terms — fall back to sellers in detected category
             const categories = (category === 'shoes' || category === 'fashion')
                 ? ['shoes', 'fashion']
                 : [category];
@@ -1880,6 +1919,51 @@ export default function App() {
                     </button>
                 </div>
             </div>
+
+            {/* Seller Login Popup */}
+            {showSellerPopup && (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center"
+                    style={{ backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)', background: 'rgba(0,0,0,0.6)' }}
+                >
+                    <div className="bg-[#1a1a1a] rounded-2xl p-8 mx-6 w-full max-w-sm border border-gray-700 shadow-2xl">
+                        {isLoadingSellerProfile ? (
+                            <div className="flex flex-col items-center gap-4 py-4">
+                                <svg className="animate-spin h-12 w-12 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"/>
+                                </svg>
+                                <p className="text-white font-semibold text-base">Please wait...</p>
+                            </div>
+                        ) : (
+                            <>
+                                <div className="text-center mb-6">
+                                    <div className="w-14 h-14 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <svg className="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                        </svg>
+                                    </div>
+                                    <h2 className="text-white text-xl font-bold mb-2">Welcome back!</h2>
+                                    <p className="text-gray-400 text-sm">Are you a seller on SearchPadi?</p>
+                                </div>
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleSellerNo}
+                                        className="flex-1 py-3 rounded-xl bg-gray-800 text-gray-300 font-semibold text-sm hover:bg-gray-700 transition-colors"
+                                    >
+                                        No
+                                    </button>
+                                    <button
+                                        onClick={handleSellerYes}
+                                        className="flex-1 py-3 rounded-xl bg-purple-600 text-white font-semibold text-sm hover:bg-purple-700 transition-colors"
+                                    >
+                                        Yes
+                                    </button>
+                                </div>
+                            </>
+                        )}
+                    </div>
+                </div>
+            )}
 
             {/* Seller Profile Skeleton */}
             {isLoadingProfile && (
