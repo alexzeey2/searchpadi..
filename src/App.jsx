@@ -608,36 +608,58 @@ export default function App() {
         setClickedButtons({});
         setCurrentStep('searching');
 
-        // Show Somto opening + buyer message
         setMessages([
             { id: 1, type: 'assistant', text: "Hi! 👋 I'm Somto.\n\nWhich product are you looking for? I'll find you a trusted seller.", timestamp: new Date(), messageId: 1 },
             { id: 2, type: 'user', text: query, timestamp: new Date(), messageId: 2 }
         ]);
         setSearchQuery('');
-
-        // Show skeleton while fetching
         setIsTyping(true);
-        
-        // Extract meaningful search terms — keep words 2+ chars, skip common filler words
-        const fillerWords = new Set(['i','a','an','the','to','for','and','or','of','in','on','at','is','my','me','want','buy','get','need','find','looking','please','can','you','help','have','does','do','are','that','this','it','be','with','from']);
-        const searchTerms = query.toLowerCase()
-            .split(/\s+/)
-            .filter(term => term.length >= 2 && !fillerWords.has(term));
 
-        const fullPhrase = query.toLowerCase().trim();
+        try {
+            // Ask Claude to extract product and location from the query
+            const response = await fetch('https://api.anthropic.com/v1/messages', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    model: 'claude-haiku-4-5-20251001',
+                    max_tokens: 100,
+                    messages: [{
+                        role: 'user',
+                        content: `You are helping a Nigerian marketplace app extract search intent. 
+Extract the product name and location (if mentioned) from this search query.
+Return ONLY a JSON object like: {"product": "iPhone", "location": "Lagos"} or {"product": "slippers", "location": null}
+No explanation, no markdown, just the JSON.
+Query: "${query}"`
+                    }]
+                })
+            });
 
-        const detectedCategory = detectCategory(query);
-        const category = detectedCategory || 'general';
+            const data = await response.json();
+            const text = data.content?.[0]?.text || '';
+            let extracted = { product: query, location: null };
+            try {
+                extracted = JSON.parse(text.trim());
+            } catch(e) {
+                extracted = { product: query, location: null };
+            }
 
-        setSelectedCategory(category);
-        setSearchContext({ query, searchTerms, category, fullPhrase });
+            const searchTerm = extracted.product || query;
+            const locationFilter = extracted.location || null;
 
-        // Fetch products in detected category — skeleton stays on until fetch completes
-        await fetchCategoryProducts(category, null, searchTerms, query, 0, fullPhrase);
+            setSearchContext({ query, searchTerms: [searchTerm], category: 'general', location: locationFilter });
+            await fetchCategoryProducts('general', null, [searchTerm], query, 0, null, locationFilter);
+
+        } catch(e) {
+            // Fallback to basic keyword search if Claude API fails
+            const searchTerms = query.toLowerCase().split(/\s+/).filter(t => t.length >= 2);
+            setSearchContext({ query, searchTerms, category: 'general' });
+            await fetchCategoryProducts('general', null, searchTerms, query);
+        }
+
         setIsTyping(false);
     };
 
-    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0, fullPhrase = null) => {
+    const fetchCategoryProducts = async (category, gender = null, searchTerms = null, originalQuery = '', sellerPageOffset = 0, fullPhrase = null, locationFilter = null) => {
         try {
             if (searchTerms && searchTerms.length > 0) {
                 const orFilters = searchTerms.map(term =>
@@ -651,17 +673,41 @@ export default function App() {
                     .order('created_at', { ascending: false });
 
                 if (matchedProducts && matchedProducts.length > 0) {
-                    // Get unique seller IDs from matched products, limit to 2 sellers at a time
-                    const uniqueSellerIds = [...new Set(matchedProducts.map(p => p.seller_id))]
-                        .slice(sellerPageOffset, sellerPageOffset + 2);
+                    const uniqueSellerIds = [...new Set(matchedProducts.map(p => p.seller_id))];
 
-                    const { data: sellersData } = await supabaseClient
+                    // Fetch sellers — filter by location if provided
+                    let sellersQuery = supabaseClient
                         .from('profiles')
                         .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
                         .in('id', uniqueSellerIds);
 
+                    if (locationFilter) {
+                        sellersQuery = sellersQuery.ilike('location', `%${locationFilter}%`);
+                    }
+
+                    let { data: sellersData } = await sellersQuery;
+
+                    // If location filter returned nothing, fall back without location
+                    if (locationFilter && (!sellersData || sellersData.length === 0)) {
+                        const { data: fallback } = await supabaseClient
+                            .from('profiles')
+                            .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
+                            .in('id', uniqueSellerIds);
+                        sellersData = fallback;
+                        setMessages(prev => [...prev, {
+                            id: prev.length + 1, type: 'assistant',
+                            text: `I couldn't find a seller in ${locationFilter}, but here's what I found 👇`,
+                            timestamp: new Date(), messageId: Date.now()
+                        }]);
+                    }
+
+                    // Limit to 2 sellers at a time
+                    const pagedSellerIds = (sellersData || [])
+                        .map(s => s.id)
+                        .slice(sellerPageOffset, sellerPageOffset + 2);
+
                     const sellerMap = {};
-                    (sellersData || []).forEach(s => {
+                    (sellersData || []).filter(s => pagedSellerIds.includes(s.id)).forEach(s => {
                         const isTrusted = (s.is_free_trial && s.free_trial_expires_at)
                             ? new Date(s.free_trial_expires_at) > new Date()
                             : s.subscription_plan === 'growth_pro';
@@ -679,14 +725,11 @@ export default function App() {
                         };
                     });
 
-                    // Only show products from the 2 sellers, and only if name matches
                     const mappedProducts = matchedProducts
                         .filter(p => {
-                            if (!uniqueSellerIds.includes(p.seller_id)) return false;
+                            if (!pagedSellerIds.includes(p.seller_id)) return false;
                             const nameLower = (p.name || '').toLowerCase();
-                            // Match if name contains full phrase OR any individual search term
-                            return (fullPhrase && nameLower.includes(fullPhrase)) ||
-                                searchTerms.some(term => nameLower.includes(term));
+                            return searchTerms.some(term => nameLower.includes(term));
                         })
                         .map(p => {
                             const seller = sellerMap[p.seller_id];
@@ -706,7 +749,6 @@ export default function App() {
                             const newSellers = Object.values(sellerMap).filter(s => !existingIds.has(s.id));
                             return [...prev, ...newSellers];
                         });
-
                         setMessages(prev => [...prev, {
                             id: prev.length + 1, type: 'assistant',
                             text: `Here's what I found! 🎯\n\nDo any of these match what you want?`,
@@ -722,91 +764,35 @@ export default function App() {
                 }
             }
 
-            // STEP 2: No products found
-            // If buyer searched something specific, just say not found
-            if (searchTerms && searchTerms.length > 0) {
+            // Nothing found — use Claude for a natural response
+            try {
+                const notFoundRes = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        model: 'claude-haiku-4-5-20251001',
+                        max_tokens: 80,
+                        messages: [{
+                            role: 'user',
+                            content: `You are Somto, a friendly AI assistant on SearchPadi, a Nigerian marketplace. A buyer searched for "${originalQuery}" but no products were found. Write a short natural response (1-2 sentences max) telling them nothing was found. Be warm and casual like a Nigerian friend. No emojis.`
+                        }]
+                    })
+                });
+                const notFoundData = await notFoundRes.json();
+                const notFoundText = notFoundData.content?.[0]?.text || "I couldn't find that product right now. Try a different search!";
                 setMessages(prev => [...prev, {
                     id: prev.length + 1, type: 'assistant',
-                    text: `I couldn't find any product matching that 😔\n\nTry a different search or browse by category:`,
-                    buttons: [
-                        { text: '📱 Phones & Gadgets', value: 'phones' },
-                        { text: '💻 Electronics', value: 'electronics' },
-                        { text: '👟 Shoes & Footwear', value: 'shoes' },
-                        { text: '👔 Clothes & Fashion', value: 'fashion' },
-                        { text: '🏠 Home & Furniture', value: 'furniture' },
-                        { text: '🍕 Foods & Edibles', value: 'foods' },
-                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
-                    ],
+                    text: notFoundText,
                     timestamp: new Date(), messageId: Date.now()
                 }]);
-                setCurrentStep('category');
-                return;
-            }
-
-            // STEP 2b: No search terms — fall back to sellers in detected category
-            const categories = (category === 'shoes' || category === 'fashion')
-                ? ['shoes', 'fashion']
-                : [category];
-
-            const { data: categorySellerData } = await supabaseClient
-                .from('profiles')
-                .select('id,business_name,profile_photo,location,whatsapp,is_verified,subscription_plan,is_free_trial,free_trial_expires_at,bio,category,gender,views,leads_count,temp_verified_until')
-                .in('category', categories)
-                .order('created_at', { ascending: false })
-                .range(sellerPageOffset, sellerPageOffset + 1);
-
-            if (!categorySellerData || categorySellerData.length === 0) {
+            } catch(e) {
                 setMessages(prev => [...prev, {
                     id: prev.length + 1, type: 'assistant',
-                    text: `No sellers found for that yet 😔\n\nTry a different category!`,
-                    buttons: [
-                        { text: '📱 Phones & Gadgets', value: 'phones' },
-                        { text: '💻 Electronics', value: 'electronics' },
-                        { text: '👟 Shoes & Footwear', value: 'shoes' },
-                        { text: '👔 Clothes & Fashion', value: 'fashion' },
-                        { text: '🏠 Home & Furniture', value: 'furniture' },
-                        { text: '🍕 Foods & Edibles', value: 'foods' },
-                        { text: '💄 Beauty & Personal Care', value: 'beauty' },
-                    ],
+                    text: `I couldn't find that product right now. Try a different search!`,
                     timestamp: new Date(), messageId: Date.now()
                 }]);
-                setCurrentStep('category');
-                return;
             }
-
-            const fallbackSellers = categorySellerData.map(s => {
-                const isTrusted = (s.is_free_trial && s.free_trial_expires_at)
-                    ? new Date(s.free_trial_expires_at) > new Date()
-                    : s.subscription_plan === 'growth_pro';
-                return {
-                    id: s.id, name: s.business_name,
-                    profilePhoto: s.profile_photo || DEFAULT_PROFILE_IMAGE,
-                    location: s.location, whatsappNumber: s.whatsapp,
-                    isVerified: s.is_verified || false, isTrusted,
-                    bio: s.bio || '', category: s.category,
-                    gender: s.gender || null, views: s.views || 0,
-                    leadsCount: s.leads_count || 0,
-                    tempVerifiedUntil: s.temp_verified_until || null,
-                    subscription: s.subscription_plan || 'free',
-                    products: []
-                };
-            });
-
-            setSellers(prev => {
-                const existingIds = new Set(prev.map(s => s.id));
-                const newOnes = fallbackSellers.filter(s => !existingIds.has(s.id));
-                return [...prev, ...newOnes];
-            });
-
-            setMessages(prev => [...prev, {
-                id: prev.length + 1, type: 'assistant',
-                text: `I couldn't find that exact product, but here are sellers in this category you can contact 👇`,
-                timestamp: new Date(), messageId: Date.now()
-            }]);
-            setShowProducts(false);
-            setSellerOffset(sellerPageOffset + 2);
-            setShowSellers(true);
-            setCurrentStep('sellers');
+            setCurrentStep('recommendations');
 
         } catch(e) {
             console.error('fetchCategoryProducts error:', e);
