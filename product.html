@@ -292,7 +292,7 @@
                 <svg width="20" height="20" fill="white" viewBox="0 0 24 24">
                     <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
                 </svg>
-                Discuss Price
+                Ask for Price
             </button>
             <button class="btn-like" onclick="toggleLike()">
                 <svg id="likeIcon" width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24">
@@ -592,31 +592,18 @@ function render(p, seller) {
 } // end render()
 
 function renderPrice(p) {
+    // Price is hidden from product page — revealed inside chat flow only
     const priceCard = document.getElementById('priceCard');
-    const priceCardAmount = document.getElementById('priceCardAmount');
-    let shown = false;
-    if (p.price_amount && Number(p.price_amount) > 0) {
-        priceCardAmount.textContent = '₦' + Number(p.price_amount).toLocaleString('en-NG');
-        priceCardAmount.className = 'price-card-amount';
-        priceCard.style.display = 'flex';
-        shown = true;
-    } else if (p.price && p.price !== 'Ask for Price' && p.price !== 'null' && p.price !== 'undefined') {
-        const raw = String(p.price).trim();
-        if (!raw) { priceCard.style.display = 'none'; return; }
-        const hasNaira = raw.startsWith('₦');
-        const numVal = Number(raw.replace(/[₦,]/g, ''));
-        if (!isNaN(numVal) && numVal > 0) {
-            priceCardAmount.textContent = '₦' + numVal.toLocaleString('en-NG');
-        } else {
-            priceCardAmount.textContent = hasNaira ? raw : '₦' + raw;
-        }
-        priceCardAmount.className = 'price-card-amount';
-        priceCard.style.display = 'flex';
-        shown = true;
-    }
-    if (!shown) priceCard.style.display = 'none';
+    priceCard.style.display = 'none';
     const sellerLink = document.getElementById('sellerLink');
-    if (sellerLink) sellerLink.style.maxWidth = shown ? 'calc(100% - 110px)' : '100%';
+    if (sellerLink) sellerLink.style.maxWidth = '100%';
+    // Store price for use in chat
+    if (p.price_amount && Number(p.price_amount) > 0) {
+        productPriceAmount = Number(p.price_amount);
+    } else if (p.price && p.price !== 'Ask for Price') {
+        const numVal = Number(String(p.price).replace(/[₦,]/g, ''));
+        if (!isNaN(numVal) && numVal > 0) productPriceAmount = numVal;
+    }
 }
 
 // Refresh price live from Supabase so updates reflect immediately
@@ -699,7 +686,7 @@ function openLeadModal() {
 }
 
 // ── Chat Screen ──────────────────────────────────────────
-let chatStep = 'initial'; // 'initial' | 'awaiting_offer' | 'awaiting_choice' | 'awaiting_final_offer' | 'awaiting_number_final' | 'done'
+let chatStep = 'initial'; // 'initial' | 'awaiting_first_send' | 'awaiting_message' | 'done'
 let chatHistory = []; // records full conversation transcript
 
 function autoResize(el) {
@@ -740,14 +727,13 @@ function openChatScreen() {
     input.value = '';
 
     // Pre-fill buyer's opening message — let them send it themselves
-    const autoMsg = `Hi, is the ${productName} still available? I want to discuss the price.`;
+    const autoMsg = `Hi, is this product still available?`;
     setTimeout(() => {
         input.value = autoMsg;
         input.disabled = false;
         chatStep = 'awaiting_first_send';
         autoResize(input);
         input.focus();
-        // Move cursor to end
         input.setSelectionRange(input.value.length, input.value.length);
     }, 400);
 }
@@ -1000,53 +986,47 @@ async function sendChatMessage() {
     const input = document.getElementById('chatInput');
     const text = input.value.trim();
     if (!text) return;
-    if (chatStep === 'awaiting_choice' || chatStep === 'done' || chatStep === 'initial') return;
+    if (chatStep === 'done' || chatStep === 'initial') return;
 
+    // Step 1 — Buyer sends opening message
     if (chatStep === 'awaiting_first_send') {
         input.disabled = true;
         addProductBubble(text);
         input.value = '';
         autoResize(input);
         document.getElementById('productTag').style.display = 'none';
-        sellerReply(`Yes, it's still available! 😊\n\nWhat's your WhatsApp number so we can talk about the price on WhatsApp?`, () => {
-            chatStep = 'awaiting_number_final';
+
+        sellerReply(`Yes, it's still available! 😊\n\nIs there something you want to ask about the product?`, () => {
+            chatStep = 'awaiting_message';
             input.disabled = false;
             input.value = '';
-            input.placeholder = 'Enter your WhatsApp number...';
-            input.setAttribute('inputmode', 'numeric');
-            input.setAttribute('pattern', '[0-9]*');
+            input.placeholder = 'Type a message...';
+            input.removeAttribute('inputmode');
+            input.removeAttribute('pattern');
             autoResize(input);
             input.focus();
-            window._onNumberComplete = () => showContactButtons(0);
         });
         return;
     }
 
-    if (chatStep === 'awaiting_number_final') {
-        const cleaned = text.replace(/\D/g, '');
-        const isValidNumber = cleaned.length >= 10 && cleaned.length <= 14 && (text.replace(/\D/g, '').length / text.length) > 0.6;
-
-        if (!isValidNumber) {
-            addBubble(text, 'sent');
-            input.value = '';
-            input.disabled = true;
-            autoResize(input);
-            sellerReply(`Please enter a valid WhatsApp number so the seller can reach you 😊`, () => {
-                input.disabled = false;
-                input.focus();
-            });
-            return;
-        }
-
+    // Step 2 — Buyer types anything → straight to WhatsApp
+    if (chatStep === 'awaiting_message') {
+        input.disabled = true;
         addBubble(text, 'sent');
         input.value = '';
-        input.disabled = true;
         autoResize(input);
-        const formattedPhone = formatNigerianNumber(cleaned);
-        await saveLead(formattedPhone);
 
-        sellerReply(`🎉 Great! I will call or message you shortly on WhatsApp.\n\nBut you can also contact me IMMEDIATELY so we can talk about the price 👇`, () => {
-            if (window._onNumberComplete) window._onNumberComplete();
+        const wa = (currentSeller?.whatsapp || '').replace(/\D/g, '');
+        const waMsg = `${text}\n\n> message from SearchPadi`;
+
+        // Save as lead
+        await saveLead('via_chat', text);
+
+        sellerReply(`Give me a moment... 🙂`, () => {
+            chatStep = 'done';
+            setTimeout(() => {
+                showWaChoiceSheet(wa, waMsg);
+            }, 500);
         });
     }
 }
@@ -1072,7 +1052,7 @@ async function trackAdClick() {
     } catch(e) {}
 }
 
-async function saveLead(phone) {
+async function saveLead(phone, buyerMessage) {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/buyer_leads`, {
             method: 'POST',
@@ -1082,8 +1062,8 @@ async function saveLead(phone) {
                 seller_id: currentSeller?.id || null,
                 product_name: productName,
                 product_image: images?.[0] || null,
-                buyer_whatsapp: phone,
-                message: `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`,
+                buyer_whatsapp: phone || 'via_chat',
+                message: buyerMessage || `Hi ${currentSeller?.business_name || 'there'}, I saw your "${productName}" on SearchPadi. Is it still available?`,
                 chat_transcript: chatHistory.length > 0 ? chatHistory : null
             })
         });
@@ -1117,14 +1097,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
-// Hard fallback — if still on skeleton after 10s, show error
-const _loadTimeout = setTimeout(() => {
-    if (document.getElementById('skeleton').style.display !== 'none') {
-        showError('Taking too long. Check your connection and try again.');
-    }
-}, 10000);
-
-load().then(() => clearTimeout(_loadTimeout));
+load();
 </script>
 </body>
 </html>
